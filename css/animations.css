@@ -1,0 +1,273 @@
+/* animations.css - 动画效果文件 */
+
+/* 基础淡入动画 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* 屏幕淡入效果 */
+.screen-fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* 加分动画 */
+@keyframes pointsFade {
+    0% { transform: translate(-50%, 0); opacity: 0; }
+    20% { transform: translate(-50%, -20px); opacity: 1; }
+    80% { transform: translate(-50%, -50px); opacity: 1; }
+    100% { transform: translate(-50%, -70px); opacity: 0; }
+}
+
+/* 彩花效果动画 */
+@keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* 脉冲动画（用于选中卡片） */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.6); }
+    70% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+/* 正确匹配动画 */
+@keyframes correct {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* 错误匹配动画 */
+@keyframes incorrect {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* 提示动画 */
+@keyframes hint {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.6); }
+    50% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+/* 旋转动画（用于加载指示器） */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 洗牌动画 */
+@keyframes card-shuffle {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    25% { transform: scale(0.9) rotate(-5deg); opacity: 0.8; }
+    50% { transform: scale(0.8) rotate(0deg); opacity: 0.7; }
+    75% { transform: scale(0.9) rotate(5deg); opacity: 0.9; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* 动画类 */
+@keyframes glow {
+    0% { box-shadow: 0 0 5px 2px rgba(255, 193, 7, 0.6); }
+    50% { box-shadow: 0 0 15px 5px rgba(255, 193, 7, 0.8); }
+    100% { box-shadow: 0 0 5px 2px rgba(255, 193, 7, 0.6); }
+}
+
+.card.selected {
+    animation: selectedGlow 1.5s infinite;
+    transform: scale(1.05);
+    z-index: 10; /* 确保光晕不被其他卡片遮挡 */
+}
+
+.card.correct {
+    animation: correct 0.8s;
+}
+
+.card.incorrect {
+    animation: incorrect 0.5s;
+}
+
+.card.hint {
+    animation: hint 1.5s infinite;
+}
+
+.shuffling {
+    animation: card-shuffle 0.5s ease-in-out;
+}
+
+.loading-spinner {
+    animation: spin 1s ease-in-out infinite;
+}
+
+/* 卡片悬停效果 */
+.card:hover:not(.empty-card):not(.matched) {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+@keyframes matchedGlow {
+    0% { box-shadow: 0 0 8px 3px rgba(46, 204, 113, 0.6); }
+    50% { box-shadow: 0 0 16px 6px rgba(46, 204, 113, 0.8); }
+    100% { box-shadow: 0 0 8px 3px rgba(46, 204, 113, 0.6); }
+}
+
+.card.matched {
+    opacity: 0.6;
+    transform: scale(0.95);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+/* 模态框动画 */
+.modal {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.modal.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    transform: translateY(30px);
+    transition: transform 0.3s;
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
+}
+
+/* 关卡项动画 */
+.level-item:hover:not(.locked) {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.level-item.available {
+    animation: pulse 2s infinite;
+}
+
+/* 错误提示动画 */
+.error-toast {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.error-toast.active {
+    opacity: 1;
+}
+
+/* 加载覆盖层动画 */
+.loading-overlay {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* 进度条动画 */
+.progress-bar .fill {
+    transition: width 0.3s;
+}
+
+/* 按钮动画 */
+.btn {
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active {
+    transform: translateY(-1px);
+}
+
+/* 连接线动画 - SVG连接线特效 */
+.connector-svg line {
+    transition: stroke 0.3s;
+}
+
+.connector-svg circle {
+    transition: fill 0.3s;
+}
+
+/* 卡片内容过渡效果 */
+.card .content {
+    transition: opacity 0.3s;
+}
+
+/* 星级评分动画 */
+.star-rating .star {
+    transition: color 0.3s;
+}
+
+/* 分页控制动画 */
+.pagination-btn {
+    transition: all 0.3s;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 关卡进度指示器动画 */
+.progress-indicator {
+    transition: width 0.3s;
+}
+
+/* 主题切换平滑过渡 */
+body {
+    transition: background 0.5s, color 0.5s;
+}
+
+.container, 
+.card, 
+.btn, 
+h1, h2, h3, 
+.info-box {
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+/* 选择器过渡效果 */
+select,
+input[type="number"],
+input[type="file"],
+textarea {
+    transition: all 0.3s;
+}
+
+/* 媒体查询动画调整 */
+@media (max-width: 768px) {
+    /* 移动设备上减少动画强度，提高性能 */
+    .card:hover {
+        transform: translateY(-2px) scale(1.02);
+    }
+    
+    .level-item:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* 减少动画时间 */
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.5); }
+        70% { box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
+}
