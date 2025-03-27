@@ -166,20 +166,260 @@ const WordBoard = {
             });
         });
         
-        // 打乱卡片顺序
-        const shuffledCards = WordUtils.shuffle(cards);
+        // 智能卡片排列算法
+        const smartShuffle = (cards) => {
+            // 将卡片按匹配对分组
+            const pairGroups = {};
+            cards.forEach(card => {
+                if (!pairGroups[card.pairId]) {
+                    pairGroups[card.pairId] = [];
+                }
+                pairGroups[card.pairId].push(card);
+            });
+            
+            // 准备排列后的卡片数组
+            const arranged = [];
+            const totalCells = this.boardSize * this.boardSize;
+            
+            // 为了增加随机性，先创建有序分区，再打乱分区
+            const areaCount = Math.min(Math.ceil(this.boardSize/2), Math.ceil(wordPairs.length / 4)); 
+            const cellsPerArea = Math.ceil(totalCells / areaCount);
+            
+            // 对于每个区域，分配一些匹配对
+            let pairIds = Object.keys(pairGroups);
+            
+            // 随机打乱pairIds以增加变化
+            pairIds = WordUtils.shuffle(pairIds);
+            
+            // 分配难度等级 (但比例有变化，减少简单对)
+            const easyPairs = pairIds.slice(0, Math.ceil(pairIds.length / 5)); // 只有1/5是简单对
+            const mediumPairs = pairIds.slice(Math.ceil(pairIds.length / 5), Math.ceil(pairIds.length * 3 / 5)); // 2/5是中等对
+            const hardPairs = pairIds.slice(Math.ceil(pairIds.length * 3 / 5)); // 2/5是困难对
+            
+            // 处理简单匹配对 - 改变策略，不再放在极近位置
+            easyPairs.forEach(pairId => {
+                const pair = pairGroups[pairId];
+                
+                // 找两个位置，确保至少有一定距离
+                let pos1 = -1, pos2 = -1;
+                
+                // 随机选择第一个位置
+                pos1 = Math.floor(Math.random() * totalCells);
+                
+                // 确保位置有效
+                while (arranged[pos1] !== undefined) {
+                    pos1 = (pos1 + 1) % totalCells;
+                }
+                
+                // 设置最小距离约束，不再是相邻的
+                const minDist = 3; // 至少相隔3格
+                const maxDist = 7; // 最多相隔7格
+                
+                // 随机化第二个位置选择
+                const possiblePositions = [];
+                for (let i = 0; i < totalCells; i++) {
+                    if (arranged[i] === undefined && i !== pos1) {
+                        // 计算与pos1的曼哈顿距离
+                        const row1 = Math.floor(pos1 / this.boardSize);
+                        const col1 = pos1 % this.boardSize;
+                        const row2 = Math.floor(i / this.boardSize);
+                        const col2 = i % this.boardSize;
+                        const distance = Math.abs(row1 - row2) + Math.abs(col1 - col2);
+                        
+                        if (distance >= minDist && distance <= maxDist) {
+                            possiblePositions.push(i);
+                        }
+                    }
+                }
+                
+                // 如果有合适的位置，随机选一个
+                if (possiblePositions.length > 0) {
+                    pos2 = possiblePositions[Math.floor(Math.random() * possiblePositions.length)];
+                } else {
+                    // 如果没有符合条件的位置，就找下一个未占用的位置
+                    pos2 = (pos1 + minDist) % totalCells;
+                    while (arranged[pos2] !== undefined) {
+                        pos2 = (pos2 + 1) % totalCells;
+                    }
+                }
+                
+                // 放置卡片
+                arranged[pos1] = pair[0];
+                arranged[pos2] = pair[1];
+            });
+            
+            // 处理中等难度匹配对 - 更加随机的距离
+            mediumPairs.forEach(pairId => {
+                const pair = pairGroups[pairId];
+                
+                // 寻找两个有一定距离的空位
+                let pos1 = -1, pos2 = -1;
+                
+                // 找第一个空位
+                for (let i = 0; i < totalCells; i++) {
+                    if (arranged[i] === undefined) {
+                        pos1 = i;
+                        break;
+                    }
+                }
+                
+                // 增加距离的随机性
+                const minDistance = Math.floor(this.boardSize / 2) + Math.floor(Math.random() * 3);
+                const maxDistance = this.boardSize + Math.floor(Math.random() * 5);
+                
+                const possiblePositions = [];
+                for (let i = 0; i < totalCells; i++) {
+                    if (arranged[i] === undefined && i !== pos1) {
+                        // 计算与pos1的曼哈顿距离
+                        const row1 = Math.floor(pos1 / this.boardSize);
+                        const col1 = pos1 % this.boardSize;
+                        const row2 = Math.floor(i / this.boardSize);
+                        const col2 = i % this.boardSize;
+                        const distance = Math.abs(row1 - row2) + Math.abs(col1 - col2);
+                        
+                        if (distance >= minDistance && distance <= maxDistance) {
+                            possiblePositions.push(i);
+                        }
+                    }
+                }
+                
+                // 随机选择一个符合条件的位置
+                if (possiblePositions.length > 0) {
+                    pos2 = possiblePositions[Math.floor(Math.random() * possiblePositions.length)];
+                } else {
+                    // 如果没找到符合条件的，就找下一个空位
+                    for (let i = 0; i < totalCells; i++) {
+                        if (arranged[i] === undefined && i !== pos1) {
+                            pos2 = i;
+                            break;
+                        }
+                    }
+                }
+                
+                // 放置卡片
+                arranged[pos1] = pair[0];
+                arranged[pos2] = pair[1];
+            });
+            
+            // 处理困难匹配对 - 距离较远且随机性更高
+            hardPairs.forEach(pairId => {
+                const pair = pairGroups[pairId];
+                
+                // 找两个空位
+                let pos1 = -1, pos2 = -1;
+                
+                // 随机找第一个空位
+                const emptyPositions = [];
+                for (let i = 0; i < totalCells; i++) {
+                    if (arranged[i] === undefined) {
+                        emptyPositions.push(i);
+                    }
+                }
+                
+                if (emptyPositions.length > 0) {
+                    // 随机选择第一个位置
+                    const randomIndex = Math.floor(Math.random() * emptyPositions.length);
+                    pos1 = emptyPositions[randomIndex];
+                    emptyPositions.splice(randomIndex, 1);
+                    
+                    if (emptyPositions.length > 0) {
+                        // 随机选择距离较远的第二个位置
+                        emptyPositions.sort((a, b) => {
+                            // 计算与pos1的距离
+                            const row1 = Math.floor(pos1 / this.boardSize);
+                            const col1 = pos1 % this.boardSize;
+                            
+                            const rowA = Math.floor(a / this.boardSize);
+                            const colA = a % this.boardSize;
+                            const distA = Math.abs(row1 - rowA) + Math.abs(col1 - colA);
+                            
+                            const rowB = Math.floor(b / this.boardSize);
+                            const colB = b % this.boardSize;
+                            const distB = Math.abs(row1 - rowB) + Math.abs(col1 - colB);
+                            
+                            // 倾向于选择更远的位置，但有一定随机性
+                            if (Math.random() < 0.7) {
+                                return distB - distA; // 70%概率选择更远的
+                            } else {
+                                return Math.random() - 0.5; // 30%概率随机选择
+                            }
+                        });
+                        
+                        // 选择前1/3的位置中的随机一个
+                        const farIndex = Math.floor(Math.random() * Math.ceil(emptyPositions.length / 3));
+                        pos2 = emptyPositions[farIndex];
+                    }
+                }
+                
+                // 如果没找到位置，则使用默认寻找策略
+                if (pos1 === -1 || pos2 === -1) {
+                    for (let i = 0; i < totalCells; i++) {
+                        if (arranged[i] === undefined) {
+                            if (pos1 === -1) {
+                                pos1 = i;
+                            } else {
+                                pos2 = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // 放置卡片
+                arranged[pos1] = pair[0];
+                arranged[pos2] = pair[1];
+            });
+            
+            // 填充可能的空位
+            let allPairs = [...easyPairs, ...mediumPairs, ...hardPairs];
+            // 再次打乱组合顺序，避免按顺序放置剩余卡片
+            allPairs = WordUtils.shuffle(allPairs);
+            
+            for (let i = 0; i < totalCells; i++) {
+                if (arranged[i] === undefined) {
+                    // 找到有剩余卡片的匹配对
+                    for (const pairId of allPairs) {
+                        if (pairGroups[pairId] && pairGroups[pairId].length > 0) {
+                            arranged[i] = pairGroups[pairId].pop();
+                            if (pairGroups[pairId].length === 0) {
+                                delete pairGroups[pairId];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // 最后再整体打乱20%的卡片，增加随机性
+            const finalArranged = arranged.filter(card => card !== undefined);
+            const shuffleCount = Math.floor(finalArranged.length * 0.2);
+            
+            for (let i = 0; i < shuffleCount; i++) {
+                const idx1 = Math.floor(Math.random() * finalArranged.length);
+                const idx2 = Math.floor(Math.random() * finalArranged.length);
+                
+                if (idx1 !== idx2) {
+                    [finalArranged[idx1], finalArranged[idx2]] = [finalArranged[idx2], finalArranged[idx1]];
+                }
+            }
+            
+            return finalArranged;
+        };
+        
+        // 使用智能排列而不是随机打乱
+        const arrangedCards = smartShuffle(cards);
         
         // 计算内部游戏板的空方块数量
         const totalCells = this.boardSize * this.boardSize;
-        const emptyCardCount = totalCells - shuffledCards.length;
+        const emptyCardCount = totalCells - arrangedCards.length;
         
         // 为内部游戏板创建实际卡片和空方块（从边界偏移1位）
         for (let row = 1; row <= this.boardSize; row++) {
             for (let col = 1; col <= this.boardSize; col++) {
                 const index = (row - 1) * this.boardSize + (col - 1);
                 
-                if (index < shuffledCards.length) {
-                    this.createCardElement(shuffledCards[index], row, col);
+                if (index < arrangedCards.length) {
+                    this.createCardElement(arrangedCards[index], row, col);
                 } else {
                     this.createEmptyCell(row, col);
                 }
@@ -684,50 +924,198 @@ const WordBoard = {
                     return;
                 }
                 
-                // 打乱卡片数组
-                for (let i = unmatchedCards.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [unmatchedCards[i], unmatchedCards[j]] = [unmatchedCards[j], unmatchedCards[i]];
-                }
+                // 智能洗牌算法
+                const smartShuffle = () => {
+                    // 按匹配对分组
+                    const pairGroups = {};
+                    unmatchedCards.forEach(card => {
+                        if (!pairGroups[card.id]) {
+                            pairGroups[card.id] = [];
+                        }
+                        pairGroups[card.id].push(card);
+                    });
+                    
+                    // 收集空位置
+                    const emptyPositions = [];
+                    for (let r = 1; r <= this.boardSize; r++) {
+                        for (let c = 1; c <= this.boardSize; c++) {
+                            if (!this.boardMatrix[r][c]) {
+                                emptyPositions.push({ row: r, col: c });
+                            }
+                        }
+                    }
+                    
+                    // 空位置随机打乱
+                    for (let i = emptyPositions.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [emptyPositions[i], emptyPositions[j]] = [emptyPositions[j], emptyPositions[i]];
+                    }
+                    
+                    // 分层放置卡片对
+                    const pairIds = Object.keys(pairGroups);
+                    const totalPairs = pairIds.length;
+                    
+                    // 前1/3的卡片对放置较近
+                    const easyPairs = pairIds.slice(0, Math.ceil(totalPairs / 3));
+                    // 中间1/3的卡片对放置中等距离
+                    const mediumPairs = pairIds.slice(Math.ceil(totalPairs / 3), Math.ceil(totalPairs * 2 / 3));
+                    // 最后1/3的卡片对放置较远
+                    const hardPairs = pairIds.slice(Math.ceil(totalPairs * 2 / 3));
+                    
+                    // 处理简单匹配对 - 相对较近
+                    let posIndex = 0;
+                    easyPairs.forEach(pairId => {
+                        if (pairGroups[pairId].length !== 2) return; // 跳过不是一对的
+                        
+                        const pos1 = emptyPositions[posIndex++];
+                        // 找一个靠近的位置
+                        let nearestPos;
+                        let minDistance = Infinity;
+                        
+                        for (let i = posIndex; i < emptyPositions.length; i++) {
+                            const pos = emptyPositions[i];
+                            const distance = Math.abs(pos.row - pos1.row) + Math.abs(pos.col - pos1.col);
+                            
+                            if (distance < minDistance && distance >= 1) { // 至少有1个距离
+                                minDistance = distance;
+                                nearestPos = i;
+                                // 如果距离足够小，就不再寻找
+                                if (distance <= 2) break;
+                            }
+                        }
+                        
+                        // 交换位置，使得第二张卡片位于选定的位置
+                        if (nearestPos !== undefined) {
+                            [emptyPositions[posIndex], emptyPositions[nearestPos]] = 
+                                [emptyPositions[nearestPos], emptyPositions[posIndex]];
+                        }
+                        
+                        // 分配位置
+                        const pos2 = emptyPositions[posIndex++];
+                        
+                        // 设置卡片位置
+                        pairGroups[pairId][0].newPos = pos1;
+                        pairGroups[pairId][1].newPos = pos2;
+                    });
+                    
+                    // 处理中等难度匹配对 - 中等距离
+                    mediumPairs.forEach(pairId => {
+                        if (pairGroups[pairId].length !== 2 || posIndex >= emptyPositions.length - 1) return;
+                        
+                        const pos1 = emptyPositions[posIndex++];
+                        
+                        // 找一个中等距离的位置
+                        let mediumDistPos;
+                        
+                        // 定义中等距离范围
+                        const minDist = 3; // 至少相隔3格
+                        const maxDist = 5; // 最多相隔5格
+                        
+                        for (let i = posIndex; i < emptyPositions.length; i++) {
+                            const pos = emptyPositions[i];
+                            const distance = Math.abs(pos.row - pos1.row) + Math.abs(pos.col - pos1.col);
+                            
+                            if (distance >= minDist && distance <= maxDist) {
+                                mediumDistPos = i;
+                                break;
+                            }
+                        }
+                        
+                        // 如果没找到合适的，就用下一个位置
+                        if (mediumDistPos === undefined) {
+                            mediumDistPos = posIndex;
+                        } else {
+                            // 交换位置
+                            [emptyPositions[posIndex], emptyPositions[mediumDistPos]] = 
+                                [emptyPositions[mediumDistPos], emptyPositions[posIndex]];
+                        }
+                        
+                        const pos2 = emptyPositions[posIndex++];
+                        
+                        // 设置卡片位置
+                        pairGroups[pairId][0].newPos = pos1;
+                        pairGroups[pairId][1].newPos = pos2;
+                    });
+                    
+                    // 处理困难匹配对 - 较远距离
+                    hardPairs.forEach(pairId => {
+                        if (pairGroups[pairId].length !== 2 || posIndex >= emptyPositions.length - 1) return;
+                        
+                        const pos1 = emptyPositions[posIndex++];
+                        
+                        // 找一个较远的位置
+                        let farPosition;
+                        let maxDistance = 0;
+                        
+                        for (let i = posIndex; i < emptyPositions.length; i++) {
+                            const pos = emptyPositions[i];
+                            const distance = Math.abs(pos.row - pos1.row) + Math.abs(pos.col - pos1.col);
+                            
+                            if (distance > maxDistance) {
+                                maxDistance = distance;
+                                farPosition = i;
+                            }
+                        }
+                        
+                        // 如果找到了，就交换位置
+                        if (farPosition !== undefined) {
+                            [emptyPositions[posIndex], emptyPositions[farPosition]] = 
+                                [emptyPositions[farPosition], emptyPositions[posIndex]];
+                        }
+                        
+                        const pos2 = emptyPositions[posIndex++];
+                        
+                        // 设置卡片位置
+                        pairGroups[pairId][0].newPos = pos1;
+                        pairGroups[pairId][1].newPos = pos2;
+                    });
+                    
+                    // 处理剩余的单卡片
+                    Object.keys(pairGroups).forEach(pairId => {
+                        pairGroups[pairId].forEach(card => {
+                            if (!card.newPos && posIndex < emptyPositions.length) {
+                                card.newPos = emptyPositions[posIndex++];
+                            }
+                        });
+                    });
+                    
+                    // 确保所有卡片都有位置
+                    unmatchedCards.forEach(card => {
+                        if (!card.newPos && posIndex < emptyPositions.length) {
+                            card.newPos = emptyPositions[posIndex++];
+                        }
+                    });
+                    
+                    return unmatchedCards;
+                };
                 
-                // 只使用原来有卡片的位置
-                const cardPositions = unmatchedCards.map(card => ({ row: card.row, col: card.col }));
+                // 应用智能洗牌
+                smartShuffle();
                 
-                // 打乱卡片位置
-                for (let i = cardPositions.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [cardPositions[i], cardPositions[j]] = [cardPositions[j], cardPositions[i]];
-                }
-                
-                console.log("打乱后的位置数量:", cardPositions.length);
-                
-                // 重新分配卡片位置
-                for (let i = 0; i < unmatchedCards.length; i++) {
-                    const card = unmatchedCards[i];
-                    const newPos = cardPositions[i];
-                    
-                    console.log(`卡片移动: (${card.row},${card.col}) -> (${newPos.row},${newPos.col})`);
-                    
-                    // 更新DOM元素的数据属性
-                    card.element.dataset.row = newPos.row;
-                    card.element.dataset.col = newPos.col;
-                    
-                    // 更新游戏矩阵
-                    this.boardMatrix[newPos.row][newPos.col] = {
-                        element: card.element,
-                        id: card.id,
-                        type: card.type,
-                        matched: false,
-                        isEmpty: false
-                    };
-                    
-                    // 确保之前的动画被清除
-                    card.element.style.animation = '';
-                    
-                    // 更新DOM元素的视觉位置
-                    card.element.style.gridRow = newPos.row + 1;  // 加1因为CSS网格从1开始
-                    card.element.style.gridColumn = newPos.col + 1;
-                }
+                // 更新卡片位置和矩阵
+                unmatchedCards.forEach(card => {
+                    if (card.newPos) {
+                        // 更新DOM元素的数据属性
+                        card.element.dataset.row = card.newPos.row;
+                        card.element.dataset.col = card.newPos.col;
+                        
+                        // 更新游戏矩阵
+                        this.boardMatrix[card.newPos.row][card.newPos.col] = {
+                            element: card.element,
+                            id: card.id,
+                            type: card.type,
+                            matched: false,
+                            isEmpty: false
+                        };
+                        
+                        // 确保之前的动画被清除
+                        card.element.style.animation = '';
+                        
+                        // 更新DOM元素的视觉位置
+                        card.element.style.gridRow = card.newPos.row + 1;  // 加1因为CSS网格从1开始
+                        card.element.style.gridColumn = card.newPos.col + 1;
+                    }
+                });
                 
                 // 再等待0.5秒后完成洗牌过程
                 setTimeout(() => {

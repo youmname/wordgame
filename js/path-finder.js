@@ -95,37 +95,61 @@ const WordPathFinder = {
         const parent = Array(this.boardSize + 2).fill().map(() => Array(this.boardSize + 2).fill().map(() => null));
         
         // 将起点加入队列
-        queue.push({row: startRow, col: startCol});
+        queue.push({row: startRow, col: startCol, turns: 0, dir: null});
         visited[startRow][startCol] = true;
         
+        // 设置最大搜索深度，避免无限扩展
+        const maxDepth = (this.boardSize + 2) * 2;
+        let depth = 0;
+        
         // BFS搜索
-        while (queue.length > 0) {
-            const current = queue.shift();
+        while (queue.length > 0 && depth < maxDepth) {
+            const size = queue.length;
             
-            // 如果到达终点
-            if (current.row === endRow && current.col === endCol) {
-                // 重建路径
-                return this.reconstructPath(parent, startRow, startCol, endRow, endCol);
-            }
-            
-            // 尝试四个方向
-            for (let i = 0; i < 4; i++) {
-                const nextRow = current.row + dy[i];
-                const nextCol = current.col + dx[i];
+            // 每次只处理当前深度的节点
+            for (let s = 0; s < size; s++) {
+                const current = queue.shift();
                 
-                // 检查边界
-                if (nextRow < 0 || nextRow >= this.boardSize + 2 || 
-                    nextCol < 0 || nextCol >= this.boardSize + 2) {
-                    continue;
+                // 如果到达终点
+                if (current.row === endRow && current.col === endCol) {
+                    // 重建路径
+                    return this.reconstructPath(parent, startRow, startCol, endRow, endCol);
                 }
                 
-                // 如果该单元格可通行且未访问过
-                if (passableGrid[nextRow][nextCol] && !visited[nextRow][nextCol]) {
-                    visited[nextRow][nextCol] = true;
-                    parent[nextRow][nextCol] = {row: current.row, col: current.col};
-                    queue.push({row: nextRow, col: nextCol});
+                // 尝试四个方向
+                for (let i = 0; i < 4; i++) {
+                    const nextRow = current.row + dy[i];
+                    const nextCol = current.col + dx[i];
+                    
+                    // 检查边界
+                    if (nextRow < 0 || nextRow >= this.boardSize + 2 || 
+                        nextCol < 0 || nextCol >= this.boardSize + 2) {
+                        continue;
+                    }
+                    
+                    // 确定方向
+                    const nextDir = i % 2 === 0 ? 'vertical' : 'horizontal';
+                    
+                    // 计算转弯次数
+                    let nextTurns = current.turns;
+                    if (current.dir !== null && current.dir !== nextDir) {
+                        nextTurns++;
+                        // 如果转弯次数超过2，不考虑这条路径
+                        if (nextTurns > 2) {
+                            continue;
+                        }
+                    }
+                    
+                    // 如果该单元格可通行且未访问过
+                    if (passableGrid[nextRow][nextCol] && !visited[nextRow][nextCol]) {
+                        visited[nextRow][nextCol] = true;
+                        parent[nextRow][nextCol] = {row: current.row, col: current.col};
+                        queue.push({row: nextRow, col: nextCol, turns: nextTurns, dir: nextDir});
+                    }
                 }
             }
+            
+            depth++;
         }
         
         // 如果没有找到路径，返回null
@@ -188,6 +212,43 @@ const WordPathFinder = {
             return false;
         }
         
+        // 如果只有两个点，检查是否在同一行或同一列
+        if (path.length === 2) {
+            const start = path[0];
+            const end = path[1];
+            
+            // 检查是否在同一行或列
+            const sameRow = start.row === end.row;
+            const sameCol = start.col === end.col;
+            
+            if (!(sameRow || sameCol)) {
+                return false; // 不在同一行或列
+            }
+            
+            // 检查路径上是否有障碍物
+            if (sameRow) {
+                const minCol = Math.min(start.col, end.col);
+                const maxCol = Math.max(start.col, end.col);
+                for (let c = minCol + 1; c < maxCol; c++) {
+                    const cell = this.boardMatrix[start.row]?.[c];
+                    if (!cell || (!cell.isEmpty && !cell.matched)) {
+                        return false; // 有障碍物
+                    }
+                }
+            } else { // sameCol
+                const minRow = Math.min(start.row, end.row);
+                const maxRow = Math.max(start.row, end.row);
+                for (let r = minRow + 1; r < maxRow; r++) {
+                    const cell = this.boardMatrix[r]?.[start.col];
+                    if (!cell || (!cell.isEmpty && !cell.matched)) {
+                        return false; // 有障碍物
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
         // 计算方向变化次数
         let directionChanges = 0;
         let prevDirection = null;
@@ -195,6 +256,32 @@ const WordPathFinder = {
         for (let i = 1; i < path.length; i++) {
             const current = path[i];
             const prev = path[i-1];
+            
+            // 检查中间是否有障碍物
+            if (current.row === prev.row) {
+                // 水平移动
+                const minCol = Math.min(current.col, prev.col);
+                const maxCol = Math.max(current.col, prev.col);
+                for (let c = minCol + 1; c < maxCol; c++) {
+                    const cell = this.boardMatrix[current.row]?.[c];
+                    if (!cell || (!cell.isEmpty && !cell.matched)) {
+                        return false; // 有障碍物
+                    }
+                }
+            } else if (current.col === prev.col) {
+                // 垂直移动
+                const minRow = Math.min(current.row, prev.row);
+                const maxRow = Math.max(current.row, prev.row);
+                for (let r = minRow + 1; r < maxRow; r++) {
+                    const cell = this.boardMatrix[r]?.[current.col];
+                    if (!cell || (!cell.isEmpty && !cell.matched)) {
+                        return false; // 有障碍物
+                    }
+                }
+            } else {
+                // 斜向移动是不允许的
+                return false;
+            }
             
             // 确定当前方向
             let currentDirection;
@@ -227,32 +314,39 @@ const WordPathFinder = {
     checkForPossibleMatches() {
         if (!this.boardMatrix) return false;
         
-        // 寻找所有未匹配的卡片
-        const unmatchedCards = [];
+        // 按ID对卡片进行分组，提高匹配效率
+        const cardGroups = {};
+        
+        // 寻找所有未匹配的卡片并分组
         for (let r = 0; r < this.boardSize + 2; r++) {
             for (let c = 0; c < this.boardSize + 2; c++) {
-                if (this.boardMatrix[r]?.[c] && !this.boardMatrix[r][c].matched && !this.boardMatrix[r][c].isEmpty) {
-                    unmatchedCards.push({
+                const cell = this.boardMatrix[r]?.[c];
+                if (cell && cell.matched === false && cell.isEmpty === false && cell.id) {
+                    if (!cardGroups[cell.id]) {
+                        cardGroups[cell.id] = [];
+                    }
+                    cardGroups[cell.id].push({
                         row: r,
                         col: c,
-                        id: this.boardMatrix[r][c].id,
-                        type: this.boardMatrix[r][c].type
+                        type: cell.type
                     });
                 }
             }
         }
         
-        // 检查每对卡片是否可以连接
-        for (let i = 0; i < unmatchedCards.length; i++) {
-            for (let j = i + 1; j < unmatchedCards.length; j++) {
-                const card1 = unmatchedCards[i];
-                const card2 = unmatchedCards[j];
-                
-                if (card1.id === card2.id && card1.type !== card2.type) {
-                    const path = this.findPath(card1.row, card1.col, card2.row, card2.col);
-                    
-                    if (path) {
-                        return true;
+        // 只检查有至少两张卡片的组
+        for (const id in cardGroups) {
+            const cards = cardGroups[id];
+            if (cards.length >= 2) {
+                // 检查每对卡片
+                for (let i = 0; i < cards.length; i++) {
+                    for (let j = i + 1; j < cards.length; j++) {
+                        if (cards[i].type !== cards[j].type) {
+                            const path = this.findPath(cards[i].row, cards[i].col, cards[j].row, cards[j].col);
+                            if (path) {
+                                return true;
+                            }
+                        }
                     }
                 }
             }
@@ -268,37 +362,49 @@ const WordPathFinder = {
     findConnectablePair() {
         if (!this.boardMatrix) return null;
         
-        // 寻找所有未匹配的卡片
-        const unmatchedCards = [];
+        // 按ID对卡片进行分组
+        const cardGroups = {};
+        
+        // 寻找所有未匹配的卡片并分组
         for (let r = 0; r < this.boardSize + 2; r++) {
             for (let c = 0; c < this.boardSize + 2; c++) {
-                if (this.boardMatrix[r]?.[c] && !this.boardMatrix[r][c].matched && !this.boardMatrix[r][c].isEmpty) {
-                    unmatchedCards.push({
+                const cell = this.boardMatrix[r]?.[c];
+                if (cell && cell.matched === false && cell.isEmpty === false && cell.id) {
+                    if (!cardGroups[cell.id]) {
+                        cardGroups[cell.id] = [];
+                    }
+                    cardGroups[cell.id].push({
                         row: r,
                         col: c,
-                        id: this.boardMatrix[r][c].id,
-                        type: this.boardMatrix[r][c].type,
-                        element: this.boardMatrix[r][c].element
+                        id: cell.id,
+                        type: cell.type,
+                        element: cell.element
                     });
                 }
             }
         }
         
-        // 检查每对卡片是否可以连接
-        for (let i = 0; i < unmatchedCards.length; i++) {
-            for (let j = i + 1; j < unmatchedCards.length; j++) {
-                const card1 = unmatchedCards[i];
-                const card2 = unmatchedCards[j];
-                
-                if (card1.id === card2.id && card1.type !== card2.type) {
-                    const path = this.findPath(card1.row, card1.col, card2.row, card2.col);
-                    
-                    if (path) {
-                        return {
-                            card1,
-                            card2,
-                            path
-                        };
+        // 只检查有至少两张卡片的组
+        for (const id in cardGroups) {
+            const cards = cardGroups[id];
+            if (cards.length >= 2) {
+                // 检查每对卡片
+                for (let i = 0; i < cards.length; i++) {
+                    for (let j = i + 1; j < cards.length; j++) {
+                        const card1 = cards[i];
+                        const card2 = cards[j];
+                        
+                        if (card1.type !== card2.type) {
+                            const path = this.findPath(card1.row, card1.col, card2.row, card2.col);
+                            
+                            if (path) {
+                                return {
+                                    card1,
+                                    card2,
+                                    path
+                                };
+                            }
+                        }
                     }
                 }
             }
