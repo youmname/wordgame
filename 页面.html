@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 单词游戏</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column; /* 将 body 设置为垂直排列 */
+            justify-content: center;
+            align-items: center;
+            background-size: cover;
+            font-family: 'Roboto', sans-serif;
+        }
+        .title {
+            margin-bottom: 20px; /* 标题与容器之间的间距 */
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 80%;
+            background-color: rgba(169, 162, 162, 0.3);
+            backdrop-filter: blur(10px); /* 磨砂效果 */
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+
+        }
+        .illustration {
+            position: relative;
+            height: 400px;
+            width: 600px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            background: rgb(255, 255, 255); /* 白色透明背景 */
+            backdrop-filter: blur(10px); /* 磨砂效果 */
+            border-radius: 30px;
+            padding: 20px;
+            margin-right: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        .login-box {
+            background: rgba(255, 255, 255, 1); /* 白色透明背景 */
+            backdrop-filter: blur(10px); /* 磨砂效果 */
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            width: 450px;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .login-box h2 {
+            font-size: 24px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .login-box p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .input-field {
+            margin-bottom: 20px;
+        }
+        .input-field input {
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.5); /* 输入框透明背景 */
+            backdrop-filter: blur(5px); /* 磨砂效果 */
+        }
+        .input-field input:focus {
+            outline: none;
+            border-radius: 30px;
+        }
+        .options-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .options-row a {
+            color: #4285f4;
+        }
+        .options-row a:hover {
+            text-decoration: underline;
+        }
+        .btn {
+            width: 100%;
+            background: #333;
+            color: #fff;
+            border-radius: 25px;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-content: center;
+            align-items: center;
+            justify-content: center;
+            justify-items: center;
+        }
+        .btn:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- <div class="title">
+        <h3>单词游戏</h3>
+    </div> -->
+
+    <div class="container">
+        <div class="illustration">
+            <!-- 放背景图片 -->
+        </div>
+
+        <div class="login-box">
+            <h2>单词连连看</h2>
+            <p>请输入您的账号和激活码</p>
+            <form id="loginForm">
+                <div class="input-field">
+                    <input id="email" type="email" required placeholder="账号">
+                </div>
+                <div class="input-field">
+                    <input id="password" type="password" required placeholder="激活码">
+                </div>
+                <div class="options-row">
+                    <label>
+                        <input type="checkbox" id="rememberMe">
+                        <span>记住账号</span>
+                    </label>
+                    <!-- <a href="#">Forgot password?</a> -->
+                </div>
+                <button class="btn" type="submit">登入</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            // 模拟登录成功（待后端实现）
+            M.toast({ html: '登录成功！正在跳转...' });
+            setTimeout(() => {
+                window.location.href = '/game.html';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
