@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>用户管理</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        .container { padding: 20px; }
+        .form-container { max-width: 600px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h3>创建新用户</h3>
+            <form id="createUserForm">
+                <div class="input-field">
+                    <input type="text" id="username" required>
+                    <label for="username">用户名（手机号或用户名）</label>
+                </div>
+                
+                <div class="input-field">
+                    <input type="email" id="email" required>
+                    <label for="email">邮箱</label>
+                </div>
+                
+                <div class="input-field">
+                    <input type="password" id="password" required>
+                    <label for="password">初始密码</label>
+                </div>
+                
+                <div class="input-field">
+                    <select id="userType">
+                        <option value="normal">普通用户</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                    <label>用户类型</label>
+                </div>
+                
+                <button class="btn waves-effect waves-light" type="submit">
+                    创建用户
+                </button>
+            </form>
+
+            <div id="message" style="margin-top: 20px;"></div>
+            
+            <div style="margin-top: 40px;">
+                <h3>用户列表</h3>
+                <table class="striped">
+                    <thead>
+                        <tr>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>类型</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userList">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        // 初始化Select
+        document.addEventListener('DOMContentLoaded', function() {
+            var elems = document.querySelectorAll('select');
+            M.FormSelect.init(elems);
+            loadUsers(); // 加载用户列表
+        });
+
+        // 创建用户
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                userType: document.getElementById('userType').value
+            };
+
+            try {
+                const response = await fetch('http://175.24.181.59/api/admin/create-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    M.toast({html: '用户创建成功！'});
+                    document.getElementById('createUserForm').reset();
+                    loadUsers(); // 重新加载用户列表
+                } else {
+                    M.toast({html: data.message || '创建失败'});
+                }
+            } catch (error) {
+                M.toast({html: '服务器错误'});
+            }
+        });
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                const response = await fetch('http://175.24.181.59/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const userList = document.getElementById('userList');
+                    userList.innerHTML = data.users.map(user => `
+                        <tr>
+                            <td>${user.username}</td>
+                            <td>${user.email}</td>
+                            <td>${user.user_type}</td>
+                            <td>${new Date(user.created_at).toLocaleString()}</td>
+                            <td>
+                                <button class="btn-small" onclick="resetPassword('${user.id}')">
+                                    重置密码
+                                </button>
+                                <button class="btn-small red" onclick="deleteUser('${user.id}')">
+                                    删除
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载用户列表失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

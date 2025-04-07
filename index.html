@@ -276,5 +276,47 @@ believe    相信"></textarea>
     <script src="js/level-system.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
+    <script>
+        // 检查登录状态
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('userToken');
+            if (!token) {
+                // 如果没有token，重定向到登录页面
+                window.location.href = '页面.html';
+                return;
+            }
+
+            // 验证token有效性
+            fetch('/api/verify-token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    // token无效，清除本地存储并重定向到登录页面
+                    localStorage.removeItem('userToken');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('rememberMe');
+                    window.location.href = '页面.html';
+                }
+            })
+            .catch(error => {
+                console.error('验证token失败:', error);
+                window.location.href = '页面.html';
+            });
+        });
+
+        // 添加退出登录功能
+        document.getElementById('back-btn').addEventListener('click', () => {
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('rememberMe');
+            window.location.href = '页面.html';
+        });
+    </script>
 </body>
 </html>
