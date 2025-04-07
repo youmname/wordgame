@@ -104,3 +104,28 @@
         console.log("Main.js: Initial setup finished.");
     });
 })();
+
+function updateUI() {
+    const userType = localStorage.getItem('userType');
+    
+    // 隐藏所有特权元素
+    document.querySelectorAll('[data-role]').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    // 根据用户类型显示对应元素
+    if (userType === 'admin') {
+        document.querySelectorAll('[data-role="admin"]').forEach(el => {
+            el.style.display = 'block';
+        });
+    } else if (userType === 'vip') {
+        document.querySelectorAll('[data-role="vip"]').forEach(el => {
+            el.style.display = 'block';
+        });
+    }
+    
+    // 所有登录用户可见
+    document.querySelectorAll('[data-role="user"]').forEach(el => {
+        el.style.display = 'block';
+    });
+}

@@ -148,9 +148,7 @@ const initializeAdmin = async () => {
 
 // 验证管理员Token的中间件
 const verifyAdminToken = (req, res, next) => {
-    // 从请求头获取token
     const token = req.headers.authorization?.split(' ')[1];
-    
     if (!token) {
         return res.status(401).json({
             success: false,
@@ -159,16 +157,15 @@ const verifyAdminToken = (req, res, next) => {
     }
     
     try {
-        // 验证token
         const decoded = jwt.verify(token, JWT_SECRET);
-        // 检查是否是管理员
+        console.log('[verifyAdminToken] Decoded Token:', decoded);
         if (decoded.userType !== 'admin') {
+            console.log(`[verifyAdminToken] Permission denied: User type is '${decoded.userType}', not 'admin'.`);
             return res.status(403).json({
                 success: false,
                 message: '需要管理员权限'
             });
         }
-        // 将解码后的用户信息添加到请求对象中
         req.user = decoded;
         next();
     } catch (error) {
@@ -239,46 +236,32 @@ app.get('/', (req, res) => {
 });
 
 // 用户登录路由
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', (req, res) => {
     const { account, password } = req.body;
     
-    try {
-        // 查询用户信息（支持邮箱或用户名登录）
-        const sql = `
-            SELECT id, username, password_hash, user_type 
-            FROM Users 
-            WHERE email = ? OR username = ?
-        `;
+    if (!account || !password) {
+        return res.status(400).json({ success: false, message: '账号和密码不能为空' });
+    }
+    
+    // 查询用户
+    const sql = 'SELECT * FROM users WHERE username = ? OR email = ?';
+    db.get(sql, [account, account], async (err, user) => {
+        if (err) {
+            console.error('登录查询错误:', err);
+            return res.status(500).json({ success: false, message: '服务器错误' });
+        }
         
-        db.get(sql, [account, account], async (err, user) => {
-            if (err) {
-                console.error('登录查询错误:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: '服务器错误'
-                });
+        if (!user) {
+            return res.status(401).json({ success: false, message: '账号或密码错误' });
+        }
+        
+        try {
+            // 验证密码 - 修正字段名为 password_hash
+            const isMatch = await bcrypt.compare(password, user.password_hash);
+            
+            if (!isMatch) {
+                return res.status(401).json({ success: false, message: '账号或密码错误' });
             }
-            
-            // 检查用户是否存在
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: '账号或密码错误'
-                });
-            }
-            
-            // 验证密码
-            const isValid = await bcrypt.compare(password, user.password_hash);
-            
-            if (!isValid) {
-                return res.status(401).json({
-                    success: false,
-                    message: '账号或密码错误'
-                });
-            }
-            
-            // 更新最后登录时间
-            db.run('UPDATE Users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
             
             // 生成JWT token
             const token = jwt.sign(
@@ -288,81 +271,78 @@ app.post('/api/login', async (req, res) => {
                     userType: user.user_type
                 },
                 JWT_SECRET,
-                { expiresIn: '24h' }  // token有效期24小时
+                { expiresIn: '24h' }
             );
             
-            // 返回登录成功信息
+            // 更新最后登录时间
+            db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+            
             res.json({
                 success: true,
-                token,
+                token: token,
                 user: {
                     id: user.id,
                     username: user.username,
-                    userType: user.user_type
+                    userType: user.user_type,
+                    email: user.email
                 }
             });
-        });
-    } catch (error) {
-        console.error('登录处理错误:', error);
-        res.status(500).json({
-            success: false,
-            message: '服务器错误'
-        });
-    }
+        } catch (error) {
+            console.error('密码验证错误:', error);
+            res.status(500).json({ success: false, message: '服务器错误' });
+        }
+    });
 });
 
-// 修改密码路由
+// 修改密码
 app.post('/api/change-password', verifyAdminToken, async (req, res) => {
     const { oldPassword, newPassword } = req.body;
-    const userId = req.user.userId;
-
+    
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: '旧密码和新密码不能为空' });
+    }
+    
+    if (newPassword.length < 6) {
+        return res.status(400).json({ success: false, message: '新密码不能少于6个字符' });
+    }
+    
     try {
-        // 先验证旧密码
-        const getUserSql = 'SELECT password_hash FROM Users WHERE id = ?';
-        db.get(getUserSql, [userId], async (err, user) => {
+        // 获取当前用户
+        db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], async (err, user) => {
             if (err) {
-                console.error('查询用户密码错误:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: '服务器错误'
-                });
+                return res.status(500).json({ success: false, message: '服务器错误' });
             }
-
-            // 验证旧密码是否正确
-            const isValidOld = await bcrypt.compare(oldPassword, user.password_hash);
-            if (!isValidOld) {
-                return res.status(401).json({
-                    success: false,
-                    message: '原密码错误'
-                });
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: '用户不存在' });
             }
-
-            // 生成新密码的hash
-            const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
+            
+            // 验证旧密码
+            const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+            
+            if (!isMatch) {
+                return res.status(401).json({ success: false, message: '旧密码错误' });
+            }
+            
+            // 加密新密码
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            
             // 更新密码
-            const updateSql = 'UPDATE Users SET password_hash = ? WHERE id = ?';
-            db.run(updateSql, [newPasswordHash, userId], (err) => {
-                if (err) {
-                    console.error('更新密码错误:', err);
-                    return res.status(500).json({
-                        success: false,
-                        message: '更新密码失败'
-                    });
+            db.run(
+                'UPDATE users SET password_hash = ? WHERE id = ?',
+                [hashedPassword, req.user.userId],
+                function(err) {
+                    if (err) {
+                        return res.status(500).json({ success: false, message: '更新密码失败' });
+                    }
+                    
+                    res.json({ success: true, message: '密码修改成功' });
                 }
-
-                res.json({
-                    success: true,
-                    message: '密码修改成功'
-                });
-            });
+            );
         });
     } catch (error) {
-        console.error('修改密码处理错误:', error);
-        res.status(500).json({
-            success: false,
-            message: '服务器错误'
-        });
+        console.error('修改密码错误:', error);
+        res.status(500).json({ success: false, message: '服务器错误' });
     }
 });
 
@@ -370,42 +350,100 @@ app.post('/api/change-password', verifyAdminToken, async (req, res) => {
 app.post('/api/admin/create-user', verifyAdminToken, async (req, res) => {
     const { username, email, password, userType } = req.body;
     
+    // 参数校验
+    if (!username || !email || !password || !userType) {
+        return res.status(400).json({ success: false, message: '缺少必要参数' });
+    }
+    
+    // 合法性检查：确保用户类型有效
+    if (!['user', 'vip', 'admin'].includes(userType)) {
+        return res.status(400).json({ success: false, message: '无效的用户类型' });
+    }
+    
     try {
-        // 生成密码hash
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // 插入新用户
-        const sql = `
-            INSERT INTO Users (
-                username, 
-                email, 
-                password_hash, 
-                user_type, 
-                created_at
-            ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `;
-        
-        db.run(sql, [username, email, hashedPassword, userType], function(err) {
+        // 检查用户是否已存在
+        db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, email], async (err, user) => {
             if (err) {
-                console.error('创建用户错误:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: '创建用户失败'
-                });
+                console.error('查询用户失败:', err);
+                return res.status(500).json({ success: false, message: '数据库错误' });
             }
             
-            res.json({
-                success: true,
-                message: '用户创建成功',
-                userId: this.lastID
-            });
+            if (user) {
+                return res.status(400).json({ success: false, message: '用户名或邮箱已存在' });
+            }
+            
+            // 哈希密码
+            const hashedPassword = await bcrypt.hash(password, 10);
+            
+            // 插入新用户 - 修正字段名为 password_hash
+            db.run(
+                'INSERT INTO users (username, email, password_hash, user_type) VALUES (?, ?, ?, ?)',
+                [username, email, hashedPassword, userType],
+                function(err) {
+                    if (err) {
+                        console.error('创建用户失败:', err);
+                        return res.status(500).json({ success: false, message: '数据库错误' });
+                    }
+                    
+                    console.log('用户创建成功:', username, userType);
+                    res.json({ 
+                        success: true,
+                        message: '用户创建成功'
+                    });
+                }
+            );
         });
     } catch (error) {
-        console.error('创建用户处理错误:', error);
-        res.status(500).json({
-            success: false,
-            message: '服务器错误'
-        });
+        console.error('创建用户异常:', error);
+        res.status(500).json({ success: false, message: '服务器错误' });
+    }
+});
+
+// 删除用户
+app.delete('/api/admin/users/:userId', verifyAdminToken, (req, res) => {
+    const userId = req.params.userId;
+    
+    // 防止删除自己
+    if (userId === req.user.userId) {
+        return res.status(400).json({ success: false, message: '不能删除当前登录的管理员' });
+    }
+    
+    db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
+        if (err) {
+            console.error('删除用户失败:', err);
+            return res.status(500).json({ success: false, message: '数据库错误' });
+        }
+        res.json({ success: true });
+    });
+});
+
+// 重置用户密码
+app.post('/api/admin/users/:userId/reset-password', verifyAdminToken, async (req, res) => {
+    const userId = req.params.userId;
+    const { newPassword } = req.body;
+    
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ success: false, message: '密码无效（最少6位）' });
+    }
+    
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        // 修正字段名为 password_hash
+        db.run(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [hashedPassword, userId],
+            function(err) {
+                if (err) {
+                    console.error('重置密码失败:', err);
+                    return res.status(500).json({ success: false, message: '数据库错误' });
+                }
+                res.json({ success: true, message: '密码重置成功' });
+            }
+        );
+    } catch (error) {
+        console.error('密码加密失败:', error);
+        res.status(500).json({ success: false, message: '密码加密失败' });
     }
 });
 

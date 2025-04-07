@@ -532,5 +532,92 @@ const WordLevelSystem = {
         };
         this.saveLevelData();
         this.renderLevelPage();
-    }
+    },
+    
+    /**
+     * 检查指定索引的关卡是否已解锁
+     * @param {number} levelIndex - 关卡的索引 (从0开始)
+     * @returns {boolean} 如果关卡已解锁则返回true，否则返回false
+     */
+    isLevelUnlocked: function(levelKey) {
+        const userType = localStorage.getItem('userType');
+        const levelIndex = parseInt(levelKey);
+        
+        // 管理员和VIP可以访问所有关卡
+        if (userType === 'admin' || userType === 'vip') {
+            return true;
+        }
+        
+        // 普通用户只能访问前5关
+        return levelIndex <= 5 && this.levelData.levels[levelKey]?.unlocked;
+    },
+    
+    loadProgress: function() {
+        const savedLevel = localStorage.getItem('maxUnlockedLevel'); // 确认键名是否为 maxUnlockedLevel
+        this.maxUnlockedLevel = (parseInt(savedLevel, 10) >= 0) ? parseInt(savedLevel, 10) : 0;
+        // --- 添加日志 ---
+        console.log(`[loadProgress] Value from localStorage: ${savedLevel}`);
+        console.log(`[loadProgress] Final maxUnlockedLevel set to: ${this.maxUnlockedLevel}`);
+        // --- 日志结束 ---
+    },
+
+    generateLevelButtons: function(chapters) { // 确保能获取到章节数据
+        const grid = document.getElementById('level-grid');
+        if (!grid) { console.error("Level grid not found!"); return; }
+        grid.innerHTML = '';
+
+        // --- 修改：从传入的参数或DataLoader获取总关卡数 ---
+        const totalLevels = chapters ? chapters.length : (DataLoader.getChapters() ? DataLoader.getChapters().length : 0);
+        this.totalLevels = totalLevels;
+        // --- 修改结束 ---
+
+        console.log(`[generateLevelButtons] Generating ${totalLevels} buttons. Current maxUnlockedLevel: ${this.maxUnlockedLevel}`); // 添加日志
+
+        for (let i = 0; i < totalLevels; i++) {
+            const button = document.createElement('button');
+            // ... (设置 button.textContent, classList, dataset.levelIndex) ...
+            button.textContent = `第 ${i + 1} 关`;
+            button.classList.add('level-button', 'btn');
+            button.dataset.levelIndex = i;
+
+            // --- 添加详细日志，特别关注 i === 0 ---
+            if (i === 0) {
+                console.log(`[generateLevelButtons] Processing button for index 0 (First Level).`);
+            }
+            const isUnlocked = this.isLevelUnlocked(i); // 调用检查函数
+            console.log(`[generateLevelButtons] Button index ${i}: isUnlocked = ${isUnlocked}`); // 打印检查结果
+
+            if (isUnlocked) {
+                button.classList.remove('locked');
+                button.classList.add('unlocked');
+                button.disabled = false;
+                button.title = `开始第 ${i + 1} 关`;
+                button.addEventListener('click', this.handleLevelButtonClick.bind(this)); // 绑定点击事件
+                // --- 添加日志 ---
+                 if (i === 0) {
+                     console.log(`[generateLevelButtons] Button index 0: Set as UNLOCKED (disabled=${button.disabled}, classes=${button.className})`);
+                 }
+                // --- 日志结束 ---
+            } else {
+                button.classList.remove('unlocked');
+                button.classList.add('locked');
+                button.disabled = true;
+                button.title = "请先完成前面的关卡";
+                 // --- 添加日志 ---
+                 if (i === 0) { // 这理论上不应该发生
+                     console.error(`[generateLevelButtons] ERROR: Button index 0: Incorrectly set as LOCKED (disabled=${button.disabled}, classes=${button.className})`);
+                 }
+                // --- 日志结束 ---
+            }
+            // --- 日志结束 ---
+            grid.appendChild(button);
+        }
+    },
+    // 确保有一个处理按钮点击的函数
+    handleLevelButtonClick: function(event) {
+         const index = parseInt(event.target.dataset.levelIndex, 10);
+         console.log(`[handleLevelButtonClick] Starting level ${index + 1}`);
+         Game.startLevel(index); // 假设 Game 对象有 startLevel 方法
+         UIManager.showScreen('game-screen');
+    },
 };
