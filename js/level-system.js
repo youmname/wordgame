@@ -133,23 +133,19 @@ const WordLevelSystem = {
      */
     openLevelScreen() {
         const dataSource = document.querySelector('input[name="data-source"]:checked').value;
-        console.log("当前数据来源:", dataSource);
+        console.log("[openLevelScreen] 当前数据来源:", dataSource);
         
         // 输出用户类型和权限状态，方便调试
         const userType = localStorage.getItem('userType');
-        console.log("当前用户类型:", userType);
-        console.log("前5关权限状态:");
-        for (let i = 0; i < 5; i++) {
-            console.log(`  关卡${i+1} 权限: ${this.isLevelUnlocked(i)}`);
-        }
+        console.log("[openLevelScreen] 当前用户类型:", userType);
         
         // 先确保加载了数据
         if (dataSource === 'chapter') {
             // 对于按章节获取，确保我们已经获取了章节数据
             const chapterSelect = document.getElementById('chapter-select');
             
-            if (chapterSelect && chapterSelect.options.length > 0) {
-                console.log("章节已加载，准备生成关卡");
+            if (chapterSelect && chapterSelect.options.length > 0 && Object.keys(WordDataLoader.excelData).length > 0) {
+                console.log("[openLevelScreen] 章节已加载，准备生成关卡");
                 // 使用章节数据生成游戏关卡
                 this.generateLevelsFromChapters();
                 
@@ -159,7 +155,7 @@ const WordLevelSystem = {
                     const currentIndex = chapters.indexOf(this.levelData.currentLevel);
                     if (currentIndex >= 0) {
                         this.currentPage = Math.floor(currentIndex / this.levelsPerPage) + 1;
-                        console.log("跳转到上次关卡所在页码:", this.currentPage);
+                        console.log("[openLevelScreen] 跳转到上次关卡所在页码:", this.currentPage);
                     }
                 }
                 
@@ -170,11 +166,11 @@ const WordLevelSystem = {
                 this.renderLevelPage();
                 this.updatePageIndicator();
             } else {
-                console.log("章节未加载，尝试获取章节数据");
+                console.log("[openLevelScreen] 章节未加载，尝试获取章节数据");
                 // 如果章节数据未加载，先加载章节
                 WordDataLoader.updateChapterSelectWithApiData().then(success => {
                     if (success) {
-                        console.log("成功获取章节数据");
+                        console.log("[openLevelScreen] 成功获取章节数据");
                         this.generateLevelsFromChapters();
                         
                         // 计算上次关卡所在的页码
@@ -183,7 +179,7 @@ const WordLevelSystem = {
                             const currentIndex = chapters.indexOf(this.levelData.currentLevel);
                             if (currentIndex >= 0) {
                                 this.currentPage = Math.floor(currentIndex / this.levelsPerPage) + 1;
-                                console.log("跳转到上次关卡所在页码:", this.currentPage);
+                                console.log("[openLevelScreen] 跳转到上次关卡所在页码:", this.currentPage);
                             }
                         }
                         
@@ -194,8 +190,11 @@ const WordLevelSystem = {
                         this.renderLevelPage();
                         this.updatePageIndicator();
                     } else {
-                        WordUtils.ErrorManager.showToast('无法加载章节数据，请稍后再试');
+                        WordUtils.ErrorManager.showToast('无法从服务器获取章节数据，请稍后再试');
                     }
+                }).catch(error => {
+                    console.error("[openLevelScreen] 获取章节数据失败:", error);
+                    WordUtils.ErrorManager.showToast('无法从服务器获取章节数据，请检查网络连接');
                 });
             }
         } else if (dataSource === 'upload') {
@@ -207,7 +206,7 @@ const WordLevelSystem = {
                     const currentIndex = chapters.indexOf(this.levelData.currentLevel);
                     if (currentIndex >= 0) {
                         this.currentPage = Math.floor(currentIndex / this.levelsPerPage) + 1;
-                        console.log("跳转到上次关卡所在页码:", this.currentPage);
+                        console.log("[openLevelScreen] 跳转到上次关卡所在页码:", this.currentPage);
                     }
                 }
                 
@@ -221,7 +220,7 @@ const WordLevelSystem = {
                 WordUtils.ErrorManager.showToast('请先上传Excel文件');
             }
         } else {
-            WordUtils.ErrorManager.showToast('没有可用的单词数据，请先上传Excel文件或选择其他数据源');
+            WordUtils.ErrorManager.showToast('请选择章节数据来源或上传Excel文件');
         }
     },
 
@@ -740,11 +739,15 @@ const WordLevelSystem = {
         this.levelData.currentLevel = chapterName;
         this.saveLevelData();
         
+        // 显示加载动画
+        WordUtils.LoadingManager.show('正在加载关卡数据...');
+        
         // 加载该关卡的单词数据
         WordDataLoader.loadChapterWords(chapterName)
             .then(wordPairs => {
-                if (!wordPairs) {
-                    WordUtils.ErrorManager.showToast('无法加载关卡数据，请稍后再试');
+                if (!wordPairs || wordPairs.length < 2) {
+                    WordUtils.ErrorManager.showToast('无法加载关卡数据，单词数量不足');
+                    WordUtils.LoadingManager.hide();
                     return;
                 }
                 
@@ -762,6 +765,7 @@ const WordLevelSystem = {
             .catch(error => {
                 console.error('[startLevel] 加载关卡数据失败:', error);
                 WordUtils.ErrorManager.showToast('加载关卡数据失败，请稍后再试');
+                WordUtils.LoadingManager.hide();
             });
     },
 };

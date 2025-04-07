@@ -303,7 +303,7 @@ const WordDataLoader = {
     async loadChapterWords(chapter) {
         // 从章节名提取ID（例如"第1章" -> 1）
         const chapterId = parseInt(chapter.match(/\d+/)?.[0]) || 1;
-        console.log("正在尝试加载章节ID:", chapterId);
+        console.log("[loadChapterWords] 正在加载章节ID:", chapterId);
         
         WordUtils.LoadingManager.show('正在加载单词数据...');
         
@@ -311,40 +311,55 @@ const WordDataLoader = {
             // 构建API请求URL
             const endpoint = WordConfig.API.WORDS_ENDPOINT.replace('{id}', chapterId);
             const fullUrl = WordConfig.API.BASE_URL + endpoint;
-            console.log("API请求URL:", fullUrl);
+            console.log("[loadChapterWords] API请求URL:", fullUrl);
             
-            const response = await fetch(fullUrl);
+            const response = await fetch(fullUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : ''
+                },
+                credentials: 'include'
+            });
             
             // 检查响应状态
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`API响应错误(${response.status}):`, errorText);
+                console.error(`[loadChapterWords] API响应错误(${response.status})`);
                 throw new Error(`获取单词失败: ${response.status} - ${response.statusText}`);
             }
             
-            const words = await response.json();
-            console.log("API返回的单词数据:", words);
+            const rawData = await response.json();
+            console.log("[loadChapterWords] API返回的原始数据:", rawData);
             
-            // 验证返回的数据格式
-            if (!Array.isArray(words)) {
-                console.error("API返回的不是数组:", words);
-                throw new Error("API返回的数据格式不正确");
+            // 处理不同的API响应格式
+            let wordsData = [];
+            if (Array.isArray(rawData)) {
+                wordsData = rawData;
+            } else if (rawData && Array.isArray(rawData.words)) {
+                wordsData = rawData.words;
+            } else if (rawData && Array.isArray(rawData.data)) {
+                wordsData = rawData.data;
+            } else {
+                console.error("[loadChapterWords] API返回的数据格式不正确:", rawData);
+                throw new Error("API返回的数据格式不正确，无法识别单词数据");
             }
             
-            if (words.length === 0) {
-                console.warn("API返回的单词数组为空");
+            console.log(`[loadChapterWords] 成功解析出${wordsData.length}个单词`);
+            
+            if (wordsData.length === 0) {
+                console.warn("[loadChapterWords] API返回的单词数组为空");
                 WordUtils.ErrorManager.showToast('该章节没有单词数据，请选择其他章节');
                 WordUtils.LoadingManager.hide();
                 return null;
             }
             
             // 转换为游戏需要的格式
-            const wordPairs = words.map(word => ({
-                word: word.word || "未知单词",
-                definition: word.meaning || "未知定义"
+            const wordPairs = wordsData.map(word => ({
+                word: word.word || word.name || "未知单词",
+                definition: word.meaning || word.definition || word.chinese || "未知定义"
             }));
             
-            console.log("转换后的单词对:", wordPairs);
+            console.log("[loadChapterWords] 转换后的单词对:", wordPairs.slice(0, 3), `... (共${wordPairs.length}个)`);
             
             if (wordPairs.length < 2) {
                 WordUtils.ErrorManager.showToast('该章节单词数量不足，请选择其他章节');
@@ -358,9 +373,17 @@ const WordDataLoader = {
             WordUtils.LoadingManager.hide();
             return shuffledPairs;
         } catch (error) {
-            console.error(`加载章节${chapterId}单词失败:`, error);
-            WordUtils.ErrorManager.showToast(`加载章节数据失败: ${error.message}`);
+            console.error(`[loadChapterWords] 加载章节${chapterId}单词失败:`, error);
+            WordUtils.ErrorManager.showToast(`无法加载该章节单词: ${error.message}，请稍后再试`);
             WordUtils.LoadingManager.hide();
+            
+            // 尝试使用示例数据作为备选
+            console.log("[loadChapterWords] 尝试使用示例数据");
+            const samplePairs = WordUtils.parseCustomInput(WordConfig.SAMPLE_DATA);
+            if (samplePairs && samplePairs.length >= 2) {
+                return samplePairs;
+            }
+            
             return null;
         }
     },
