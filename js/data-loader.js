@@ -370,87 +370,99 @@ const WordDataLoader = {
      * @returns {Promise<boolean>} 加载成功与否
      */
     async updateChapterSelectWithApiData() {
-        console.log("Attempting to fetch chapters..."); // 调试信息
+        console.log("[updateChapterSelectWithApiData] 开始获取API章节数据");
+        
+        // 显示加载动画
+        WordUtils.LoadingManager.show('正在加载章节数据...');
+        
         try {
-            // --- 修改这里的 URL ---
-            const response = await fetch('https://sanjinai.cn:5000/api/chapters', { // 使用正确的、包含域名的完整URL
+            const response = await fetch('https://sanjinai.cn:5000/api/chapters', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 如果你的API需要认证才能获取章节，需要添加 Authorization 头
-                    // 'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : ''
                 },
-                credentials: 'include' // 如果需要跨域传递cookie或认证信息
+                credentials: 'include'
             });
-            // --- URL 修改结束 ---
 
-            console.log("Fetch response status:", response.status); // 调试信息
+            console.log("[updateChapterSelectWithApiData] API响应状态:", response.status);
 
             if (!response.ok) {
-                // 如果HTTP状态码不是2xx，抛出错误
-                throw new Error(`HTTP error! status: ${response.status}, statusText: ${response.statusText}`);
+                throw new Error(`HTTP请求失败! 状态: ${response.status}, 消息: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log("Received chapter data:", data); // 调试信息
+            console.log("[updateChapterSelectWithApiData] 收到章节数据:", data);
 
-            // --- 确保后端返回的数据结构包含 success 和 chapters 字段 ---
-            if (!data || !data.success || !Array.isArray(data.chapters)) {
-                 // 如果后端返回的数据格式不符合预期，也抛出错误
-                console.error("Invalid data format received from /api/chapters:", data);
-                throw new Error('从服务器获取的章节数据格式无效');
+            // 验证API返回的数据格式
+            let chapters = [];
+            if (data && data.success && Array.isArray(data.chapters)) {
+                chapters = data.chapters;
+            } else if (Array.isArray(data)) {
+                chapters = data;
+            } else {
+                console.error("[updateChapterSelectWithApiData] API返回的数据格式无效:", data);
+                throw new Error('API返回的章节数据格式无效');
             }
-            // --- 数据结构检查结束 ---
 
-            const chapters = data.chapters;
+            console.log(`[updateChapterSelectWithApiData] 提取到${chapters.length}个章节`);
+
             const selectElement = document.getElementById('chapter-select');
-
             if (!selectElement) {
-                console.warn('未能找到ID为 chapter-select 的下拉选择框元素');
-                return; // 如果找不到元素，直接返回，避免后续错误
+                console.warn('[updateChapterSelectWithApiData] 未找到章节选择器元素');
+                WordUtils.LoadingManager.hide();
+                return false;
             }
 
             // 清空现有选项
-            selectElement.innerHTML = '<option value="" disabled selected>请选择章节</option>'; // 添加一个默认提示选项
+            selectElement.innerHTML = '';
 
             // 添加从API获取的新选项
             if (chapters.length === 0) {
-                console.warn("API返回的章节列表为空");
-                 const option = document.createElement('option');
-                 option.value = "";
-                 option.textContent = "暂无可用章节";
-                 option.disabled = true;
-                 selectElement.appendChild(option);
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "暂无可用章节";
+                option.disabled = true;
+                selectElement.appendChild(option);
+                console.warn("[updateChapterSelectWithApiData] 没有可用章节");
             } else {
-                chapters.forEach(chapter => {
+                // 同时更新excelData，用于关卡系统
+                // 清空原有API数据
+                this.excelData = {};
+                
+                chapters.forEach((chapter, index) => {
                     const option = document.createElement('option');
-                    option.value = chapter.id; // 假设后端返回的章节对象有 id 字段
-                    // 尝试使用 chapter.name，如果不存在则使用 order_num
-                    option.textContent = chapter.name || `章节 ${chapter.order_num || chapter.id}`; // 假设有 name 或 order_num 字段
+                    // 使用章节ID作为value
+                    const chapterId = chapter.id || index + 1;
+                    option.value = `第${chapterId}章`;
+                    option.textContent = chapter.name || `第${chapterId}章`;
                     selectElement.appendChild(option);
+                    
+                    // 将章节ID添加到excelData中，作为关卡系统的数据源
+                    this.excelData[`第${chapterId}章`] = [];
                 });
-                console.log("Chapter select dropdown populated.");
+                
+                console.log("[updateChapterSelectWithApiData] 章节加载完成，已添加到excelData:", Object.keys(this.excelData));
             }
 
-            // 如果使用了Materialize CSS的下拉框，需要重新初始化
+            // 重新初始化下拉框
             if (typeof M !== 'undefined' && M.FormSelect) {
                 M.FormSelect.init(selectElement);
-                console.log("Materialize FormSelect re-initialized.");
             }
-
+            
+            // 通知事件系统章节已更新
+            WordUtils.EventSystem.trigger('chapters:updated', Object.keys(this.excelData));
+            
+            WordUtils.LoadingManager.hide();
+            return chapters.length > 0;
         } catch (error) {
-            // 捕获 fetch 错误或上面抛出的错误
-            console.error('获取或处理章节列表失败:', error);
-            // 在UI上给用户提示
-            const errorToast = document.getElementById('error-toast'); // 假设你有一个显示错误信息的元素
-            if (errorToast) {
-                errorToast.textContent = `加载章节失败: ${error.message}`;
-                errorToast.style.display = 'block';
-                setTimeout(() => { errorToast.style.display = 'none'; }, 5000); // 5秒后自动隐藏
-            }
-             // 也可以禁用章节选择相关的UI
-             const chapterSelectorDiv = document.getElementById('chapter-selector');
-             if (chapterSelectorDiv) chapterSelectorDiv.innerHTML = "<p style='color: red;'>加载章节失败，请刷新页面重试。</p>";
+            console.error('[updateChapterSelectWithApiData] 获取章节失败:', error);
+            
+            // 显示友好的错误信息，不要提到Excel
+            WordUtils.ErrorManager.showToast('无法从服务器获取章节数据，请稍后再试');
+            
+            WordUtils.LoadingManager.hide();
+            return false;
         }
     },
 

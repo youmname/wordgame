@@ -135,6 +135,14 @@ const WordLevelSystem = {
         const dataSource = document.querySelector('input[name="data-source"]:checked').value;
         console.log("当前数据来源:", dataSource);
         
+        // 输出用户类型和权限状态，方便调试
+        const userType = localStorage.getItem('userType');
+        console.log("当前用户类型:", userType);
+        console.log("前5关权限状态:");
+        for (let i = 0; i < 5; i++) {
+            console.log(`  关卡${i+1} 权限: ${this.isLevelUnlocked(i)}`);
+        }
+        
         // 先确保加载了数据
         if (dataSource === 'chapter') {
             // 对于按章节获取，确保我们已经获取了章节数据
@@ -243,7 +251,7 @@ const WordLevelSystem = {
                 WordDataLoader.excelData[chapter] = []; // 空数组作为占位符
             }
             
-            // 初始化关卡数据
+            // 初始化关卡数据 - 只有第一关默认解锁
             if (!this.levelData.levels[chapter]) {
                 this.levelData.levels[chapter] = {
                     unlocked: index === 0, // 只有第一关默认解锁
@@ -286,6 +294,22 @@ const WordLevelSystem = {
         const startIndex = (this.currentPage - 1) * this.levelsPerPage;
         const endIndex = Math.min(startIndex + this.levelsPerPage, chapters.length);
         
+        console.log(`[renderLevelPage] 渲染第${this.currentPage}页，索引范围${startIndex}-${endIndex}`);
+        
+        // 获取用户类型
+        const userType = localStorage.getItem('userType');
+        console.log(`[renderLevelPage] 当前用户类型: ${userType}`);
+        
+        // 预先计算最大已解锁关卡索引
+        let maxUnlockedLevel = 0;
+        for (let i = 0; i < chapters.length; i++) {
+            const chapter = chapters[i];
+            if (this.levelData.levels[chapter] && this.levelData.levels[chapter].unlocked) {
+                maxUnlockedLevel = Math.max(maxUnlockedLevel, i);
+            }
+        }
+        console.log(`[renderLevelPage] 最大已解锁关卡索引: ${maxUnlockedLevel}`);
+        
         // 添加当前页的关卡
         for (let i = startIndex; i < endIndex; i++) {
             const chapter = chapters[i];
@@ -304,9 +328,40 @@ const WordLevelSystem = {
             // 创建关卡项
             const levelItem = document.createElement('div');
             levelItem.className = 'level-item';
+            levelItem.dataset.index = i; // 添加索引数据
+            
+            // 判断此关卡是否在用户可见范围内
+            let isVisible = true;
+            if (userType === 'admin') {
+                // 管理员可以看到所有关卡
+                isVisible = true;
+            } else if (userType === 'vip') {
+                // VIP可以看到所有关卡
+                isVisible = true;
+            } else {
+                // 普通用户只能看到前5关
+                isVisible = i < 5;
+            }
+            
+            // 如果关卡不可见，跳过渲染
+            if (!isVisible) {
+                continue;
+            }
+            
+            // 判断此关卡是否已解锁（按顺序解锁）
+            let isUnlocked = false;
+            if (userType === 'admin') {
+                // 管理员所有关卡都已解锁
+                isUnlocked = true;
+            } else {
+                // 其他用户需要按顺序解锁
+                isUnlocked = i <= maxUnlockedLevel + 1 && (i === 0 || this.levelData.levels[chapters[i-1]].completed);
+            }
+            
+            console.log(`[renderLevelPage] 关卡${i+1}: 可见性=${isVisible}, 解锁状态=${isUnlocked}`);
             
             // 根据解锁状态设置样式
-            if (!this.levelData.levels[chapter].unlocked) {
+            if (!isUnlocked) {
                 levelItem.classList.add('locked');
             } else if (this.levelData.levels[chapter].completed) {
                 levelItem.classList.add('completed');
@@ -314,14 +369,17 @@ const WordLevelSystem = {
                 levelItem.classList.add('available');
             }
             
-            // 构建关卡内容 - 修改成网格样式布局
+            // 关卡名称（使用章节ID或序号）
+            const levelNumber = i + 1;
+            
+            // 构建关卡内容
             const content = document.createElement('div');
             content.className = 'level-content';
             
             // 关卡名称
             const levelName = document.createElement('div');
             levelName.className = 'level-name';
-            levelName.textContent = chapter;
+            levelName.textContent = `第 ${levelNumber} 关`;
             
             // 星级评分
             const starsDiv = document.createElement('div');
@@ -334,7 +392,7 @@ const WordLevelSystem = {
             
             if (this.levelData.levels[chapter].completed) {
                 infoDiv.textContent = `最高分: ${this.levelData.levels[chapter].highScore}`;
-            } else if (this.levelData.levels[chapter].unlocked) {
+            } else if (isUnlocked) {
                 infoDiv.textContent = '点击开始';
             } else {
                 infoDiv.textContent = '未解锁';
@@ -362,8 +420,8 @@ const WordLevelSystem = {
             
             // 关卡点击事件
             levelItem.addEventListener('click', () => {
-                if (this.levelData.levels[chapter].unlocked) {
-                    console.log("点击关卡:", chapter);
+                if (isUnlocked) {
+                    console.log(`[点击关卡] 第${levelNumber}关 (${chapter}), 索引: ${i}`);
                     // 设置当前关卡
                     this.levelData.currentLevel = chapter;
                     this.saveLevelData();
@@ -372,24 +430,15 @@ const WordLevelSystem = {
                     try {
                         WordGame.startLevel(chapter);
                     } catch (error) {
-                        console.error("启动关卡时出错:", error);
+                        console.error("[启动关卡失败]", error);
                         WordUtils.ErrorManager.showToast("启动关卡失败，请稍后再试");
                     }
                 } else {
-                    WordUtils.ErrorManager.showToast('需要先完成前一关才能解锁此关卡');
+                    WordUtils.ErrorManager.showToast('该关卡未解锁，请先完成前面的关卡');
                 }
             });
             
             levelGrid.appendChild(levelItem);
-        }
-        
-        // 如果当前页的关卡数少于每页显示的最大数，添加空白占位
-        for (let i = endIndex - startIndex; i < this.levelsPerPage; i++) {
-            const emptyItem = document.createElement('div');
-            emptyItem.className = 'level-item';
-            emptyItem.style.visibility = 'hidden';
-            emptyItem.style.pointerEvents = 'none';
-            levelGrid.appendChild(emptyItem);
         }
         
         // 保存关卡数据
@@ -418,15 +467,15 @@ const WordLevelSystem = {
     updateLevelCompletion(isWin, score) {
         const currentLevel = this.levelData.currentLevel;
         if (!currentLevel) {
-            console.log("未找到当前关卡信息!");
+            console.log("[updateLevelCompletion] 未找到当前关卡信息!");
             return false;
         }
         
-        console.log("更新关卡状态:", currentLevel, "是否获胜:", isWin);
+        console.log("[updateLevelCompletion] 更新关卡状态:", currentLevel, "是否获胜:", isWin);
         
         const levelInfo = this.levelData.levels[currentLevel];
         if (!levelInfo) {
-            console.log("未找到当前关卡数据!");
+            console.log("[updateLevelCompletion] 未找到当前关卡数据!");
             return false;
         }
         
@@ -434,7 +483,7 @@ const WordLevelSystem = {
         
         // 如果赢了，标记为完成并解锁下一关
         if (isWin) {
-            console.log("获胜，更新关卡完成状态");
+            console.log("[updateLevelCompletion] 获胜，更新关卡完成状态");
             levelInfo.completed = true;
             
             // 更新最高分
@@ -454,41 +503,54 @@ const WordLevelSystem = {
             // 只更新更高的星级
             if (newStars > levelInfo.stars) {
                 levelInfo.stars = newStars;
+                console.log("[updateLevelCompletion] 更新星级:", newStars);
             }
             
             // 解锁下一关
             const chapters = Object.keys(WordDataLoader.excelData);
             const currentIndex = chapters.indexOf(currentLevel);
-            console.log("当前关卡索引:", currentIndex, "总关卡数:", chapters.length);
+            console.log("[updateLevelCompletion] 当前关卡索引:", currentIndex, "总关卡数:", chapters.length);
             
+            // 检查是否是最后一关
             if (currentIndex >= 0 && currentIndex < chapters.length - 1) {
                 const nextChapter = chapters[currentIndex + 1];
-                console.log("尝试解锁下一关:", nextChapter);
+                console.log("[updateLevelCompletion] 尝试解锁下一关:", nextChapter);
                 
-                if (this.levelData.levels[nextChapter]) {
-                    this.levelData.levels[nextChapter].unlocked = true;
-                    console.log("成功解锁下一关!");
-                    nextLevelAvailable = true;
+                // 获取用户类型，检查是否可以解锁下一关
+                const userType = localStorage.getItem('userType');
+                const nextIndex = currentIndex + 1;
+                
+                // 检查是否超出普通用户的可见范围
+                if (userType !== 'admin' && userType !== 'vip' && nextIndex >= 5) {
+                    console.log("[updateLevelCompletion] 普通用户无法解锁第5关以后的关卡");
+                    nextLevelAvailable = false;
                 } else {
-                    // 如果下一关卡数据不存在，创建它
-                    this.levelData.levels[nextChapter] = {
-                        unlocked: true,
-                        completed: false,
-                        stars: 0,
-                        highScore: 0,
-                        bestTime: 0
-                    };
-                    console.log("创建并解锁下一关!");
-                    nextLevelAvailable = true;
+                    // 解锁下一关
+                    if (this.levelData.levels[nextChapter]) {
+                        this.levelData.levels[nextChapter].unlocked = true;
+                        console.log("[updateLevelCompletion] 成功解锁下一关!");
+                        nextLevelAvailable = true;
+                    } else {
+                        // 如果下一关卡数据不存在，创建它
+                        this.levelData.levels[nextChapter] = {
+                            unlocked: true,
+                            completed: false,
+                            stars: 0,
+                            highScore: 0,
+                            bestTime: 0
+                        };
+                        console.log("[updateLevelCompletion] 创建并解锁下一关!");
+                        nextLevelAvailable = true;
+                    }
                 }
             } else {
-                console.log("已经是最后一关或无法找到当前关卡索引");
+                console.log("[updateLevelCompletion] 已经是最后一关或无法找到当前关卡索引");
             }
         }
         
         // 保存关卡数据
         this.saveLevelData();
-        console.log("关卡数据已保存:", this.levelData);
+        console.log("[updateLevelCompletion] 关卡数据已保存:", this.levelData);
         
         return nextLevelAvailable;
     },
@@ -550,7 +612,7 @@ const WordLevelSystem = {
         
         console.log(`[isLevelUnlocked] 检查关卡 ${levelIndex} 权限，用户类型: ${userType}`);
         
-        // 第一关始终可用，无论何种用户类型
+        // 第一关始终可用
         if (levelIndex === 0) {
             console.log('[isLevelUnlocked] 第一关始终可用');
             return true;
@@ -562,17 +624,36 @@ const WordLevelSystem = {
             return true;
         }
         
-        // VIP用户可访问所有关卡
-        if (userType === 'vip') {
-            console.log('[isLevelUnlocked] VIP用户，可访问所有关卡');
-            return true;
+        // 获取当前最大已解锁关卡
+        const chapters = Object.keys(WordDataLoader.excelData || {});
+        const currentLevel = this.levelData.currentLevel;
+        let maxUnlockedIndex = 0;
+        
+        // 遍历关卡数据，找出最大已解锁关卡索引
+        for (let i = 0; i < chapters.length; i++) {
+            const chapter = chapters[i];
+            if (this.levelData.levels[chapter] && this.levelData.levels[chapter].unlocked) {
+                maxUnlockedIndex = Math.max(maxUnlockedIndex, i);
+            }
         }
         
-        // 普通用户只能访问前5关
+        console.log(`[isLevelUnlocked] 最大已解锁关卡索引: ${maxUnlockedIndex}`);
+        
+        // VIP用户可以看到所有关卡，但需要逐关解锁
+        if (userType === 'vip') {
+            // 只有已解锁的关卡或下一关才可用
+            const isAvailable = levelIndex <= maxUnlockedIndex + 1;
+            console.log(`[isLevelUnlocked] VIP用户，关卡 ${levelIndex} ${isAvailable ? '可用' : '未解锁'}`);
+            return isAvailable;
+        }
+        
+        // 普通用户只能看到前5关，且需要逐关解锁
         const maxAllowedForRegular = 4; // 索引从0开始，所以是0-4共5关
         if (levelIndex <= maxAllowedForRegular) {
-            console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} 在允许范围内`);
-            return true;
+            // 只有已解锁的关卡或下一关才可用
+            const isAvailable = levelIndex <= maxUnlockedIndex + 1;
+            console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} ${isAvailable ? '可用' : '未解锁'}`);
+            return isAvailable;
         }
         
         console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} 超出权限范围(最多5关)`);
@@ -646,5 +727,41 @@ const WordLevelSystem = {
          console.log(`[handleLevelButtonClick] Starting level ${index + 1}`);
          Game.startLevel(index); // 假设 Game 对象有 startLevel 方法
          UIManager.showScreen('game-screen');
+    },
+
+    /**
+     * 开始指定关卡
+     * @param {string} chapterName - 章节名称
+     */
+    startLevel: function(chapterName) {
+        console.log("[startLevel] 开始关卡:", chapterName);
+        
+        // 设置当前关卡
+        this.levelData.currentLevel = chapterName;
+        this.saveLevelData();
+        
+        // 加载该关卡的单词数据
+        WordDataLoader.loadChapterWords(chapterName)
+            .then(wordPairs => {
+                if (!wordPairs) {
+                    WordUtils.ErrorManager.showToast('无法加载关卡数据，请稍后再试');
+                    return;
+                }
+                
+                console.log(`[startLevel] 成功加载关卡 ${chapterName} 的数据，单词数: ${wordPairs.length}`);
+                
+                // 开始游戏
+                try {
+                    WordGame.wordPairs = wordPairs;
+                    WordGame.startGame();
+                } catch (error) {
+                    console.error('[startLevel] 启动游戏失败:', error);
+                    WordUtils.ErrorManager.showToast('启动游戏失败，请稍后再试');
+                }
+            })
+            .catch(error => {
+                console.error('[startLevel] 加载关卡数据失败:', error);
+                WordUtils.ErrorManager.showToast('加载关卡数据失败，请稍后再试');
+            });
     },
 };
