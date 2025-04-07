@@ -7,10 +7,19 @@
     <style>
         .container { padding: 20px; }
         .form-container { max-width: 600px; margin: 0 auto; }
+        .user-actions { display: flex; gap: 5px; }
+        .status-tag { padding: 3px 8px; border-radius: 4px; font-size: 12px; display: inline-block; }
+        .status-admin { background-color: #f44336; color: white; }
+        .status-vip { background-color: #ffc107; color: black; }
+        .status-user { background-color: #4caf50; color: white; }
+        .logout-btn { position: fixed; top: 20px; right: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
+        <h2 class="center-align">单词连连看后台管理</h2>
+        <button class="btn red logout-btn" onclick="logout()">退出登录</button>
+        
         <div class="form-container">
             <h3>创建新用户</h3>
             <form id="createUserForm">
@@ -25,8 +34,8 @@
                 </div>
                 
                 <div class="input-field">
-                    <input type="password" id="password" required>
-                    <label for="password">初始密码</label>
+                    <input type="password" id="password" value="123456" readonly>
+                    <label for="password" class="active">初始密码 (默认123456)</label>
                 </div>
                 
                 <div class="input-field">
@@ -50,62 +59,56 @@
                 <table class="striped">
                     <thead>
                         <tr>
-                            <th>${user.username}</th>
-                            <th>${user.email}</th>
-                            <th>${user.user_type}</th>
-                            <th>${new Date(user.created_at).toLocaleString()}</th>
-                            <th>
-                                <button class="btn-small" onclick="resetPassword('${user.id}')">
-                                    重置密码
-                                </button>
-                                <button class="btn-small red" onclick="deleteUser('${user.id}')">
-                                    删除
-                                </button>
-                            </th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>用户类型</th>
+                            <th>注册时间</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="userList">
+                        <!-- 用户列表将通过JavaScript动态填充 -->
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
 
-            <div class="form-container">
-                <h3>修改密码</h3>
-                <form id="changePasswordForm">
-                    <div class="input-field">
-                        <input type="password" id="oldPassword" required>
-                        <label for="oldPassword">原密码</label>
-                    </div>
-                    
-                    <div class="input-field">
-                        <input type="password" id="newPassword" required>
-                        <label for="newPassword">新密码</label>
-                    </div>
-                    
-                    <div class="input-field">
-                        <input type="password" id="confirmPassword" required>
-                        <label for="confirmPassword">确认新密码</label>
-                    </div>
-                    
-                    <button class="btn waves-effect waves-light" type="submit">
-                        修改密码
-                    </button>
-                </form>
+    <!-- 修改用户类型的模态框 -->
+    <div id="changeTypeModal" class="modal">
+        <div class="modal-content">
+            <h4>修改用户类型</h4>
+            <p id="modalUsername"></p>
+            <div class="input-field">
+                <select id="newUserType">
+                    <option value="user">普通用户</option>
+                    <option value="vip">VIP用户</option>
+                    <option value="admin">管理员</option>
+                </select>
+                <label>新用户类型</label>
             </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-close waves-effect waves-red btn-flat">取消</a>
+            <a href="#!" id="confirmChangeType" class="waves-effect waves-green btn-flat">确定</a>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
-        // 初始化Select
+        // 初始化Select和Modal
         document.addEventListener('DOMContentLoaded', function() {
             var elems = document.querySelectorAll('select');
             M.FormSelect.init(elems);
+            
+            var modals = document.querySelectorAll('.modal');
+            M.Modal.init(modals);
+            
             loadUsers(); // 加载用户列表
         });
 
         // 修改所有fetch请求的URL为https
-        const API_BASE_URL = 'https://175.24.181.59:5000';  // 注意使用https和端口号
+        const API_BASE_URL = 'https://sanjinai.cn:5000';
 
         // 创建用户
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {
@@ -114,12 +117,11 @@
             const userData = {
                 username: document.getElementById('username').value,
                 email: document.getElementById('email').value,
-                password: document.getElementById('password').value,
+                password: document.getElementById('password').value, // 使用默认123456
                 userType: document.getElementById('userType').value
             };
 
             try {
-                console.log('[createUser] Sending token:', localStorage.getItem('authToken'));
                 const response = await fetch(`${API_BASE_URL}/api/admin/create-user`, {
                     method: 'POST',
                     headers: {
@@ -135,19 +137,21 @@
                 if (data.success) {
                     M.toast({html: '用户创建成功！'});
                     document.getElementById('createUserForm').reset();
+                    // 重置密码字段为默认值
+                    document.getElementById('password').value = '123456'; 
                     loadUsers(); // 重新加载用户列表
                 } else {
                     M.toast({html: data.message || '创建失败'});
                 }
             } catch (error) {
-                M.toast({html: '服务器错误'});
+                console.error('创建用户错误:', error);
+                M.toast({html: '服务器错误，请稍后再试'});
             }
         });
 
         // 加载用户列表
         async function loadUsers() {
             try {
-                console.log('[loadUsers] Sending token:', localStorage.getItem('authToken'));
                 const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -159,71 +163,150 @@
                 
                 if (data.success) {
                     const userList = document.getElementById('userList');
-                    userList.innerHTML = data.users.map(user => `
-                        <tr>
+                    userList.innerHTML = '';
+                    
+                    data.users.forEach(user => {
+                        // 创建用户类型标签
+                        let typeClass = '';
+                        switch(user.user_type) {
+                            case 'admin': typeClass = 'status-admin'; break;
+                            case 'vip': typeClass = 'status-vip'; break;
+                            default: typeClass = 'status-user';
+                        }
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
                             <td>${user.username}</td>
-                            <td>${user.email}</td>
-                            <td>${user.user_type}</td>
-                            <td>${new Date(user.created_at).toLocaleString()}</td>
-                            <td>
-                                <button class="btn-small" onclick="resetPassword('${user.id}')">
+                            <td>${user.email || '未设置'}</td>
+                            <td><span class="status-tag ${typeClass}">${getUserTypeLabel(user.user_type)}</span></td>
+                            <td>${formatDate(user.created_at)}</td>
+                            <td class="user-actions">
+                                <button class="btn-small waves-effect waves-light" onclick="openChangeTypeModal('${user.id}', '${user.username}', '${user.user_type}')">
+                                    修改类型
+                                </button>
+                                <button class="btn-small amber waves-effect waves-light" onclick="resetPassword('${user.id}')">
                                     重置密码
                                 </button>
-                                <button class="btn-small red" onclick="deleteUser('${user.id}')">
+                                <button class="btn-small red waves-effect waves-light" onclick="deleteUser('${user.id}')">
                                     删除
                                 </button>
                             </td>
-                        </tr>
-                    `).join('');
+                        `;
+                        userList.appendChild(row);
+                    });
+                } else {
+                    M.toast({html: data.message || '获取用户列表失败'});
                 }
             } catch (error) {
                 console.error('加载用户列表失败:', error);
+                M.toast({html: '网络错误，请稍后再试'});
             }
         }
 
-        // 添加修改密码的处理代码
-        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // 格式化日期
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 获取用户类型标签
+        function getUserTypeLabel(type) {
+            switch(type) {
+                case 'admin': return '管理员';
+                case 'vip': return 'VIP用户';
+                default: return '普通用户';
+            }
+        }
+
+        // 打开修改用户类型模态框
+        function openChangeTypeModal(userId, username, currentType) {
+            const modal = M.Modal.getInstance(document.getElementById('changeTypeModal'));
+            document.getElementById('modalUsername').textContent = `用户: ${username}`;
             
-            const oldPassword = document.getElementById('oldPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (newPassword !== confirmPassword) {
-                M.toast({html: '两次输入的新密码不一致'});
-                return;
+            // 设置当前用户类型
+            const typeSelect = document.getElementById('newUserType');
+            for (let i = 0; i < typeSelect.options.length; i++) {
+                if (typeSelect.options[i].value === currentType) {
+                    typeSelect.selectedIndex = i;
+                    break;
+                }
             }
             
+            // 强制刷新select
+            M.FormSelect.init(typeSelect);
+            
+            // 设置确认按钮事件
+            document.getElementById('confirmChangeType').onclick = function() {
+                changeUserType(userId);
+            };
+            
+            modal.open();
+        }
+
+        // 修改用户类型
+        async function changeUserType(userId) {
+            const newType = document.getElementById('newUserType').value;
+            
             try {
-                const response = await fetch('http://175.24.181.59/api/change-password', {
+                const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/change-type`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                     },
-                    body: JSON.stringify({
-                        oldPassword,
-                        newPassword
-                    })
+                    credentials: 'include',
+                    body: JSON.stringify({ userType: newType })
                 });
 
                 const data = await response.json();
                 
+                // 关闭模态框
+                const modal = M.Modal.getInstance(document.getElementById('changeTypeModal'));
+                modal.close();
+                
                 if (data.success) {
-                    M.toast({html: '密码修改成功！'});
-                    document.getElementById('changePasswordForm').reset();
+                    M.toast({html: '用户类型修改成功！'});
+                    loadUsers(); // 重新加载用户列表
                 } else {
-                    M.toast({html: data.message || '密码修改失败'});
+                    M.toast({html: data.message || '修改失败'});
                 }
             } catch (error) {
-                M.toast({html: '服务器错误'});
+                console.error('修改用户类型错误:', error);
+                M.toast({html: '服务器错误，请稍后再试'});
             }
-        });
+        }
 
+        // 重置用户密码
+        async function resetPassword(userId) {
+            if (!confirm('确认将此用户密码重置为123456？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    M.toast({html: '密码已重置为123456'});
+                } else {
+                    M.toast({html: data.message || '重置失败'});
+                }
+            } catch (error) {
+                console.error('重置密码错误:', error);
+                M.toast({html: '服务器错误，请稍后再试'});
+            }
+        }
                 
         // 删除用户
         async function deleteUser(userId) {
-            if (!confirm('确定要删除此用户吗？')) return;
+            if (!confirm('确定要删除此用户吗？此操作不可恢复！')) return;
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
@@ -236,67 +319,22 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    M.toast({ html: '用户删除成功' });
+                    M.toast({html: '用户已成功删除'});
                     loadUsers(); // 刷新列表
                 } else {
-                    M.toast({ html: data.message || '删除失败' });
+                    M.toast({html: data.message || '删除失败'});
                 }
             } catch (error) {
-                M.toast({ html: '服务器错误' });
+                console.error('删除用户错误:', error);
+                M.toast({html: '服务器错误，请稍后再试'});
             }
-        };
+        }
 
-        // 重置密码
-        async function resetPassword(userId) {
-            const newPassword = prompt('请输入新密码（至少6位）:');
-            if (!newPassword || newPassword.length < 6) {
-                M.toast({ html: '密码无效，请输入至少6位密码' });
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/reset-password`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ newPassword })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    M.toast({ html: '密码重置成功' });
-                } else {
-                    M.toast({ html: data.message || '重置失败' });
-                }
-            } catch (error) {
-                M.toast({ html: '服务器错误' });
-            }
-        };
-
-        // 检查登录状态
-        window.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('authToken');
-            const userType = localStorage.getItem('userType');
-            
-            // 如果没有token或不是管理员，跳转到登录页
-            if (!token || userType !== 'admin') {
-                window.location.href = '页面.html';
-                return;
-            }
-            
-            // 已登录且是管理员，可以留在此页面
-        });
-
+        // 退出登录
         function logout() {
-            // 设置登出标记
             sessionStorage.setItem('isLogout', 'true');
-            // 清除存储
             localStorage.removeItem('authToken');
             localStorage.removeItem('userType');
-            // 跳转到登录页
             window.location.href = '页面.html';
         }
     </script>

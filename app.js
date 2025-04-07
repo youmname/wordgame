@@ -420,14 +420,11 @@ app.delete('/api/admin/users/:userId', verifyAdminToken, (req, res) => {
 // 重置用户密码
 app.post('/api/admin/users/:userId/reset-password', verifyAdminToken, async (req, res) => {
     const userId = req.params.userId;
-    const { newPassword } = req.body;
-    
-    if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ success: false, message: '密码无效（最少6位）' });
-    }
+    // 使用默认密码123456
+    const defaultPassword = '123456';
     
     try {
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
         
         // 修正字段名为 password_hash
         db.run(
@@ -438,13 +435,143 @@ app.post('/api/admin/users/:userId/reset-password', verifyAdminToken, async (req
                     console.error('重置密码失败:', err);
                     return res.status(500).json({ success: false, message: '数据库错误' });
                 }
-                res.json({ success: true, message: '密码重置成功' });
+                res.json({ success: true, message: '密码重置成功为123456' });
             }
         );
     } catch (error) {
         console.error('密码加密失败:', error);
         res.status(500).json({ success: false, message: '密码加密失败' });
     }
+});
+
+// 修改用户类型
+app.post('/api/admin/users/:userId/change-type', verifyAdminToken, (req, res) => {
+    const userId = req.params.userId;
+    const { userType } = req.body;
+    
+    // 验证用户类型
+    if (!['user', 'vip', 'admin'].includes(userType)) {
+        return res.status(400).json({ success: false, message: '无效的用户类型' });
+    }
+    
+    // 防止修改自己的类型
+    if (userId === req.user.userId) {
+        return res.status(400).json({ success: false, message: '不能修改当前登录的管理员账号类型' });
+    }
+    
+    db.run(
+        'UPDATE users SET user_type = ? WHERE id = ?',
+        [userType, userId],
+        function(err) {
+            if (err) {
+                console.error('修改用户类型失败:', err);
+                return res.status(500).json({ success: false, message: '数据库错误' });
+            }
+            
+            // 如果修改为VIP用户，确保所有章节都有访问权限
+            if (userType === 'vip') {
+                // 查询所有章节
+                db.all('SELECT id FROM Categories', [], (err, categories) => {
+                    if (err) {
+                        console.error('获取章节列表失败:', err);
+                        return;
+                    }
+                    
+                    // 为每个章节添加权限
+                    categories.forEach(category => {
+                        // 检查是否已有权限记录
+                        db.get('SELECT * FROM UserPermissions WHERE user_id = ? AND category_id = ?',
+                            [userId, category.id],
+                            (err, permission) => {
+                                if (err) {
+                                    console.error('查询权限失败:', err);
+                                    return;
+                                }
+                                
+                                if (permission) {
+                                    // 更新现有权限
+                                    db.run('UPDATE UserPermissions SET has_access = 1 WHERE user_id = ? AND category_id = ?',
+                                        [userId, category.id],
+                                        err => {
+                                            if (err) console.error('更新权限失败:', err);
+                                        });
+                                } else {
+                                    // 创建新权限
+                                    db.run('INSERT INTO UserPermissions (user_id, category_id, has_access) VALUES (?, ?, 1)',
+                                        [userId, category.id],
+                                        err => {
+                                            if (err) console.error('创建权限失败:', err);
+                                        });
+                                }
+                            });
+                    });
+                });
+            } else if (userType === 'user') {
+                // 对于普通用户，只允许访问前5个章节
+                db.all('SELECT id FROM Categories ORDER BY id LIMIT 5', [], (err, limitedCategories) => {
+                    if (err) {
+                        console.error('获取章节列表失败:', err);
+                        return;
+                    }
+                    
+                    // 先重置所有权限
+                    db.run('UPDATE UserPermissions SET has_access = 0 WHERE user_id = ?', [userId], err => {
+                        if (err) {
+                            console.error('重置权限失败:', err);
+                            return;
+                        }
+                        
+                        // 为前5个章节添加权限
+                        limitedCategories.forEach(category => {
+                            db.get('SELECT * FROM UserPermissions WHERE user_id = ? AND category_id = ?',
+                                [userId, category.id],
+                                (err, permission) => {
+                                    if (err) {
+                                        console.error('查询权限失败:', err);
+                                        return;
+                                    }
+                                    
+                                    if (permission) {
+                                        // 更新现有权限
+                                        db.run('UPDATE UserPermissions SET has_access = 1 WHERE user_id = ? AND category_id = ?',
+                                            [userId, category.id],
+                                            err => {
+                                                if (err) console.error('更新权限失败:', err);
+                                            });
+                                    } else {
+                                        // 创建新权限
+                                        db.run('INSERT INTO UserPermissions (user_id, category_id, has_access) VALUES (?, ?, 1)',
+                                            [userId, category.id],
+                                            err => {
+                                                if (err) console.error('创建权限失败:', err);
+                                            });
+                                    }
+                                });
+                        });
+                    });
+                });
+            }
+            
+            res.json({ success: true, message: '用户类型修改成功' });
+        }
+    );
+});
+
+// 获取用户权限
+app.get('/api/users/:userId/permissions', (req, res) => {
+    const userId = req.params.userId;
+    
+    db.all('SELECT * FROM UserPermissions WHERE user_id = ?', [userId], (err, permissions) => {
+        if (err) {
+            console.error('获取用户权限失败:', err);
+            return res.status(500).json({ success: false, message: '数据库错误' });
+        }
+        
+        res.json({
+            success: true,
+            permissions
+        });
+    });
 });
 
 // 获取用户列表路由（仅管理员可用）
@@ -591,38 +718,7 @@ app.put('/api/admin/users/:userId', verifyAdminToken, async (req, res) => {
     }
 });
 
-// 4. 重置用户密码路由
-app.post('/api/admin/users/:userId/reset-password', verifyAdminToken, async (req, res) => {
-    const userId = req.params.userId;
-    const { newPassword } = req.body;
-    
-    try {
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        
-        const sql = 'UPDATE Users SET password_hash = ? WHERE id = ?';
-        db.run(sql, [hashedPassword, userId], (err) => {
-            if (err) {
-                console.error('重置密码错误:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: '重置密码失败'
-                });
-            }
-            
-            res.json({
-                success: true,
-                message: '密码重置成功'
-            });
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: '服务器错误'
-        });
-    }
-});
-
-// 5. 获取用户详细信息路由
+// 4. 获取用户详细信息路由
 app.get('/api/admin/users/:userId', verifyAdminToken, (req, res) => {
     const userId = req.params.userId;
     

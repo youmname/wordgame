@@ -19,7 +19,11 @@ const WordLevelSystem = {
      */
     init() {
         this.loadLevelData();
+        this.loadProgress(); // 确保加载进度数据
         this.setupLevelScreenButtons();
+        
+        // 默认解锁第一关
+        this.maxUnlockedLevel = Math.max(this.maxUnlockedLevel || 0, 0);
         
         // 重写开始游戏按钮，根据数据源决定行为
         const startBtn = document.getElementById('start-btn');
@@ -540,16 +544,39 @@ const WordLevelSystem = {
      * @returns {boolean} 如果关卡已解锁则返回true，否则返回false
      */
     isLevelUnlocked: function(levelKey) {
-        const userType = localStorage.getItem('userType');
+        // 确保levelKey是数字
         const levelIndex = parseInt(levelKey);
+        const userType = localStorage.getItem('userType');
         
-        // 管理员和VIP可以访问所有关卡
-        if (userType === 'admin' || userType === 'vip') {
+        console.log(`[isLevelUnlocked] 检查关卡 ${levelIndex} 权限，用户类型: ${userType}`);
+        
+        // 第一关始终可用，无论何种用户类型
+        if (levelIndex === 0) {
+            console.log('[isLevelUnlocked] 第一关始终可用');
+            return true;
+        }
+        
+        // 检查用户类型
+        if (userType === 'admin') {
+            console.log('[isLevelUnlocked] 管理员用户，允许访问所有关卡');
+            return true;
+        }
+        
+        // VIP用户可访问所有关卡
+        if (userType === 'vip') {
+            console.log('[isLevelUnlocked] VIP用户，可访问所有关卡');
             return true;
         }
         
         // 普通用户只能访问前5关
-        return levelIndex <= 5 && this.levelData.levels[levelKey]?.unlocked;
+        const maxAllowedForRegular = 4; // 索引从0开始，所以是0-4共5关
+        if (levelIndex <= maxAllowedForRegular) {
+            console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} 在允许范围内`);
+            return true;
+        }
+        
+        console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} 超出权限范围(最多5关)`);
+        return false;
     },
     
     loadProgress: function() {
