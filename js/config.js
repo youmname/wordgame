@@ -53,7 +53,7 @@ quality    质量，品质`,
     
     // API配置 - 更新为您的实际API地址
     API: {
-        BASE_URL: 'http://175.24.181.59:5000/api',
+        BASE_URL: 'https://sanjinai.cn:5000/api',
         CHAPTERS_ENDPOINT: '/chapters',
         WORDS_ENDPOINT: '/chapters/{id}/words'
     },

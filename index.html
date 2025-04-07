@@ -279,7 +279,7 @@ believe    相信"></textarea>
     <script>
         // 检查登录状态
         window.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('adminToken');
+            const token = localStorage.getItem('authToken');
             const userType = localStorage.getItem('userType');
             
             // 如果没有token或不是普通用户，跳转到登录页
@@ -293,10 +293,12 @@ believe    相信"></textarea>
 
         // 添加退出登录功能
         document.getElementById('back-btn').addEventListener('click', () => {
-            localStorage.removeItem('userToken');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('rememberMe');
-            window.location.href = '页面.html';
+            // 隐藏游戏界面
+            document.getElementById('game-screen').style.display = 'none';
+            // 显示开始界面
+            document.getElementById('start-screen').style.display = 'block';
+            // 隐藏关卡选择界面
+            document.getElementById('level-screen').style.display = 'none';
         });
     </script>
 </body>

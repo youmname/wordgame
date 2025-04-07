@@ -467,15 +467,37 @@ const WordDataLoader = {
         WordUtils.LoadingManager.show('正在获取随机单词...');
         
         try {
-            // 1. 获取所有章节列表
+            // 1. 尝试获取所有章节列表
             console.log("开始获取所有章节列表...");
-            const chaptersResponse = await fetch(WordConfig.API.BASE_URL + WordConfig.API.CHAPTERS_ENDPOINT);
+            const chaptersResponse = await fetch(WordConfig.API.BASE_URL + WordConfig.API.CHAPTERS_ENDPOINT, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                timeout: 5000 // 设置5秒超时
+            });
             
             if (!chaptersResponse.ok) {
                 throw new Error(`获取章节失败: ${chaptersResponse.status}`);
             }
             
-            const chapters = await chaptersResponse.json();
+            const chaptersData = await chaptersResponse.json();
+            console.log("API返回的章节数据:", chaptersData);
+            
+            // 确保从API返回的数据格式正确
+            let chapters = [];
+            if (Array.isArray(chaptersData)) {
+                chapters = chaptersData;
+            } else if (chaptersData && chaptersData.chapters && Array.isArray(chaptersData.chapters)) {
+                chapters = chaptersData.chapters;
+            } else if (chaptersData && chaptersData.data && Array.isArray(chaptersData.data)) {
+                chapters = chaptersData.data;
+            } else {
+                console.error("API返回的章节数据格式不正确:", chaptersData);
+                throw new Error("章节数据格式错误");
+            }
+            
             console.log(`成功获取${chapters.length}个章节`);
             
             if (!chapters || chapters.length === 0) {
@@ -496,17 +518,39 @@ const WordDataLoader = {
                 const endpoint = WordConfig.API.WORDS_ENDPOINT.replace('{id}', chapter.id);
                 
                 try {
-                    const wordResponse = await fetch(WordConfig.API.BASE_URL + endpoint);
+                    const wordResponse = await fetch(WordConfig.API.BASE_URL + endpoint, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        timeout: 5000
+                    });
                     
                     if (!wordResponse.ok) {
                         console.warn(`获取章节${chapter.id}单词失败: ${wordResponse.status}`);
                         continue; // 跳过这个章节，尝试下一个
                     }
                     
-                    const chapterWords = await wordResponse.json();
+                    const wordsData = await wordResponse.json();
+                    console.log(`从章节${chapter.id}获取的原始单词数据:`, wordsData);
+                    
+                    // 处理不同的返回格式
+                    let chapterWords = [];
+                    if (Array.isArray(wordsData)) {
+                        chapterWords = wordsData;
+                    } else if (wordsData && wordsData.words && Array.isArray(wordsData.words)) {
+                        chapterWords = wordsData.words;
+                    } else if (wordsData && wordsData.data && Array.isArray(wordsData.data)) {
+                        chapterWords = wordsData.data;
+                    } else {
+                        console.warn(`章节${chapter.id}返回的单词数据格式不正确，跳过`);
+                        continue;
+                    }
+                    
                     console.log(`从章节${chapter.id}获取到${chapterWords.length}个单词`);
                     
-                    if (Array.isArray(chapterWords) && chapterWords.length > 0) {
+                    if (chapterWords.length > 0) {
                         // 随机选择该章节的单词
                         const shuffledChapterWords = WordUtils.shuffle(chapterWords);
                         const selectedWords = shuffledChapterWords.slice(0, 
@@ -514,8 +558,8 @@ const WordDataLoader = {
                         
                         // 将选中的单词转换为游戏需要的格式
                         const formattedWords = selectedWords.map(word => ({
-                            word: word.word || "未知单词",
-                            definition: word.meaning || "未知定义",
+                            word: word.word || word.name || "未知单词",
+                            definition: word.meaning || word.definition || word.chinese || "未知定义",
                             chapterId: chapter.id
                         }));
                         
@@ -531,7 +575,9 @@ const WordDataLoader = {
             console.log(`总共获取到${allWords.length}个单词`);
             
             if (allWords.length < 2) {
-                throw new Error("获取的单词数量不足，无法开始游戏");
+                // 如果API获取失败，使用示例数据
+                console.warn("API获取单词失败，使用示例数据替代");
+                throw new Error("获取的单词数量不足，将使用示例数据");
             }
             
             // 如果获取的单词少于目标数量，给出警告
@@ -543,39 +589,39 @@ const WordDataLoader = {
             return allWords;
         } catch (error) {
             console.error('随机获取单词失败:', error);
-            WordUtils.ErrorManager.showToast(`获取随机单词失败: ${error.message}`);
+            WordUtils.ErrorManager.showToast(`获取词库失败，使用默认词库`);
             WordUtils.LoadingManager.hide();
             
-            // 作为备选，从已加载的Excel数据中随机选择单词
-            console.log("尝试从已加载的Excel数据中随机选择单词作为备选");
+            // 解析示例数据作为备选
+            console.log("使用示例数据作为备选");
+            const samplePairs = WordUtils.parseCustomInput(WordConfig.SAMPLE_DATA);
             
-            // 合并所有章节的数据
-            let allWords = [];
-            
-            Object.entries(this.excelData).forEach(([chapter, chapterWords]) => {
-                // 为每个单词添加章节信息
-                const wordsWithChapter = chapterWords.map(word => ({
-                    ...word,
-                    chapter: chapter
-                }));
-                allWords = allWords.concat(wordsWithChapter);
-            });
-            
-            if (allWords.length === 0) {
-                WordUtils.ErrorManager.showToast('没有找到可用的单词数据');
-                return null;
+            // 确保至少有默认数据可用
+            if (samplePairs && samplePairs.length >= 2) {
+                console.log(`成功加载${samplePairs.length}个示例单词`);
+                return samplePairs;
             }
             
-            // 随机选择单词
-            const shuffled = WordUtils.shuffle([...allWords]);
-            const wordPairs = shuffled.slice(0, Math.min(count, shuffled.length));
-            
-            if (wordPairs.length < 2) {
-                WordUtils.ErrorManager.showToast('获取的单词数量不足，请选择其他数据源');
-                return null;
-            }
-            
-            return wordPairs;
+            // 如果连示例数据都解析失败，构造一些基本单词
+            console.warn("示例数据也无法使用，使用硬编码的基础单词");
+            return [
+                { word: "abandon", definition: "放弃" },
+                { word: "ability", definition: "能力" },
+                { word: "absence", definition: "缺席" },
+                { word: "accept", definition: "接受" },
+                { word: "accident", definition: "事故" },
+                { word: "accomplish", definition: "完成" },
+                { word: "account", definition: "账户" },
+                { word: "accurate", definition: "准确的" },
+                { word: "achieve", definition: "达成" },
+                { word: "acknowledge", definition: "承认" },
+                { word: "acquire", definition: "获得" },
+                { word: "adapt", definition: "适应" },
+                { word: "addition", definition: "加法" },
+                { word: "address", definition: "地址" },
+                { word: "adequate", definition: "足够的" },
+                { word: "adjust", definition: "调整" }
+            ];
         }
     },
 
