@@ -689,17 +689,57 @@ const WordGame = {
 
 // 初始化控制按钮事件
 function initControlButtons() {
-    // 声音按钮事件
-    document.getElementById('sound-btn').addEventListener('click', function() {
-        WordSoundManager.toggleSound();
-        this.textContent = WordSoundManager.isSoundEnabled() ? '🔊' : '🔇';
-    });
-    
-    // 帮助按钮事件
-    document.getElementById('help-btn').addEventListener('click', function() {
-        const helpModal = document.getElementById('help-modal');
-        helpModal.classList.add('active');
-    });
+    console.log("Attempting to initialize control buttons..."); // 调试信息
+
+    const hintBtn = document.getElementById('hint-btn');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const backBtn = document.getElementById('back-btn'); // 这个按钮现在用于退出登录
+
+    // 为每个按钮添加存在性检查
+    if (hintBtn) {
+        hintBtn.addEventListener('click', () => {
+            if (!Game.isRunning || Game.isPaused) return;
+            SoundManager.playSound('click');
+            Game.showHint();
+        });
+        console.log("Hint button initialized.");
+    } else {
+        console.warn("Hint button (hint-btn) not found.");
+    }
+
+    if (shuffleBtn) {
+        shuffleBtn.addEventListener('click', () => {
+            if (!Game.isRunning || Game.isPaused) return;
+            SoundManager.playSound('shuffle');
+            Game.shuffleBoard();
+        });
+        console.log("Shuffle button initialized.");
+    } else {
+        console.warn("Shuffle button (shuffle-btn) not found.");
+    }
+
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+             if (!Game.isRunning || Game.isPaused) return; // 可以在游戏暂停或未开始时也允许重新开始
+            SoundManager.playSound('click');
+            // Game.restart(); // 应该调用 Game 模块的重启方法，或者直接重新加载关卡
+            // 临时的重启方式，后续需要完善
+             console.log("Restart button clicked - restarting game logic needed");
+             alert("重新开始功能待实现"); // 临时提示
+        });
+         console.log("Restart button initialized.");
+    } else {
+        console.warn("Restart button (restart-btn) not found.");
+    }
+
+    // back-btn 现在用于退出登录，其事件监听器应该在 index.html 的 <script> 块中
+    if (backBtn) {
+         console.log("Back button (back-btn) found, its listener should be in index.html.");
+         // 注意：这里的 back-btn 的事件监听器已经在 index.html 中定义为退出登录了，这里不需要重复添加
+    } else {
+         console.warn("Back button (back-btn) not found.");
+    }
 }
 
 // 启动游戏的函数

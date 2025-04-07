@@ -60,6 +60,30 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="form-container">
+                <h3>修改密码</h3>
+                <form id="changePasswordForm">
+                    <div class="input-field">
+                        <input type="password" id="oldPassword" required>
+                        <label for="oldPassword">原密码</label>
+                    </div>
+                    
+                    <div class="input-field">
+                        <input type="password" id="newPassword" required>
+                        <label for="newPassword">新密码</label>
+                    </div>
+                    
+                    <div class="input-field">
+                        <input type="password" id="confirmPassword" required>
+                        <label for="confirmPassword">确认新密码</label>
+                    </div>
+                    
+                    <button class="btn waves-effect waves-light" type="submit">
+                        修改密码
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -71,6 +95,9 @@
             M.FormSelect.init(elems);
             loadUsers(); // 加载用户列表
         });
+
+        // 修改所有fetch请求的URL为https
+        const API_BASE_URL = 'https://175.24.181.59:5000';  // 注意使用https和端口号
 
         // 创建用户
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {
@@ -84,12 +111,13 @@
             };
 
             try {
-                const response = await fetch('http://175.24.181.59/api/admin/create-user', {
+                const response = await fetch(`${API_BASE_URL}/api/admin/create-user`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
                     },
+                    credentials: 'include',
                     body: JSON.stringify(userData)
                 });
 
@@ -110,10 +138,11 @@
         // 加载用户列表
         async function loadUsers() {
             try {
-                const response = await fetch('http://175.24.181.59/api/admin/users', {
+                const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-                    }
+                    },
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
@@ -140,6 +169,69 @@
             } catch (error) {
                 console.error('加载用户列表失败:', error);
             }
+        }
+
+        // 添加修改密码的处理代码
+        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                M.toast({html: '两次输入的新密码不一致'});
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://175.24.181.59/api/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify({
+                        oldPassword,
+                        newPassword
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    M.toast({html: '密码修改成功！'});
+                    document.getElementById('changePasswordForm').reset();
+                } else {
+                    M.toast({html: data.message || '密码修改失败'});
+                }
+            } catch (error) {
+                M.toast({html: '服务器错误'});
+            }
+        });
+
+        // 检查登录状态
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('adminToken');
+            const userType = localStorage.getItem('userType');
+            
+            // 如果没有token或不是管理员，跳转到登录页
+            if (!token || userType !== 'admin') {
+                window.location.href = '页面.html';
+                return;
+            }
+            
+            // 已登录且是管理员，可以留在此页面
+        });
+
+        function logout() {
+            // 设置登出标记
+            sessionStorage.setItem('isLogout', 'true');
+            // 清除存储
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('userType');
+            // 跳转到登录页
+            window.location.href = '页面.html';
         }
     </script>
 </body>

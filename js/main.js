@@ -5,6 +5,10 @@
 (function() {
     // 在DOM加载完成后初始化
     document.addEventListener('DOMContentLoaded', () => {
+        console.log("Main.js: DOM fully loaded and parsed"); // 调试信息
+
+        // 检查是否需要登录验证，但这应该在 index.html 的 <script> 块中处理了
+
         // 初始化各个模块
         WordSoundManager.init();
         WordDataLoader.init();
@@ -96,5 +100,7 @@
                 }, 100);
             });
         });
+
+        console.log("Main.js: Initial setup finished.");
     });
 })();

@@ -178,172 +178,172 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // 获取输入值
-            const account = document.getElementById('email').value.trim(); // 改用更通用的变量名
+        // --- 登录表单提交处理函数 ---
+        async function handleLoginSubmit(event) {
+            event.preventDefault(); // 阻止表单默认提交行为
+            console.log('开始登录流程...'); // 调试信息
+
+            const loginButton = document.querySelector('#loginForm button[type="submit"]');
+            const errorMessageDiv = document.getElementById('error-message');
+            errorMessageDiv.style.display = 'none'; // 隐藏旧错误
+
+            // 禁用按钮，显示加载状态
+            loginButton.disabled = true;
+            loginButton.textContent = '登录中...';
+
+            const account = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
-            const rememberMe = document.getElementById('rememberMe').checked;
-            
-            // 重置错误提示
-            document.getElementById('email-error').textContent = '';
-            document.getElementById('password-error').textContent = '';
-            document.getElementById('error-message').style.display = 'none';
-            
-            // 验证账号
-            if (!account) {
-                document.getElementById('email-error').textContent = '请输入账号';
-                return;
-            }
-            
-            // 验证账号格式（邮箱或手机号）
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            const phoneRegex = /^1[3456789]\d{9}$/; // 中国大陆手机号格式
-            
-            if (account.includes('@')) {
-                // 邮箱格式验证
-                if (!emailRegex.test(account)) {
-                    document.getElementById('email-error').textContent = '请输入有效的邮箱地址';
-                    return;
-                }
-            } else {
-                // 手机号格式验证
-                if (!phoneRegex.test(account)) {
-                    document.getElementById('email-error').textContent = '请输入有效的手机号码';
-                    return;
-                }
-            }
-            
-            // 验证激活码
-            if (!password) {
-                document.getElementById('password-error').textContent = '请输入激活码';
-                return;
-            }
-            if (password.length < 6) {
-                document.getElementById('password-error').textContent = '激活码长度不能小于6位';
-                return;
-            }
-            
-            // 验证通过后的处理
-            M.toast({ html: '登录中...' });
-            await handleLogin(account, password);
-        });
 
-        // 修改实时验证逻辑
-        document.getElementById('email').addEventListener('input', function() {
-            const account = this.value.trim();
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            const phoneRegex = /^1[3456789]\d{9}$/;
-            
-            if (!account) {
-                document.getElementById('email-error').textContent = '';
-                return;
-            }
-            
-            if (account.includes('@')) {
-                // 邮箱格式验证
-                if (!emailRegex.test(account)) {
-                    document.getElementById('email-error').textContent = '请输入有效的邮箱地址';
-                } else {
-                    document.getElementById('email-error').textContent = '';
-                }
-            } else {
-                // 手机号格式验证
-                if (!phoneRegex.test(account)) {
-                    document.getElementById('email-error').textContent = '请输入有效的手机号码';
-                } else {
-                    document.getElementById('email-error').textContent = '';
-                }
-            }
-        });
-
-        document.getElementById('password').addEventListener('input', function() {
-            const password = this.value.trim();
-            if (password && password.length < 6) {
-                document.getElementById('password-error').textContent = '激活码长度不能小于6位';
-            } else {
-                document.getElementById('password-error').textContent = '';
-            }
-        });
-
-        // 添加登录按钮状态控制
-        const loginButton = document.querySelector('.btn');
-
-        function setLoginButtonState(isLoading) {
-            loginButton.disabled = isLoading;
-            loginButton.textContent = isLoading ? '登录中...' : '登入';
-        }
-
-        // 保存账号
-        function saveAccount(account) {
-            if (document.getElementById('rememberMe').checked) {
-                localStorage.setItem('savedAccount', account);
-            } else {
-                localStorage.removeItem('savedAccount');
-            }
-        }
-
-        // 页面加载时自动填充保存的账号
-        window.addEventListener('load', () => {
-            const savedAccount = localStorage.getItem('savedAccount');
-            if (savedAccount) {
-                document.getElementById('email').value = savedAccount;
-                document.getElementById('rememberMe').checked = true;
-            }
-        });
-
-        async function handleLogin(account, password) {
             try {
-                setLoginButtonState(true);
-                
-                // 发送登录请求到你的服务器
-                const response = await fetch('http://175.24.181.59/api/login', {
+                const response = await fetch('https://sanjinai.cn:5000/api/login', { // 确保使用域名
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        account: account,  // 邮箱或手机号
-                        password: password // 激活码
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // 确保包含credentials
+                    body: JSON.stringify({ account, password })
                 });
 
                 const data = await response.json();
-                
-                if (data.success) {
-                    // 保存登录token
-                    localStorage.setItem('userToken', data.token);
-                    // 保存账号（如果选择记住）
-                    saveAccount(account);
-                    
-                    M.toast({ html: '登录成功！正在跳转...' });
-                    
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1000);
+                console.log('登录响应:', data); // 调试信息
+
+                if (data.success && data.token) {
+                    // 登录成功
+                    console.log('登录成功，保存token和用户信息');
+                    localStorage.setItem('authToken', data.token); // 使用统一的 'authToken'
+                    localStorage.setItem('userType', data.user.userType);
+
+                    // 如果勾选了"记住账号"
+                    if (document.getElementById('rememberMe').checked) {
+                        localStorage.setItem('savedAccount', account);
+                    } else {
+                        localStorage.removeItem('savedAccount');
+                    }
+
+                    // 清除可能存在的登出标记
+                    sessionStorage.removeItem('isLogout');
+                    // 清除可能存在的重定向标记
+                    sessionStorage.removeItem('loginRedirecting');
+
+                    // 使用 replace 跳转，避免浏览器历史记录问题
+                    const targetUrl = data.user.userType === 'admin' ? 'admin.html' : 'index.html';
+                    console.log('准备跳转到:', targetUrl);
+                    window.location.replace(targetUrl);
+
                 } else {
-                    // 显示服务器返回的错误信息
-                    document.getElementById('error-message').textContent = data.message || '登录失败';
-                    document.getElementById('error-message').style.display = 'block';
+                    // 登录失败
+                    console.error('登录失败:', data.message);
+                    errorMessageDiv.textContent = data.message || '登录失败，请检查账号或密码';
+                    errorMessageDiv.style.display = 'block';
+                    loginButton.disabled = false; // 恢复按钮
+                    loginButton.textContent = '登入';
                 }
-                
+
             } catch (error) {
-                console.error('登录请求失败:', error);
-                document.getElementById('error-message').textContent = '网络错误，请稍后重试';
-                document.getElementById('error-message').style.display = 'block';
-            } finally {
-                setLoginButtonState(false);
+                // 网络或其他错误
+                console.error('登录请求错误:', error);
+                errorMessageDiv.textContent = '网络错误或服务器无响应，请稍后重试';
+                errorMessageDiv.style.display = 'block';
+                loginButton.disabled = false; // 恢复按钮
+                loginButton.textContent = '登入';
             }
         }
 
-        // 添加重置按钮（可选）
-        function resetForm() {
-            document.getElementById('loginForm').reset();
-            document.getElementById('email-error').textContent = '';
-            document.getElementById('password-error').textContent = '';
-            document.getElementById('error-message').style.display = 'none';
+        // --- 页面加载完成后的初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('页面.html DOMContentLoaded - 开始设置'); // 调试信息
+
+            // 1. 处理登出情况 (仅清除数据，不跳转)
+            if (sessionStorage.getItem('isLogout') === 'true') {
+                console.log('检测到登出标记，清除本地存储');
+                localStorage.clear(); // 清除所有localStorage
+                sessionStorage.removeItem('isLogout'); // 移除标记
+            }
+
+            // 2. 绑定登录表单提交事件
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', handleLoginSubmit);
+                console.log('登录表单事件监听已绑定');
+            } else {
+                console.error('错误：未能找到ID为 loginForm 的表单！');
+            }
+
+            // 3. 填充记住的账号 (如果存在)
+            const savedAccount = localStorage.getItem('savedAccount');
+            if (savedAccount) {
+                const emailInput = document.getElementById('email');
+                const rememberMeCheckbox = document.getElementById('rememberMe');
+                if (emailInput) emailInput.value = savedAccount;
+                if (rememberMeCheckbox) rememberMeCheckbox.checked = true;
+                console.log('已填充记住的账号');
+            }
+
+            // 4. 设置输入验证 (可选，保持原来的逻辑)
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            if(emailInput) {
+                emailInput.addEventListener('input', function() {
+                    const account = this.value.trim();
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    const phoneRegex = /^1[3456789]\d{9}$/;
+                    
+                    if (!account) {
+                        document.getElementById('email-error').textContent = '';
+                        return;
+                    }
+                    
+                    if (account.includes('@')) {
+                        // 邮箱格式验证
+                        if (!emailRegex.test(account)) {
+                            document.getElementById('email-error').textContent = '请输入有效的邮箱地址';
+                        } else {
+                            document.getElementById('email-error').textContent = '';
+                        }
+                    } else {
+                        // 手机号格式验证
+                        if (!phoneRegex.test(account)) {
+                            document.getElementById('email-error').textContent = '请输入有效的手机号码';
+                        } else {
+                            document.getElementById('email-error').textContent = '';
+                        }
+                    }
+                });
+            }
+             if(passwordInput) {
+                passwordInput.addEventListener('input', function() {
+                    document.getElementById('password-error').textContent = '';
+                });
+            }
+
+            console.log('页面.html DOMContentLoaded - 设置完成'); // 调试信息
+        });
+
+        // --- 其他辅助函数 (如果需要，例如 logout) ---
+        function logout() {
+            console.log('执行登出操作');
+            sessionStorage.setItem('isLogout', 'true'); // 设置登出标记
+            localStorage.clear(); // 清除所有本地存储
+            window.location.href = '页面.html'; // 跳转到登录页
         }
+        // 你需要确保有一个按钮或其他元素调用这个logout函数，例如：
+        // <button onclick="logout()">退出登录</button> (这个按钮应该在index.html或admin.html中)
     </script>
+    <!-- 确保游戏初始化在登录验证之后 -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data-loader.js"></script>
+    <script>
+    // 游戏初始化函数
+    function initGame() {
+        // 确保DOM元素已经加载
+        const gameBoard = document.getElementById('game-board');
+        if (!gameBoard) {
+            console.error('游戏面板未找到!');
+            return;
+        }
+        
+        // 初始化游戏逻辑...
+    }
+    </script>
+    <script src="js/game.js"></script>
 </body>
 </html>
