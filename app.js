@@ -93,6 +93,48 @@ const initializeDatabase = () => {
         // 检查是否存在管理员账号
         checkAndCreateAdmin();
     });
+    
+    // 创建UserPermissions表（如果不存在）
+    const createPermissionsTable = `
+        CREATE TABLE IF NOT EXISTS UserPermissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            category_id INTEGER NOT NULL,
+            has_access INTEGER DEFAULT 0 NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, category_id)
+        )
+    `;
+    
+    db.run(createPermissionsTable, (err) => {
+        if (err) {
+            console.error('创建UserPermissions表失败:', err);
+            return;
+        }
+        console.log('UserPermissions表检查/创建成功');
+    });
+    
+    // 创建UserProgress表（如果不存在）
+    const createProgressTable = `
+        CREATE TABLE IF NOT EXISTS UserProgress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            platform TEXT NOT NULL,
+            module_type TEXT NOT NULL,
+            related_id TEXT NOT NULL,
+            progress TEXT,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, module_type, related_id)
+        )
+    `;
+    
+    db.run(createProgressTable, (err) => {
+        if (err) {
+            console.error('创建UserProgress表失败:', err);
+            return;
+        }
+        console.log('UserProgress表检查/创建成功');
+    });
 };
 
 // 检查并创建管理员账号
@@ -109,7 +151,87 @@ const checkAndCreateAdmin = () => {
         } else {
             console.log('管理员账号已存在');
         }
+        
+        // 检查游客账号是否存在
+        checkAndCreateGuestAccount();
     });
+};
+
+// 检查并创建游客账号
+const checkAndCreateGuestAccount = () => {
+    db.get('SELECT * FROM Users WHERE username = "guest"', [], (err, row) => {
+        if (err) {
+            console.error('检查游客账号失败:', err);
+            return;
+        }
+        
+        if (!row) {
+            // 如果不存在游客账号，则创建
+            createGuestAccount();
+        } else {
+            console.log('游客账号已存在');
+        }
+    });
+};
+
+// 创建游客账号
+const createGuestAccount = async () => {
+    try {
+        const guestPassword = 'guest123';  // 游客账号密码
+        const hashedPassword = await bcrypt.hash(guestPassword, 10);
+        
+        const sql = `
+            INSERT INTO Users (
+                username,
+                password_hash,
+                user_type,
+                email,
+                created_at
+            ) VALUES (
+                'guest',
+                ?,
+                'user',
+                'guest@example.com',
+                CURRENT_TIMESTAMP
+            )
+        `;
+        
+        db.run(sql, [hashedPassword], (err) => {
+            if (err) {
+                console.error('创建游客账号失败:', err);
+            } else {
+                console.log('游客账号创建成功，账号: guest, 密码: guest123');
+                
+                // 为游客账号添加前5个章节的权限
+                db.all('SELECT id FROM Chapters ORDER BY id LIMIT 5', [], (err, chapters) => {
+                    if (err) {
+                        console.error('获取章节列表失败:', err);
+                        return;
+                    }
+                    
+                    // 获取游客账号ID
+                    db.get('SELECT id FROM Users WHERE username = "guest"', [], (err, user) => {
+                        if (err || !user) {
+                            console.error('获取游客账号ID失败:', err);
+                            return;
+                        }
+                        
+                        // 为每个章节添加权限
+                        chapters.forEach(chapter => {
+                            db.run('INSERT INTO UserPermissions (user_id, category_id, has_access, created_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP)',
+                                [user.id, chapter.id],
+                                err => {
+                                    if (err) console.error(`为游客账号添加章节${chapter.id}权限失败:`, err);
+                                    else console.log(`为游客账号添加章节${chapter.id}权限成功`);
+                                });
+                        });
+                    });
+                });
+            }
+        });
+    } catch (error) {
+        console.error('创建游客账号时发生错误:', error);
+    }
 };
 
 // 创建初始管理员账号
@@ -143,6 +265,30 @@ const initializeAdmin = async () => {
         });
     } catch (error) {
         console.error('创建管理员账号时发生错误:', error);
+    }
+};
+
+// 验证Token的中间件
+const authenticateToken = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: '未提供认证token'
+        });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('[authenticateToken] 验证通过，用户ID:', decoded.userId);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        console.error('[authenticateToken] 验证失败:', error.message);
+        res.status(401).json({
+            success: false,
+            message: 'token无效或已过期'
+        });
     }
 };
 
@@ -295,7 +441,7 @@ app.post('/api/login', (req, res) => {
 });
 
 // 修改密码
-app.post('/api/change-password', verifyAdminToken, async (req, res) => {
+app.post('/api/change-password', authenticateToken, async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     
     if (!oldPassword || !newPassword) {
@@ -750,6 +896,260 @@ app.get('/api/admin/users/:userId', verifyAdminToken, (req, res) => {
         });
     });
 });
+
+// 获取用户进度
+app.get('/api/user/progress', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: '未登录或授权已过期'
+        });
+    }
+    
+    let userId;
+    try {
+        // 验证token
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.userId;
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: 'token无效或已过期'
+        });
+    }
+    
+    console.log(`[API] 获取用户ID=${userId}的进度数据`);
+    
+    // 查询该用户的关卡权限
+    db.all('SELECT * FROM UserPermissions WHERE user_id = ?', [userId], (err, permissions) => {
+        if (err) {
+            console.error('获取用户权限失败:', err);
+            return res.status(500).json({
+                success: false,
+                message: '获取权限数据失败'
+            });
+        }
+        
+        // 查询该用户的游戏进度
+        db.all('SELECT * FROM UserProgress WHERE user_id = ? AND module_type = "chapter"', 
+            [userId], (err, progress) => {
+                if (err) {
+                    console.error('获取用户进度失败:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: '获取进度数据失败'
+                    });
+                }
+                
+                console.log(`[API] 找到${permissions.length}个权限记录和${progress.length}个进度记录`);
+                
+                // 将权限和进度数据一起返回
+                res.json({
+                    success: true,
+                    permissions: permissions || [],
+                    progress: progress || []
+                });
+            });
+    });
+});
+
+// 更新用户进度
+app.post('/api/user/progress', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: '未登录或授权已过期'
+        });
+    }
+    
+    let userId, userType;
+    try {
+        // 验证token
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.userId;
+        userType = decoded.userType;
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: 'token无效或已过期'
+        });
+    }
+    
+    const { chapterId, completed, stars, highScore, bestTime } = req.body;
+    
+    if (!chapterId) {
+        return res.status(400).json({
+            success: false,
+            message: '缺少必要的章节ID'
+        });
+    }
+    
+    console.log(`[API] 更新用户ID=${userId}的章节ID=${chapterId}进度`);
+    
+    // 准备进度数据
+    const progressData = JSON.stringify({
+        completed: completed || false,
+        stars: stars || 0,
+        highScore: highScore || 0,
+        bestTime: bestTime || 0
+    });
+    
+    // 检查是否已有进度记录
+    db.get('SELECT * FROM UserProgress WHERE user_id = ? AND module_type = "chapter" AND related_id = ?',
+        [userId, chapterId],
+        (err, existingProgress) => {
+            if (err) {
+                console.error('查询进度记录失败:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: '服务器错误'
+                });
+            }
+            
+            let progressId = null;
+            
+            if (existingProgress) {
+                // 更新现有记录
+                progressId = existingProgress.id;
+                db.run('UPDATE UserProgress SET progress = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?',
+                    [progressData, progressId],
+                    (err) => {
+                        if (err) {
+                            console.error('更新进度记录失败:', err);
+                            return res.status(500).json({
+                                success: false,
+                                message: '更新进度失败'
+                            });
+                        }
+                        
+                        console.log(`[API] 更新进度记录ID=${progressId}`);
+                        
+                        // 如果完成了当前关卡，解锁下一关
+                        if (completed) {
+                            unlockNextChapter(userId, chapterId, userType, res);
+                        } else {
+                            res.json({
+                                success: true,
+                                message: '进度已更新'
+                            });
+                        }
+                    }
+                );
+            } else {
+                // 创建新记录
+                db.run('INSERT INTO UserProgress (user_id, platform, module_type, related_id, progress, last_updated) VALUES (?, "web", "chapter", ?, ?, CURRENT_TIMESTAMP)',
+                    [userId, chapterId, progressData],
+                    function(err) {
+                        if (err) {
+                            console.error('创建进度记录失败:', err);
+                            return res.status(500).json({
+                                success: false,
+                                message: '保存进度失败'
+                            });
+                        }
+                        
+                        progressId = this.lastID;
+                        console.log(`[API] 创建新进度记录ID=${progressId}`);
+                        
+                        // 如果完成了当前关卡，解锁下一关
+                        if (completed) {
+                            unlockNextChapter(userId, chapterId, userType, res);
+                        } else {
+                            res.json({
+                                success: true,
+                                message: '进度已保存'
+                            });
+                        }
+                    }
+                );
+            }
+        }
+    );
+});
+
+// 辅助函数：解锁下一关
+function unlockNextChapter(userId, currentChapterId, userType, res) {
+    // 查找下一章节ID
+    const nextChapterId = parseInt(currentChapterId) + 1;
+    
+    // 普通用户最多只能解锁到第5关
+    if (userType === 'user' && nextChapterId > 5) {
+        console.log(`[API] 普通用户无法解锁第5关以后的章节`);
+        return res.json({
+            success: true,
+            message: '进度已更新，普通用户已达到最大关卡'
+        });
+    }
+    
+    // 检查是否已有权限记录
+    db.get('SELECT * FROM UserPermissions WHERE user_id = ? AND category_id = ?',
+        [userId, nextChapterId],
+        (err, existingPermission) => {
+            if (err) {
+                console.error('查询权限记录失败:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: '服务器错误'
+                });
+            }
+            
+            if (existingPermission) {
+                // 如果已存在但未解锁，则更新为已解锁
+                if (existingPermission.has_access === 0) {
+                    db.run('UPDATE UserPermissions SET has_access = 1 WHERE id = ?',
+                        [existingPermission.id],
+                        (err) => {
+                            if (err) {
+                                console.error('更新权限失败:', err);
+                                return res.status(500).json({
+                                    success: false,
+                                    message: '解锁下一关失败'
+                                });
+                            }
+                            
+                            console.log(`[API] 更新权限记录为已解锁，章节ID=${nextChapterId}`);
+                            res.json({
+                                success: true,
+                                message: '进度已更新，已解锁下一关',
+                                nextChapter: nextChapterId
+                            });
+                        }
+                    );
+                } else {
+                    console.log(`[API] 章节ID=${nextChapterId}已经解锁，无需更新`);
+                    res.json({
+                        success: true,
+                        message: '进度已更新',
+                        nextChapter: nextChapterId
+                    });
+                }
+            } else {
+                // 创建新权限
+                db.run('INSERT INTO UserPermissions (user_id, category_id, has_access, created_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP)',
+                    [userId, nextChapterId],
+                    function(err) {
+                        if (err) {
+                            console.error('创建权限记录失败:', err);
+                            return res.status(500).json({
+                                success: false,
+                                message: '解锁下一关失败'
+                            });
+                        }
+                        
+                        console.log(`[API] 创建新权限记录并解锁，章节ID=${nextChapterId}`);
+                        res.json({
+                            success: true,
+                            message: '进度已更新，已解锁下一关',
+                            nextChapter: nextChapterId
+                        });
+                    }
+                );
+            }
+        }
+    );
+}
 
 // HTTPS服务器配置
 const options = {

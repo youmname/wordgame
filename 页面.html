@@ -173,6 +173,10 @@
                 </div>
                 <button class="btn" type="submit">登入</button>
             </form>
+            <div style="margin-top: 15px; text-align: center;">
+                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">没有账号？立即体验</p>
+                <button id="try-now-btn" class="btn" style="background-color: #4CAF50;">体验一下</button>
+            </div>
         </div>
     </div>
 
@@ -266,8 +270,15 @@
             } else {
                 console.error('错误：未能找到ID为 loginForm 的表单！');
             }
+            
+            // 3. 绑定体验一下按钮事件
+            const tryNowBtn = document.getElementById('try-now-btn');
+            if (tryNowBtn) {
+                tryNowBtn.addEventListener('click', handleTryNow);
+                console.log('体验一下按钮事件监听已绑定');
+            }
 
-            // 3. 填充记住的账号 (如果存在)
+            // 4. 填充记住的账号 (如果存在)
             const savedAccount = localStorage.getItem('savedAccount');
             if (savedAccount) {
                 const emailInput = document.getElementById('email');
@@ -277,7 +288,7 @@
                 console.log('已填充记住的账号');
             }
 
-            // 4. 设置输入验证 (可选，保持原来的逻辑)
+            // 5. 设置输入验证 (可选，保持原来的逻辑)
             const emailInput = document.getElementById('email');
             const passwordInput = document.getElementById('password');
             if(emailInput) {
@@ -326,6 +337,67 @@
         }
         // 你需要确保有一个按钮或其他元素调用这个logout函数，例如：
         // <button onclick="logout()">退出登录</button> (这个按钮应该在index.html或admin.html中)
+
+        // --- 体验一下处理函数 ---
+        async function handleTryNow() {
+            console.log('开始体验模式流程...'); // 调试信息
+            
+            const tryNowBtn = document.getElementById('try-now-btn');
+            const errorMessageDiv = document.getElementById('error-message');
+            errorMessageDiv.style.display = 'none'; // 隐藏旧错误
+            
+            // 禁用按钮，显示加载状态
+            tryNowBtn.disabled = true;
+            tryNowBtn.textContent = '准备中...';
+            
+            try {
+                // 发送登录请求，使用游客账号
+                const response = await fetch('https://sanjinai.cn:5000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        account: 'guest',
+                        password: 'guest123'
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('体验模式响应:', data); // 调试信息
+                
+                if (data.success && data.token) {
+                    // 登录成功
+                    console.log('体验模式登录成功，保存token和用户信息');
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('userType', 'user'); // 强制设置为普通用户类型
+                    localStorage.setItem('userId', data.user.id);
+                    localStorage.setItem('username', 'guest');
+                    
+                    // 清除可能存在的登出标记
+                    sessionStorage.removeItem('isLogout');
+                    // 清除可能存在的重定向标记
+                    sessionStorage.removeItem('loginRedirecting');
+                    
+                    // 跳转到游戏页面
+                    console.log('准备跳转到游戏页面');
+                    window.location.replace('index.html');
+                } else {
+                    // 登录失败
+                    console.error('体验模式登录失败:', data.message);
+                    errorMessageDiv.textContent = '体验模式暂时不可用，请稍后再试';
+                    errorMessageDiv.style.display = 'block';
+                    tryNowBtn.disabled = false;
+                    tryNowBtn.textContent = '体验一下';
+                }
+            } catch (error) {
+                // 网络或其他错误
+                console.error('体验模式请求错误:', error);
+                errorMessageDiv.textContent = '网络错误或服务器无响应，请稍后重试';
+                errorMessageDiv.style.display = 'block';
+                tryNowBtn.disabled = false;
+                tryNowBtn.textContent = '体验一下';
+            }
+        }
     </script>
     <!-- 确保游戏初始化在登录验证之后 -->
     <script src="js/config.js"></script>
