@@ -112,7 +112,7 @@ const WordGame = {
             }
             
             // 获取选中的数据源
-            const dataSource = document.querySelector('input[name="data-source"]:checked')?.value;
+            const dataSource = document.getElementById('selected-source').value;
             console.log("选中的数据源:", dataSource);
             
             // 准备单词数据
@@ -123,168 +123,62 @@ const WordGame = {
             
             let wordPairs = null;
             
-            // 1. 按章节获取 - 通过API从数据库获取特定章节的单词
-            if (dataSource === 'chapter') {
-                const chapterSelect = document.getElementById('chapter-select');
-                const selectedChapter = chapterSelect.value;
-                console.log("选中的章节:", selectedChapter);
-                
-                wordPairs = await WordDataLoader.loadChapterWords(selectedChapter);
-                
-                if (!wordPairs) {
-                    console.error("未能获取到该章节的单词数据");
-                } else {
-                    console.log(`成功获取到${wordPairs.length}对单词数据`);
-                }
-            } 
-            // // 2. 上传Excel文件 - 使用用户上传的Excel文件中的数据
-            // else if (dataSource === 'upload') {
-            //     // 检查是否有已加载的Excel数据
-            //     const availableChapters = Object.keys(WordDataLoader.excelData);
-                
-            //     if (availableChapters.length === 0) {
-            //         console.error("没有上传Excel文件或Excel数据为空");
-            //         WordUtils.ErrorManager.showToast("请先上传Excel文件");
-            //         return false;
-            //     }
-                
-            //     // 使用第一个章节的数据（或者用户选择的章节）
-            //     const selectedChapter = document.getElementById('chapter-select').value || availableChapters[0];
-                
-            //     wordPairs = WordDataLoader.getChapterWords(selectedChapter);
-                
-            //     if (!wordPairs) {
-            //         console.error("未能从Excel中获取单词数据");
-            //     } else {
-            //         console.log(`成功从Excel获取到${wordPairs.length}对单词数据`);
-            //     }
-
-            //     //不要打乱顺序或者限制数量，直接使用原始数据
-            //     this.wordPairs = wordPairs;
-            // } 
-
-            // 2. 上传Excel文件 - 使用用户上传的Excel文件中的数据
-            else if (dataSource === 'upload') {
-                // 检查是否有已加载的Excel数据
-                const availableChapters = Object.keys(WordDataLoader.excelData);
-                
-                if (availableChapters.length === 0) {
-                    console.error("没有上传Excel文件或Excel数据为空");
-                    WordUtils.ErrorManager.showToast("请先上传Excel文件");
-                    return false;
-                }
-                
-                // 使用第一个章节的数据（或者用户选择的章节）
-                const selectedChapter = document.getElementById('chapter-select').value || availableChapters[0];
-                
-                wordPairs = WordDataLoader.getChapterWords(selectedChapter);
-                
-                if (!wordPairs) {
-                    console.error("未能从Excel中获取单词数据");
-                    return false;
-                } else {
-                    console.log(`成功从Excel获取到${wordPairs.length}对单词数据`);
-                }
-            
-                // 直接使用原始数据
-                this.wordPairs = wordPairs;
-                
-                // 设置游戏参数
-                const difficulty = document.getElementById('difficulty').value || 'normal';
-                
-                // 根据难度设置时间
-                this.setDifficulty(difficulty);
-                
-                // 切换到游戏界面
-                WordUI.switchScreen('game-screen');
-                
-                // 初始化游戏
-                this.initGameState(boardSize);
-                
-                return true; // 直接返回，跳过后面的通用处理逻辑
-            }
-            // 3. 随机获取 - 从数据库中随机获取一定数量的不重复单词
-            else if (dataSource === 'random') {
-                const count = 32;
-                console.log(`尝试随机获取${count}对单词`);
-                
-                try {
-                    wordPairs = await WordDataLoader.getRandomWords(count);
-                    
-                    if (wordPairs) {
-                        console.log(`成功随机获取到${wordPairs.length}对单词`);
-                    }
-                } catch (error) {
-                    console.error("随机获取单词失败:", error);
-                    WordUtils.ErrorManager.showToast(`随机获取单词失败: ${error.message}`);
-                }
-            }
-
-            // 4. 自定义输入 - 使用用户按特定格式输入的单词数据
-            else if (dataSource === 'custom') {
+            // 使用当前选择的级别
+            if (dataSource === 'chapter' && WordLevelSystem.levelData.currentLevel != null) {
+                // 如果是按级别获取且已选择级别，使用该级别的数据
+                const chapter = WordLevelSystem.levelData.currentLevel;
+                console.log("加载指定关卡数据:", chapter);
+                return this.startLevel(chapter);
+            } else if (dataSource === 'chapter') {
+                // 如果没有特定级别，使用第一级数据
+                console.log("加载默认级别数据");
+                // 从默认数据库中获取单词（可以按需修改）
+                wordPairs = await WordDataLoader.getRandomWords(maxPairs);
+            } else if (dataSource === 'random') {
+                // 从随机单词库获取单词
+                wordPairs = await WordDataLoader.getRandomWords(maxPairs);
+            } else if (dataSource === 'upload') {
+                // 从上传的Excel文件获取单词
+                wordPairs = await WordDataLoader.getExcelWords(maxPairs);
+            } else if (dataSource === 'custom') {
+                // 从自定义输入框获取单词
                 const customInput = document.getElementById('word-input').value;
-                
-                if (!customInput.trim()) {
-                    console.error("自定义输入为空");
-                    WordUtils.ErrorManager.showToast("请输入单词数据");
-                    return false;
-                }
-                
-                wordPairs = WordUtils.parseCustomInput(customInput);
-                
-                if (!wordPairs || wordPairs.length < 2) {
-                    console.error("解析自定义输入失败或数量不足");
-                    WordUtils.ErrorManager.showToast("请至少输入两组有效的单词和定义");
-                    return false;
-                }
-                
-                console.log(`成功解析自定义输入，共${wordPairs.length}对单词`);
+                wordPairs = WordDataLoader.parseCustomInput(customInput, maxPairs);
+            } else {
+                // 默认情况下使用随机单词
+                console.log("没有明确的数据源，使用随机单词");
+                wordPairs = await WordDataLoader.getRandomWords(maxPairs);
             }
             
-            // 如果没有获取到单词数据，使用示例数据作为备用
-            if (!wordPairs || wordPairs.length < 2) {
-                console.log("使用示例数据作为备用");
-                wordPairs = WordUtils.parseCustomInput(WordConfig.SAMPLE_DATA);
-                
-                if (!wordPairs || wordPairs.length < 2) {
-                    WordUtils.ErrorManager.showToast("无法加载单词数据，请稍后再试");
-                    return false;
-                }
-                
-                console.log(`使用示例数据，共${wordPairs.length}对单词`);
+            // 检查是否成功获取了单词对
+            if (!wordPairs || wordPairs.length === 0) {
+                WordUtils.ErrorManager.showToast('无法获取单词数据，请选择其他数据源或重试');
+                return false;
             }
             
-            // 打乱顺序并限制数量
-            wordPairs = WordUtils.shuffle(wordPairs);
-            
-            if (wordPairs.length > maxPairs) {
-                wordPairs = wordPairs.slice(0, maxPairs);
-                console.log(`单词对数量超过最大限制，截取前${maxPairs}对`);
-            }
-            
+            // 保存单词对到游戏状态
             this.wordPairs = wordPairs;
-            console.log("最终使用的单词对数量:", this.wordPairs.length);
             
-            // 设置游戏参数
+            // 获取难度设置
             const difficulty = document.getElementById('difficulty').value || 'normal';
             
-            // 根据难度设置时间
+            // 设置游戏难度
             this.setDifficulty(difficulty);
             
             // 切换到游戏界面
             WordUI.switchScreen('game-screen');
             
-            // 初始化游戏
+            // 初始化游戏状态
             this.initGameState(boardSize);
             
             return true;
         } catch (error) {
-            console.error("游戏启动错误:", error);
-            WordUtils.ErrorManager.showToast("游戏启动失败: " + error.message);
+            console.error("游戏启动失败:", error);
+            WordUtils.ErrorManager.showToast('游戏启动失败，请稍后再试');
             return false;
         }
-    }, 
-
+    },
+    
     /**
      * 直接跳转到特定关卡
      * @param {string} chapter - 关卡章节名

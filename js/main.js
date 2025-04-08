@@ -16,6 +16,21 @@
         WordLevelSystem.init();
         WordGame.init();
         
+        // 添加级别分类按钮事件处理
+        setupLevelCategoryButtons();
+        
+        // 添加关卡选择事件处理
+        setupLevelItems();
+        
+        // 添加返回主菜单按钮事件处理
+        document.getElementById('back-to-menu-btn').addEventListener('click', () => {
+            document.getElementById('level-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+        });
+
+        // 设置数据源按钮组
+        setupDataSourceButtons();
+        
         // 给DOM完全加载的时间，然后再初始化控制按钮
         setTimeout(() => {
             // 初始化控制按钮
@@ -135,5 +150,94 @@ function updateUI() {
     // 所有登录用户可见
     document.querySelectorAll('[data-role="user"]').forEach(el => {
         el.style.display = 'block';
+    });
+}
+
+/**
+ * 设置级别分类按钮的事件处理
+ */
+function setupLevelCategoryButtons() {
+    const categoryButtons = document.querySelectorAll('.level-category');
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // 移除所有按钮的active类
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // 给当前点击的按钮添加active类
+            this.classList.add('active');
+            
+            // 获取选中的类别
+            const category = this.getAttribute('data-category');
+            console.log('选择的单词分类:', category);
+            
+            // 可以在这里根据类别更新关卡数据
+            // 目前是演示，所以所有类别都使用相同的关卡数据
+        });
+    });
+}
+
+/**
+ * 设置关卡项的事件处理
+ */
+function setupLevelItems() {
+    const levelItems = document.querySelectorAll('.level-item');
+    levelItems.forEach(item => {
+        item.addEventListener('click', function() {
+            // 获取关卡编号
+            const level = this.getAttribute('data-level');
+            console.log('选择的关卡:', level);
+            
+            // 保存所选关卡索引
+            WordLevelSystem.levelData.currentLevel = parseInt(level);
+            WordLevelSystem.saveLevelData();
+            
+            // 隐藏关卡选择界面
+            document.getElementById('level-screen').style.display = 'none';
+            
+            // 显示游戏界面
+            document.getElementById('game-screen').style.display = 'block';
+            
+            // 开始游戏
+            WordGame.startGame();
+        });
+    });
+}
+
+/**
+ * 设置数据源按钮的事件处理
+ */
+function setupDataSourceButtons() {
+    const sourceButtons = document.querySelectorAll('.source-btn');
+    const selectedSourceInput = document.getElementById('selected-source');
+    
+    sourceButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // 移除所有按钮的active类
+            sourceButtons.forEach(b => b.classList.remove('active'));
+            
+            // 给当前点击的按钮添加active类
+            this.classList.add('active');
+            
+            // 更新隐藏的input值
+            const sourceValue = this.getAttribute('data-source');
+            selectedSourceInput.value = sourceValue;
+            
+            // 隐藏所有选项区域
+            document.getElementById('upload-selector').style.display = 'none';
+            document.getElementById('random-selector').style.display = 'none';
+            document.getElementById('custom-input').style.display = 'none';
+            document.getElementById('chapter-selector').style.display = 'none';
+            
+            // 显示对应的选项区域
+            if (sourceValue === 'upload') {
+                document.getElementById('upload-selector').style.display = 'block';
+            } else if (sourceValue === 'random') {
+                document.getElementById('random-selector').style.display = 'block';
+            } else if (sourceValue === 'custom') {
+                document.getElementById('custom-input').style.display = 'block';
+            } else if (sourceValue === 'chapter') {
+                document.getElementById('chapter-selector').style.display = 'block';
+            }
+        });
     });
 }

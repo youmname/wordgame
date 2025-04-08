@@ -27,53 +27,26 @@ const WordLevelSystem = {
         
         // 重写开始游戏按钮，根据数据源决定行为
         const startBtn = document.getElementById('start-btn');
-        startBtn.removeEventListener('click', WordGame.startGame);
-        startBtn.addEventListener('click', () => {
-            const dataSource = document.querySelector('input[name="data-source"]:checked').value;
-            
-            // 只有"按章节获取"或"上传Excel"才打开关卡选择界面
-            if (dataSource === 'chapter' || dataSource === 'upload') {
-                this.openLevelScreen();
-            } else {
-                // 其他数据源直接开始游戏
-                WordGame.startGame();
-            }
-        });
-        
-        // 添加重置游戏按钮事件监听
-        const resetBtn = document.getElementById('reset-game-btn');
-        resetBtn.addEventListener('click', () => {
-            WordUtils.showConfirm(
-                "确定要重置游戏吗？",
-                "这将清除所有游戏进度和记录，此操作不可撤销。",
-                () => {
-                    // 重置所有数据
-                    this.levelData = {
-                        currentLevel: null,
-                        levels: {}
-                    };
-                    this.saveLevelData();
-                    
-                    // 清除Excel数据
-                    WordDataLoader.excelData = {};
-                    WordDataLoader.currentSource = null;
-                    WordDataLoader.sourceData = {
-                        chapter: {},
-                        upload: {},
-                        random: {},
-                        custom: {}
-                    };
-                    
-                    // 显示成功提示
-                    WordUtils.ErrorManager.showToast("游戏已重置", 2000, 'success');
-                    
-                    // 刷新页面
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                const dataSource = document.getElementById('selected-source').value;
+                
+                // 只有"按章节获取"才打开关卡选择界面
+                if (dataSource === 'chapter') {
+                    console.log("打开关卡选择界面");
+                    // 隐藏开始界面
+                    document.getElementById('start-screen').style.display = 'none';
+                    // 显示关卡选择界面
+                    document.getElementById('level-screen').style.display = 'block';
+                } else {
+                    // 其他数据源直接开始游戏
+                    WordGame.startGame();
                 }
-            );
-        });
+            });
+        }
+        
+        // 初始化其他按钮
+        this.initOtherButtons();
         
         // 监听章节更新事件
         WordUtils.EventSystem.on('chapters:updated', () => {
@@ -99,6 +72,22 @@ const WordLevelSystem = {
                 }
             });
         });
+    },
+    
+    /**
+     * 初始化其他按钮
+     */
+    initOtherButtons() {
+        // 添加重置游戏按钮事件监听
+        const resetBtn = document.getElementById('reset-game-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                // 重置游戏逻辑
+                this.resetProgress();
+                // 刷新页面
+                window.location.reload();
+            });
+        }
     },
     
     /**
@@ -885,8 +874,19 @@ const WordLevelSystem = {
     handleLevelButtonClick: function(event) {
          const index = parseInt(event.target.dataset.levelIndex, 10);
          console.log(`[handleLevelButtonClick] Starting level ${index + 1}`);
-         Game.startLevel(index); // 假设 Game 对象有 startLevel 方法
-         UIManager.showScreen('game-screen');
+         
+         // 保存所选关卡索引
+         this.levelData.currentLevel = index;
+         this.saveLevelData();
+         
+         // 隐藏关卡选择界面
+         document.getElementById('level-screen').style.display = 'none';
+         
+         // 显示游戏界面
+         document.getElementById('game-screen').style.display = 'block';
+         
+         // 开始游戏，基于选定的关卡
+         WordGame.startGame();
     },
 
     /**
