@@ -16,8 +16,18 @@ const JWT_SECRET = 'vocabulary_game_secret_key_2024!@#$%';  // 实际部署时�
 const corsOptions = {
     origin: ['http://127.0.0.1:5500', 
 			'http://localhost:5500',
-			'https://sanjinai.cn:5500',
-			'https://175.24.181.59:5500'],
+			'https://175.24.181.59:5500',
+
+			'https://175.24.181.59:5000',
+			'http://175.24.181.59:5000',
+            
+			'http://175.24.181.59',
+			'https://175.24.181.59',
+			'https://sanjinai.cn',
+			'http://sanjinai.cn',
+			'https://www.sanjinai.cn',
+			'http://www.sanjinai.cn',
+			'null'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
         'Content-Type', 
@@ -36,10 +46,16 @@ const app = express();
 
 // 添加一个全局的中间件来处理CORS
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:5500');
+    const origin = req.headers.origin;
+    
+    if (corsOptions.origin.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
     res.header('Access-Control-Allow-Credentials', 'true');
+    
     next();
 });
 
@@ -1192,4 +1208,9 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('未处理的Promise拒绝:', reason);
     // 在生产环境中，这里可以添加报警通知等机制
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 确保DOM完全加载后再初始化控制按钮
+    initControlButtons();
 });
