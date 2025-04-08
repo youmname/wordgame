@@ -16,17 +16,16 @@
         WordLevelSystem.init();
         WordGame.init();
         
-        // 延迟执行控制按钮初始化，确保DOM元素已完全加载
+        // 给DOM完全加载的时间，然后再初始化控制按钮
         setTimeout(() => {
-            try {
-                console.log("准备初始化控制按钮...");
-                if(typeof initControlButtons === 'function') {
+            // 初始化控制按钮
+            if(typeof initControlButtons === 'function') {
+                try {
+                    console.log("Starting control buttons initialization...");
                     initControlButtons();
-                } else {
-                    console.warn("initControlButtons函数未定义");
+                } catch (error) {
+                    console.error("Error during button initialization:", error);
                 }
-            } catch (error) {
-                console.error("初始化控制按钮出错:", error);
             }
         }, 300);
         
