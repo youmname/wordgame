@@ -74,6 +74,38 @@
         .data-source-selector > div {
             width: 100%;
         }
+        
+        /* 单选按钮选中状态样式 */
+        .source-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px; /* 从15px增加到20px (增加三分之一) */
+            margin: 20px 0;
+        }
+        
+        .source-btn {
+            background-color: #c0c0c0;
+            color: #333;
+            font-size: 16px;
+            border: none;
+            border-radius: 35px; /* 从40px减少到35px */
+            padding: 13.5px 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 216px; /* 从180px增加到216px (再增加20%) */
+            font-weight: 500;
+        }
+        
+        .source-btn:hover {
+            filter: brightness(110%);
+        }
+        
+        .source-btn.active {
+            filter: brightness(130%);
+            box-shadow: 0 0 5px 1px rgba(241, 196, 15, 0.5), 0 0 8px 2px rgba(243, 156, 18, 0.3);
+            border: 1px solid rgba(243, 156, 18, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -112,22 +144,11 @@
                 <div class="data-source-selector">
                     <h3>单词数据来源</h3>
                     <div class="source-options">
-                        <label>
-                            <input type="radio" name="data-source" value="chapter" checked>
-                            按章节获取
-                        </label>
-                        <label>
-                            <input type="radio" name="data-source" value="upload">
-                            上传Excel文件
-                        </label>
-                        <label>
-                            <input type="radio" name="data-source" value="random">
-                            随机获取
-                        </label>
-                        <label>
-                            <input type="radio" name="data-source" value="custom">
-                            自定义输入
-                        </label>
+                        <button class="source-btn active" data-source="chapter">按级别获取</button>
+                        <button class="source-btn" data-source="upload">上传Excel文件</button>
+                        <button class="source-btn" data-source="random">随机获取</button>
+                        <button class="source-btn" data-source="custom">自定义输入</button>
+                        <input type="hidden" id="selected-source" name="data-source" value="chapter">
                     </div>
 
                     <div id="upload-selector" style="display:none;">
@@ -362,6 +383,41 @@ believe    相信"></textarea>
             }
             
             // 已登录且是普通用户，可以留在此页面
+            
+            // 添加数据源按钮点击处理
+            const sourceButtons = document.querySelectorAll('.source-btn');
+            const selectedSourceInput = document.getElementById('selected-source');
+            
+            sourceButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 移除所有按钮的active类
+                    sourceButtons.forEach(b => b.classList.remove('active'));
+                    
+                    // 给当前点击的按钮添加active类
+                    this.classList.add('active');
+                    
+                    // 更新隐藏的input值
+                    const sourceValue = this.getAttribute('data-source');
+                    selectedSourceInput.value = sourceValue;
+                    
+                    // 隐藏所有选项区域
+                    document.getElementById('upload-selector').style.display = 'none';
+                    document.getElementById('random-selector').style.display = 'none';
+                    document.getElementById('custom-input').style.display = 'none';
+                    document.getElementById('chapter-selector').style.display = 'none';
+                    
+                    // 显示对应的选项区域
+                    if (sourceValue === 'upload') {
+                        document.getElementById('upload-selector').style.display = 'block';
+                    } else if (sourceValue === 'random') {
+                        document.getElementById('random-selector').style.display = 'block';
+                    } else if (sourceValue === 'custom') {
+                        document.getElementById('custom-input').style.display = 'block';
+                    } else if (sourceValue === 'chapter') {
+                        document.getElementById('chapter-selector').style.display = 'block';
+                    }
+                });
+            });
         });
 
         // 添加退出登录功能
