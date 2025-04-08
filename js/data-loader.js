@@ -399,7 +399,11 @@ const WordDataLoader = {
         WordUtils.LoadingManager.show('正在加载章节数据...');
         
         try {
-            const response = await fetch('https://sanjinai.cn:5000/api/chapters', {
+            // 使用API配置的URL，而不是硬编码URL
+            const apiUrl = WordConfig.API.BASE_URL + WordConfig.API.CHAPTERS_ENDPOINT;
+            console.log("获取章节列表URL:", apiUrl);
+            
+            const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -415,13 +419,15 @@ const WordDataLoader = {
             }
 
             const data = await response.json();
-            console.log("[updateChapterSelectWithApiData] 收到章节数据:", data);
+            console.log("获取到的章节列表:", data);
 
-            // 验证API返回的数据格式
+            // 验证API返回的数据格式，添加更详细的日志
             let chapters = [];
             if (data && data.success && Array.isArray(data.chapters)) {
+                console.log("使用API返回的标准格式 data.chapters 数组");
                 chapters = data.chapters;
             } else if (Array.isArray(data)) {
+                console.log("使用API返回的直接数组格式");
                 chapters = data;
             } else {
                 console.error("[updateChapterSelectWithApiData] API返回的数据格式无效:", data);
@@ -441,13 +447,13 @@ const WordDataLoader = {
             selectElement.innerHTML = '';
 
             // 添加从API获取的新选项
-            if (chapters.length === 0) {
+            if (!chapters || chapters.length === 0) {
                 const option = document.createElement('option');
                 option.value = "";
                 option.textContent = "暂无可用章节";
                 option.disabled = true;
                 selectElement.appendChild(option);
-                console.warn("[updateChapterSelectWithApiData] 没有可用章节");
+                console.error("API返回的章节列表为空");
             } else {
                 // 同时更新excelData，用于关卡系统
                 // 清空原有API数据

@@ -16,10 +16,19 @@
         WordLevelSystem.init();
         WordGame.init();
         
-        // 初始化控制按钮
-        if(typeof initControlButtons === 'function') {
-            initControlButtons();
-        }
+        // 延迟执行控制按钮初始化，确保DOM元素已完全加载
+        setTimeout(() => {
+            try {
+                console.log("准备初始化控制按钮...");
+                if(typeof initControlButtons === 'function') {
+                    initControlButtons();
+                } else {
+                    console.warn("initControlButtons函数未定义");
+                }
+            } catch (error) {
+                console.error("初始化控制按钮出错:", error);
+            }
+        }, 300);
         
         console.log('单词连连看游戏初始化完成!');
         

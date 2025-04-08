@@ -1209,8 +1209,3 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('未处理的Promise拒绝:', reason);
     // 在生产环境中，这里可以添加报警通知等机制
 });
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 确保DOM完全加载后再初始化控制按钮
-    initControlButtons();
-});
