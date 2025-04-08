@@ -369,7 +369,7 @@
                     // 登录成功
                     console.log('体验模式登录成功，保存token和用户信息');
                     localStorage.setItem('authToken', data.token);
-                    localStorage.setItem('userType', 'user'); // 强制设置为普通用户类型
+                    localStorage.setItem('userType', 'guest'); // 设置为游客用户类型
                     localStorage.setItem('userId', data.user.id);
                     localStorage.setItem('username', 'guest');
                     

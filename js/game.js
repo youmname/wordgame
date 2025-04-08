@@ -688,27 +688,48 @@ const WordGame = {
 };
 
 // 初始化控制按钮事件
-function initControlButtons() {
-    console.log("Attempting to initialize control buttons..."); // 调试信息
+function initControlButtons(retryCount = 0) {
+    console.log(`Attempting to initialize control buttons... (尝试次数: ${retryCount + 1})`);
+    
+    // 最大重试次数限制
+    const MAX_RETRIES = 5;
     
     // 使用setTimeout确保DOM完全加载
     setTimeout(() => {
         try {
-            const hintBtn = document.getElementById('hint-btn');
-            const shuffleBtn = document.getElementById('shuffle-btn');
-            const restartBtn = document.getElementById('restart-btn');
-            const backBtn = document.getElementById('back-btn'); // 这个按钮现在用于退出登录
+            // 使用querySelector增加选择器的兼容性
+            const hintBtn = document.getElementById('hint-btn') || document.querySelector('.hint-btn');
+            const shuffleBtn = document.getElementById('shuffle-btn') || document.querySelector('.shuffle-btn');
+            const restartBtn = document.getElementById('restart-btn') || document.querySelector('.restart-btn');
+            const backBtn = document.getElementById('back-btn') || document.querySelector('.back-btn');
+    
+            console.log('[Chrome调试] 按钮元素状态:', {
+                hintBtn: !!hintBtn,
+                shuffleBtn: !!shuffleBtn,
+                restartBtn: !!restartBtn,
+                backBtn: !!backBtn
+            });
     
             // 如果所有按钮都不存在，可能DOM还没准备好，稍后重试
-            if (!hintBtn && !shuffleBtn && !restartBtn && !backBtn) {
-                console.warn("Control buttons not found, retrying in 300ms...");
-                setTimeout(initControlButtons, 300);
+            if ((!hintBtn && !shuffleBtn && !restartBtn && !backBtn) && retryCount < MAX_RETRIES) {
+                const delayTime = 500 * Math.pow(1.5, retryCount); // 指数退避重试
+                console.warn(`Control buttons not found, retrying in ${delayTime}ms... (尝试 ${retryCount + 1}/${MAX_RETRIES})`);
+                setTimeout(() => initControlButtons(retryCount + 1), delayTime);
+                return;
+            } else if (retryCount >= MAX_RETRIES) {
+                console.error(`已达到最大重试次数(${MAX_RETRIES})，停止尝试初始化控制按钮`);
                 return;
             }
     
             // 为每个按钮添加存在性检查
             if (hintBtn) {
-                hintBtn.addEventListener('click', () => {
+                // 移除可能已存在的事件监听器(防止重复绑定)
+                const newHintBtn = hintBtn.cloneNode(true);
+                if (hintBtn.parentNode) {
+                    hintBtn.parentNode.replaceChild(newHintBtn, hintBtn);
+                }
+                
+                newHintBtn.addEventListener('click', () => {
                     if (!Game.isRunning || Game.isPaused) return;
                     SoundManager.playSound('click');
                     Game.showHint();
@@ -719,7 +740,13 @@ function initControlButtons() {
             }
     
             if (shuffleBtn) {
-                shuffleBtn.addEventListener('click', () => {
+                // 移除可能已存在的事件监听器
+                const newShuffleBtn = shuffleBtn.cloneNode(true);
+                if (shuffleBtn.parentNode) {
+                    shuffleBtn.parentNode.replaceChild(newShuffleBtn, shuffleBtn);
+                }
+                
+                newShuffleBtn.addEventListener('click', () => {
                     if (!Game.isRunning || Game.isPaused) return;
                     SoundManager.playSound('shuffle');
                     Game.shuffleBoard();
@@ -730,30 +757,47 @@ function initControlButtons() {
             }
     
             if (restartBtn) {
-                restartBtn.addEventListener('click', () => {
-                     if (!Game.isRunning || Game.isPaused) return; // 可以在游戏暂停或未开始时也允许重新开始
+                // 移除可能已存在的事件监听器
+                const newRestartBtn = restartBtn.cloneNode(true);
+                if (restartBtn.parentNode) {
+                    restartBtn.parentNode.replaceChild(newRestartBtn, restartBtn);
+                }
+                
+                newRestartBtn.addEventListener('click', () => {
+                    if (!Game.isRunning || Game.isPaused) return;
                     SoundManager.playSound('click');
                     // Game.restart(); // 应该调用 Game 模块的重启方法，或者直接重新加载关卡
                     // 临时的重启方式，后续需要完善
-                     console.log("Restart button clicked - restarting game logic needed");
-                     alert("重新开始功能待实现"); // 临时提示
+                    console.log("Restart button clicked - restarting game logic needed");
+                    alert("重新开始功能待实现"); // 临时提示
                 });
-                 console.log("Restart button initialized.");
+                console.log("Restart button initialized.");
             } else {
                 console.warn("Restart button (restart-btn) not found.");
             }
     
             // back-btn 现在用于退出登录，其事件监听器应该在 index.html 的 <script> 块中
             if (backBtn) {
-                 console.log("Back button (back-btn) found, its listener should be in index.html.");
-                 // 注意：这里的 back-btn 的事件监听器已经在 index.html 中定义为退出登录了，这里不需要重复添加
+                console.log("Back button (back-btn) found, its listener should be in index.html.");
+                // 注意：这里的 back-btn 的事件监听器已经在 index.html 中定义为退出登录了，这里不需要重复添加
             } else {
-                 console.warn("Back button (back-btn) not found.");
+                console.warn("Back button (back-btn) not found.");
             }
+            
+            console.log("Control buttons initialization completed successfully");
         } catch (error) {
             console.error("Error initializing control buttons:", error);
+            
+            // 如果还有重试次数，继续尝试
+            if (retryCount < MAX_RETRIES) {
+                const delayTime = 500 * Math.pow(1.5, retryCount);
+                console.warn(`初始化按钮出错，${delayTime}ms后重试... (尝试 ${retryCount + 1}/${MAX_RETRIES})`);
+                setTimeout(() => initControlButtons(retryCount + 1), delayTime);
+            } else {
+                console.error(`已达到最大重试次数(${MAX_RETRIES})，停止尝试初始化控制按钮`);
+            }
         }
-    }, 100);
+    }, 300); // 增加初始延迟时间
 }
 
 // 启动游戏的函数

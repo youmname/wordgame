@@ -334,11 +334,11 @@ const WordLevelSystem = {
             if (userType === 'admin') {
                 // 管理员可以看到所有关卡
                 isVisible = true;
-            } else if (userType === 'vip') {
-                // VIP可以看到所有关卡
+            } else if (userType === 'vip' || userType === 'user') {
+                // VIP用户和普通用户可以看到所有关卡
                 isVisible = true;
             } else {
-                // 普通用户只能看到前5关
+                // 游客用户只能看到前5关
                 isVisible = i < 5;
             }
             
@@ -784,12 +784,11 @@ const WordLevelSystem = {
      * @param {number} levelIndex - 关卡的索引 (从0开始)
      * @returns {boolean} 如果关卡已解锁则返回true，否则返回false
      */
-    isLevelUnlocked: function(levelKey) {
-        // 确保levelKey是数字
-        const levelIndex = parseInt(levelKey);
-        const userType = localStorage.getItem('userType');
+    isLevelUnlocked: function(levelIndex) {
+        const userType = localStorage.getItem('userType') || 'guest';
+        const maxUnlockedIndex = this.maxUnlockedLevel;
         
-        console.log(`[isLevelUnlocked] 检查关卡 ${levelIndex} 权限，用户类型: ${userType}`);
+        console.log(`[isLevelUnlocked] 检查关卡 ${levelIndex} 是否解锁，用户类型:${userType}, 最大解锁关卡:${maxUnlockedIndex}`);
         
         // 第一关始终可用
         if (levelIndex === 0) {
@@ -797,45 +796,27 @@ const WordLevelSystem = {
             return true;
         }
         
-        // 检查用户类型
+        // 管理员可以看到所有关卡，且无需解锁
         if (userType === 'admin') {
-            console.log('[isLevelUnlocked] 管理员用户，允许访问所有关卡');
+            console.log(`[isLevelUnlocked] 管理员用户，关卡 ${levelIndex} 可用`);
             return true;
-        }
-        
-        // 获取当前最大已解锁关卡
-        const chapters = Object.keys(WordDataLoader.excelData || {});
-        const currentLevel = this.levelData.currentLevel;
-        let maxUnlockedIndex = 0;
-        
-        // 遍历关卡数据，找出最大已解锁关卡索引
-        for (let i = 0; i < chapters.length; i++) {
-            const chapter = chapters[i];
-            if (this.levelData.levels[chapter] && this.levelData.levels[chapter].unlocked) {
-                maxUnlockedIndex = Math.max(maxUnlockedIndex, i);
-            }
-        }
-        
-        console.log(`[isLevelUnlocked] 最大已解锁关卡索引: ${maxUnlockedIndex}`);
-        
-        // VIP用户可以看到所有关卡，但需要逐关解锁
-        if (userType === 'vip') {
-            // 只有已解锁的关卡或下一关才可用
+        } else if (userType === 'vip' || userType === 'user') {
+            // VIP用户和普通用户可以看到所有关卡，但需要逐关解锁
             const isAvailable = levelIndex <= maxUnlockedIndex + 1;
-            console.log(`[isLevelUnlocked] VIP用户，关卡 ${levelIndex} ${isAvailable ? '可用' : '未解锁'}`);
+            console.log(`[isLevelUnlocked] ${userType === 'vip' ? 'VIP' : '普通'}用户，关卡 ${levelIndex} ${isAvailable ? '可用' : '未解锁'}`);
             return isAvailable;
         }
         
-        // 普通用户只能看到前5关，且需要逐关解锁
-        const maxAllowedForRegular = 4; // 索引从0开始，所以是0-4共5关
-        if (levelIndex <= maxAllowedForRegular) {
+        // 游客用户只能看到前5关
+        const maxAllowedForGuest = 4; // 索引从0开始，所以是0-4共5关
+        if (levelIndex <= maxAllowedForGuest) {
             // 只有已解锁的关卡或下一关才可用
             const isAvailable = levelIndex <= maxUnlockedIndex + 1;
-            console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} ${isAvailable ? '可用' : '未解锁'}`);
+            console.log(`[isLevelUnlocked] 游客用户，关卡 ${levelIndex} ${isAvailable ? '可用' : '未解锁'}`);
             return isAvailable;
         }
         
-        console.log(`[isLevelUnlocked] 普通用户，关卡 ${levelIndex} 超出权限范围(最多5关)`);
+        console.log(`[isLevelUnlocked] 游客用户，关卡 ${levelIndex} 超出权限范围(最多5关)`);
         return false;
     },
     

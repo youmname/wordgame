@@ -439,16 +439,46 @@ const WordDataLoader = {
 
             const data = await response.json();
             console.log("[updateChapterSelectWithApiData] 收到章节数据:", data);
+            console.log("[Chrome调试] 数据类型:", typeof data, "数据是否为数组:", Array.isArray(data));
+            if (data && data.success) {
+                console.log("[Chrome调试] 数据success字段:", data.success, "chapters字段:", data.chapters, "chapters是否为数组:", Array.isArray(data.chapters));
+                if (data.chapters) {
+                    console.log("[Chrome调试] chapters长度:", data.chapters.length);
+                }
+            }
 
             // 验证API返回的数据格式
             let chapters = [];
-            if (data && data.success && Array.isArray(data.chapters)) {
-                chapters = data.chapters;
-            } else if (Array.isArray(data)) {
-                chapters = data;
-            } else {
-                console.error("[updateChapterSelectWithApiData] API返回的数据格式无效:", data);
-                throw new Error('API返回的章节数据格式无效');
+            // 更健壮的数据提取
+            if (data) {
+                if (data.success === true && data.chapters && Array.isArray(data.chapters)) {
+                    chapters = data.chapters;
+                    console.log("[Chrome调试] 从data.chapters获取到", chapters.length, "个章节");
+                } else if (Array.isArray(data)) {
+                    chapters = data;
+                    console.log("[Chrome调试] 从data数组直接获取到", chapters.length, "个章节");
+                } else if (data.data && Array.isArray(data.data)) {
+                    chapters = data.data;
+                    console.log("[Chrome调试] 从data.data获取到", chapters.length, "个章节");
+                } else {
+                    // 尝试JSON解析数据(处理可能的双重解析问题)
+                    try {
+                        if (typeof data === 'string') {
+                            const parsedData = JSON.parse(data);
+                            if (parsedData.success && Array.isArray(parsedData.chapters)) {
+                                chapters = parsedData.chapters;
+                                console.log("[Chrome调试] 从字符串解析获取到", chapters.length, "个章节");
+                            }
+                        }
+                    } catch (e) {
+                        console.error("[Chrome调试] 尝试解析字符串失败:", e);
+                    }
+                    
+                    if (chapters.length === 0) {
+                        console.error("[updateChapterSelectWithApiData] API返回的数据格式无效:", data);
+                        console.log("[Chrome调试] 无法提取章节数据，将使用空数组");
+                    }
+                }
             }
 
             console.log(`[updateChapterSelectWithApiData] 提取到${chapters.length}个章节`);

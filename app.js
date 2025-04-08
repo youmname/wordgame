@@ -206,7 +206,7 @@ const createGuestAccount = async () => {
             ) VALUES (
                 'guest',
                 ?,
-                'user',
+                'guest',
                 'guest@example.com',
                 CURRENT_TIMESTAMP
             )
@@ -518,7 +518,7 @@ app.post('/api/admin/create-user', verifyAdminToken, async (req, res) => {
     }
     
     // 合法性检查：确保用户类型有效
-    if (!['user', 'vip', 'admin'].includes(userType)) {
+    if (!['user', 'vip', 'admin', 'guest'].includes(userType)) {
         return res.status(400).json({ success: false, message: '无效的用户类型' });
     }
     
@@ -612,7 +612,7 @@ app.post('/api/admin/users/:userId/change-type', verifyAdminToken, (req, res) =>
     const { userType } = req.body;
     
     // 验证用户类型
-    if (!['user', 'vip', 'admin'].includes(userType)) {
+    if (!['user', 'vip', 'admin', 'guest'].includes(userType)) {
         return res.status(400).json({ success: false, message: '无效的用户类型' });
     }
     
@@ -622,7 +622,7 @@ app.post('/api/admin/users/:userId/change-type', verifyAdminToken, (req, res) =>
     }
     
     db.run(
-        'UPDATE users SET user_type = ? WHERE id = ?',
+        'UPDATE Users SET user_type = ? WHERE id = ?',
         [userType, userId],
         function(err) {
             if (err) {
@@ -630,8 +630,8 @@ app.post('/api/admin/users/:userId/change-type', verifyAdminToken, (req, res) =>
                 return res.status(500).json({ success: false, message: '数据库错误' });
             }
             
-            // 如果修改为VIP用户，确保所有章节都有访问权限
-            if (userType === 'vip') {
+            // 如果修改为VIP用户或普通用户，确保所有章节都有访问权限
+            if (userType === 'vip' || userType === 'user') {
                 // 查询所有章节
                 db.all('SELECT id FROM Categories', [], (err, categories) => {
                     if (err) {
@@ -668,8 +668,8 @@ app.post('/api/admin/users/:userId/change-type', verifyAdminToken, (req, res) =>
                             });
                     });
                 });
-            } else if (userType === 'user') {
-                // 对于普通用户，只允许访问前5个章节
+            } else if (userType === 'guest') {
+                // 对于游客用户，只允许访问前5个章节
                 db.all('SELECT id FROM Categories ORDER BY id LIMIT 5', [], (err, limitedCategories) => {
                     if (err) {
                         console.error('获取章节列表失败:', err);
@@ -1090,12 +1090,12 @@ function unlockNextChapter(userId, currentChapterId, userType, res) {
     // 查找下一章节ID
     const nextChapterId = parseInt(currentChapterId) + 1;
     
-    // 普通用户最多只能解锁到第5关
-    if (userType === 'user' && nextChapterId > 5) {
-        console.log(`[API] 普通用户无法解锁第5关以后的章节`);
+    // 游客用户最多只能解锁到第5关
+    if (userType === 'guest' && nextChapterId > 5) {
+        console.log(`[API] 游客用户无法解锁第5关以后的章节`);
         return res.json({
             success: true,
-            message: '进度已更新，普通用户已达到最大关卡'
+            message: '进度已更新，游客用户已达到最大关卡'
         });
     }
     
