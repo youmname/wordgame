@@ -7,17 +7,39 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
     <style>
-        body {
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
-            height: 100vh;
+        }
+        
+        body {
             display: flex;
-            flex-direction: column; /* 将 body 设置为垂直排列 */
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
             background-size: cover;
             font-family: 'Roboto', sans-serif;
         }
+        
+        .page-content {
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .footer {
+            flex-shrink: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 -1px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
         .title {
             margin-bottom: 20px; /* 标题与容器之间的间距 */
             font-size: 32px;
@@ -139,45 +161,62 @@
             position: relative;
             margin-bottom: 25px;  /* 增加间距以容纳错误提示 */
         }
+
+        .beian-wrapper {
+            width: 100%;
+            background-color: #e9e9e9;
+            padding: 8px 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <!-- <div class="title">
-        <h3>单词游戏</h3>
-    </div> -->
+    <div class="page-content">
+        <!-- <div class="title">
+            <h3>单词游戏</h3>
+        </div> -->
 
-    <div class="container">
-        <div class="illustration">
-            <!-- 放背景图片 -->
-        </div>
+        <div class="container">
+            <div class="illustration">
+                <!-- 放背景图片 -->
+            </div>
 
-        <div class="login-box">
-            <h2>单词连连看</h2>
-            <p>请输入您的账号和激活码</p>
-            <div id="error-message" style="color: red; margin-bottom: 10px; display: none;"></div>
-            <form id="loginForm">
-                <div class="input-field">
-                    <input id="email" type="text" required placeholder="账号（邮箱或手机号）">
-                    <span class="error-text" id="email-error" style="color: red; font-size: 12px;"></span>
+            <div class="login-box">
+                <h2>单词连连看</h2>
+                <p>请输入您的账号和激活码</p>
+                <div id="error-message" style="color: red; margin-bottom: 10px; display: none;"></div>
+                <form id="loginForm">
+                    <div class="input-field">
+                        <input id="email" type="text" required placeholder="账号（邮箱或手机号）">
+                        <span class="error-text" id="email-error" style="color: red; font-size: 12px;"></span>
+                    </div>
+                    <div class="input-field">
+                        <input id="password" type="password" required placeholder="激活码">
+                        <span class="error-text" id="password-error" style="color: red; font-size: 12px;"></span>
+                    </div>
+                    <div class="options-row">
+                        <label>
+                            <input type="checkbox" id="rememberMe">
+                            <span>记住账号</span>
+                        </label>
+                        <!-- <a href="#">Forgot password?</a> -->
+                    </div>
+                    <button class="btn" type="submit">登入</button>
+                </form>
+                <div style="margin-top: 15px; text-align: center;">
+                    <p style="color: #666; font-size: 14px; margin-bottom: 10px;">没有账号？立即体验</p>
+                    <button id="try-now-btn" class="btn" style="background-color: #4CAF50;">体验一下</button>
                 </div>
-                <div class="input-field">
-                    <input id="password" type="password" required placeholder="激活码">
-                    <span class="error-text" id="password-error" style="color: red; font-size: 12px;"></span>
-                </div>
-                <div class="options-row">
-                    <label>
-                        <input type="checkbox" id="rememberMe">
-                        <span>记住账号</span>
-                    </label>
-                    <!-- <a href="#">Forgot password?</a> -->
-                </div>
-                <button class="btn" type="submit">登入</button>
-            </form>
-            <div style="margin-top: 15px; text-align: center;">
-                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">没有账号？立即体验</p>
-                <button id="try-now-btn" class="btn" style="background-color: #4CAF50;">体验一下</button>
             </div>
         </div>
+    </div>
+
+    <!-- 页面底部 -->
+    <div class="beian-wrapper">
+        <a href="https://beian.mps.gov.cn/#/query/webSearch?code=33010502012234" target="_blank" style="display: inline-block; text-decoration: none; height: 20px; line-height: 20px; color: #939393;">
+            <img src="assets/images/备案图标.png" style="float: left; height: 20px; margin-right: 5px;">
+            <span style="float: left; height: 20px; line-height: 20px; margin: 0 5px 0 0;">浙公网安备33010502012234号</span>
+        </a>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>

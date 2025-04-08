@@ -21,16 +21,41 @@
             --success-color: #188038;
         }
         
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+            position: relative;
+        }
+        
         body {
             font-family: 'Segoe UI', 'Google Sans', Arial, sans-serif;
             background-color: var(--background-color);
             color: var(--text-color);
-            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
             font-size: 14px;
             line-height: 1.5;
+        }
+        
+        .page-content {
+            flex: 1 0 auto;
+            width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
+        }
+        
+        .footer {
+            flex-shrink: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 -1px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
         }
         
         .page-header {
@@ -510,153 +535,170 @@
         .select-dropdown {
             overflow: visible !important;
         }
+        
+        .beian-wrapper {
+            width: 100%;
+            background-color: #e9e9e9;
+            padding: 8px 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div class="page-header">
-        <div class="container">
-            <div class="header-content">
-                <h1 class="page-title">单词连连看后台管理</h1>
-                <button class="btn logout-btn waves-effect" onclick="logout()">
-                    <i class="material-icons left">exit_to_app</i>退出登录
-                </button>
+    <div class="page-content">
+        <div class="page-header">
+            <div class="container">
+                <div class="header-content">
+                    <h1 class="page-title">单词连连看后台管理</h1>
+                    <button class="btn logout-btn waves-effect" onclick="logout()">
+                        <i class="material-icons left">exit_to_app</i>退出登录
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-    
-    <div class="container">
-        <div class="row">
-            <!-- 创建用户卡片 -->
-            <div class="col s12 m12 l4">
-                <div class="card" style="max-width: 100%;">
-                    <div class="card-content">
-                        <div class="card-title">创建新用户</div>
-                        <form id="createUserForm">
-                            <div class="input-field">
-                                <i class="material-icons prefix">person</i>
-                                <input type="text" id="username" required>
-                                <label for="username">用户名（手机号或用户名）</label>
-                            </div>
-                            
-                            <div class="input-field">
-                                <i class="material-icons prefix">email</i>
-                                <input type="email" id="email" required>
-                                <label for="email">邮箱</label>
-                            </div>
-                            
-                            <div class="input-field">
-                                <i class="material-icons prefix">lock</i>
-                                <input type="password" id="password" value="123456" readonly>
-                                <label for="password" class="active">初始密码 (默认123456)</label>
-                            </div>
-                            
-                            <div class="input-field" style="margin-top: 20px; position: relative;">
-                                <i class="material-icons prefix" style="top: 24px;">group</i>
-                                <div style="margin-left: 45px; margin-bottom: 12px;">
-                                    <label style="font-size: 14px; color: #333; font-weight: 500; display: block;">用户类型</label>
+        
+        <div class="container">
+            <div class="row">
+                <!-- 创建用户卡片 -->
+                <div class="col s12 m12 l4">
+                    <div class="card" style="max-width: 100%;">
+                        <div class="card-content">
+                            <div class="card-title">创建新用户</div>
+                            <form id="createUserForm">
+                                <div class="input-field">
+                                    <i class="material-icons prefix">person</i>
+                                    <input type="text" id="username" required>
+                                    <label for="username">用户名（手机号或用户名）</label>
                                 </div>
-                                <div style="margin-left: 45px; width: calc(100% - 45px);">
-                                    <select id="userType" class="browser-default" style="width: 100%; height: 42px; padding: 0 10px; border: 1px solid var(--divider-color); border-radius: 4px; background-color: white; cursor: pointer; z-index: 1;">
-                                        <option value="user">普通用户</option>
-                                        <option value="vip">VIP用户</option>
-                                        <option value="guest">游客用户</option>
-                                        <option value="admin">管理员</option>
-                                    </select>
+                                
+                                <div class="input-field">
+                                    <i class="material-icons prefix">email</i>
+                                    <input type="email" id="email" required>
+                                    <label for="email">邮箱</label>
                                 </div>
-                            </div>
-                            
-                            <div class="button-container">
-                                <button class="btn waves-effect waves-light" type="submit">
-                                    <i class="material-icons left">add</i>创建用户
-                                </button>
-                            </div>
-                        </form>
+                                
+                                <div class="input-field">
+                                    <i class="material-icons prefix">lock</i>
+                                    <input type="password" id="password" value="123456" readonly>
+                                    <label for="password" class="active">初始密码 (默认123456)</label>
+                                </div>
+                                
+                                <div class="input-field" style="margin-top: 20px; position: relative;">
+                                    <i class="material-icons prefix" style="top: 24px;">group</i>
+                                    <div style="margin-left: 45px; margin-bottom: 12px;">
+                                        <label style="font-size: 14px; color: #333; font-weight: 500; display: block;">用户类型</label>
+                                    </div>
+                                    <div style="margin-left: 45px; width: calc(100% - 45px);">
+                                        <select id="userType" class="browser-default" style="width: 100%; height: 42px; padding: 0 10px; border: 1px solid var(--divider-color); border-radius: 4px; background-color: white; cursor: pointer; z-index: 1;">
+                                            <option value="user">普通用户</option>
+                                            <option value="vip">VIP用户</option>
+                                            <option value="guest">游客用户</option>
+                                            <option value="admin">管理员</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="button-container">
+                                    <button class="btn waves-effect waves-light" type="submit">
+                                        <i class="material-icons left">add</i>创建用户
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
+                    
+                    <div id="message" class="hide"></div>
                 </div>
                 
-                <div id="message" class="hide"></div>
-            </div>
-            
-            <!-- 用户列表卡片 -->
-            <div class="col s12 m12 l8">
-                <div class="card" style="max-width: 100%;">
-                    <div class="card-content">
-                        <div class="card-title">用户列表</div>
-                        
-                        <!-- 搜索和筛选区域 -->
-                        <div class="search-filters">
-                            <div class="filter-row">
-                                <div class="search-box">
-                                    <i class="material-icons">search</i>
-                                    <input id="search-input" type="text" placeholder="  搜索用户名或邮箱..." style="padding-left: 50px !important; width: 95%">
+                <!-- 用户列表卡片 -->
+                <div class="col s12 m12 l8">
+                    <div class="card" style="max-width: 100%;">
+                        <div class="card-content">
+                            <div class="card-title">用户列表</div>
+                            
+                            <!-- 搜索和筛选区域 -->
+                            <div class="search-filters">
+                                <div class="filter-row">
+                                    <div class="search-box">
+                                        <i class="material-icons">search</i>
+                                        <input id="search-input" type="text" placeholder="  搜索用户名或邮箱..." style="padding-left: 50px !important; width: 95%">
+                                    </div>
+                                    <div class="filter-select">
+                                        <select id="filter-type" class="browser-default" style="height: 40px; padding: 0 10px; width: 100%; border: 1px solid var(--divider-color); border-radius: 4px; background-color: white; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                                            <option value="">所有用户类型</option>
+                                            <option value="admin">管理员</option>
+                                            <option value="vip">VIP用户</option>
+                                            <option value="user">普通用户</option>
+                                            <option value="guest">游客用户</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="filter-select">
-                                    <select id="filter-type" class="browser-default" style="height: 40px; padding: 0 10px; width: 100%; border: 1px solid var(--divider-color); border-radius: 4px; background-color: white; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                                        <option value="">所有用户类型</option>
-                                        <option value="admin">管理员</option>
-                                        <option value="vip">VIP用户</option>
-                                        <option value="user">普通用户</option>
-                                        <option value="guest">游客用户</option>
-                                    </select>
+                                
+                                <!-- 活动筛选条件显示区域 -->
+                                <div id="active-filters" class="hide">
+                                    <span class="filter-label">已应用筛选条件:</span>
+                                    <div id="filter-badges"></div>
                                 </div>
                             </div>
                             
-                            <!-- 活动筛选条件显示区域 -->
-                            <div id="active-filters" class="hide">
-                                <span class="filter-label">已应用筛选条件:</span>
-                                <div id="filter-badges"></div>
+                            <!-- 用户表格 -->
+                            <div class="user-table-container">
+                                <table class="user-table">
+                                    <thead>
+                                        <tr>
+                                            <th>用户名</th>
+                                            <th>邮箱</th>
+                                            <th>用户类型</th>
+                                            <th>注册时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userList">
+                                        <!-- 用户列表将通过JavaScript动态填充 -->
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                        
-                        <!-- 用户表格 -->
-                        <div class="user-table-container">
-                            <table class="user-table">
-                                <thead>
-                                    <tr>
-                                        <th>用户名</th>
-                                        <th>邮箱</th>
-                                        <th>用户类型</th>
-                                        <th>注册时间</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="userList">
-                                    <!-- 用户列表将通过JavaScript动态填充 -->
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- 无搜索结果提示 -->
-                        <div id="no-results" class="center-align hide" style="padding: 0px;">
-                            <i class="material-icons medium" style="color: #dadce0;">search_off</i>
-                            <p>未找到匹配的用户</p>
+                            
+                            <!-- 无搜索结果提示 -->
+                            <div id="no-results" class="center-align hide" style="padding: 0px;">
+                                <i class="material-icons medium" style="color: #dadce0;">search_off</i>
+                                <p>未找到匹配的用户</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 修改用户类型的模态框 -->
+        <div id="changeTypeModal" class="modal">
+            <div class="modal-content">
+                <h4>修改用户类型</h4>
+                <p id="modalUsername"></p>
+                <div class="input-field">
+                    <i class="material-icons prefix">group</i>
+                    <select id="newUserType">
+                        <option value="user">普通用户</option>
+                        <option value="vip">VIP用户</option>
+                        <option value="guest">游客用户</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                    <label>新用户类型</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class="modal-close waves-effect waves-light btn-flat">取消</a>
+                <a href="#!" id="confirmChangeType" class="waves-effect waves-light btn-flat">确定</a>
             </div>
         </div>
     </div>
 
-    <!-- 修改用户类型的模态框 -->
-    <div id="changeTypeModal" class="modal">
-        <div class="modal-content">
-            <h4>修改用户类型</h4>
-            <p id="modalUsername"></p>
-            <div class="input-field">
-                <i class="material-icons prefix">group</i>
-                <select id="newUserType">
-                    <option value="user">普通用户</option>
-                    <option value="vip">VIP用户</option>
-                    <option value="guest">游客用户</option>
-                    <option value="admin">管理员</option>
-                </select>
-                <label>新用户类型</label>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <a href="#!" class="modal-close waves-effect waves-light btn-flat">取消</a>
-            <a href="#!" id="confirmChangeType" class="waves-effect waves-light btn-flat">确定</a>
-        </div>
+    <!-- 页面底部 -->
+    <div class="beian-wrapper">
+        <a href="https://beian.mps.gov.cn/#/query/webSearch?code=33010502012234" target="_blank" style="display: inline-block; text-decoration: none; height: 20px; line-height: 20px; color: #939393;">
+            <img src="assets/images/备案图标.png" style="float: left; height: 20px; margin-right: 5px;">
+            <span style="float: left; height: 20px; line-height: 20px; margin: 0 5px 0 0;">浙公网安备33010502012234号</span>
+        </a>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
