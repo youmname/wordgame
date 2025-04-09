@@ -54,6 +54,8 @@ quality    质量，品质`,
     // API配置 - 更新为您的实际API地址
     API: {
         BASE_URL: window.location.protocol + '//' + window.location.hostname + ':5000/api',
+        VOCABULARY_LEVELS_ENDPOINT: '/vocabulary-levels',
+        LEVEL_CHAPTERS_ENDPOINT: '/vocabulary-levels/{id}/chapters',
         CHAPTERS_ENDPOINT: '/chapters',
         WORDS_ENDPOINT: '/chapters/{id}/words'
     },

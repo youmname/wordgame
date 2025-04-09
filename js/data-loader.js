@@ -807,5 +807,57 @@ const WordDataLoader = {
         
         // 恢复该数据源的数据
         this.excelData = this.sourceData[source] || {};
+    },
+
+    /**
+     * 加载所有单词级别
+     * @returns {Promise<Array>} 单词级别数组Promise
+     */
+    async loadVocabularyLevels() {
+        try {
+            const response = await fetch(WordConfig.API.BASE_URL + WordConfig.API.VOCABULARY_LEVELS_ENDPOINT);
+            
+            if (!response.ok) {
+                throw new Error(`获取单词级别失败: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log("获取到的单词级别数据:", data);
+            
+            return data.levels || [];
+        } catch (error) {
+            console.error('加载单词级别失败:', error);
+            WordUtils.ErrorManager.showToast('无法加载单词级别，请稍后再试');
+            return [];
+        }
+    },
+    
+    /**
+     * 按级别加载章节
+     * @param {number} levelId - 级别ID
+     * @returns {Promise<Array>} 章节数组Promise
+     */
+    async loadLevelChapters(levelId) {
+        WordUtils.LoadingManager.show('正在加载章节...');
+        
+        try {
+            const endpoint = WordConfig.API.LEVEL_CHAPTERS_ENDPOINT.replace('{id}', levelId);
+            const response = await fetch(WordConfig.API.BASE_URL + endpoint);
+            
+            if (!response.ok) {
+                throw new Error(`获取章节失败: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log(`获取到级别${levelId}的章节数据:`, data);
+            
+            WordUtils.LoadingManager.hide();
+            return data.chapters || [];
+        } catch (error) {
+            console.error(`加载级别${levelId}的章节失败:`, error);
+            WordUtils.ErrorManager.showToast('无法加载章节，请稍后再试');
+            WordUtils.LoadingManager.hide();
+            return [];
+        }
     }
 };

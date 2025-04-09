@@ -16,6 +16,9 @@
         WordLevelSystem.init();
         WordGame.init();
         
+        // 初始化单词级别选择
+        initVocabularyLevels();
+        
         // 添加级别分类按钮事件处理
         setupLevelCategoryButtons();
         
@@ -154,37 +157,138 @@ function updateUI() {
 }
 
 /**
+ * 初始化单词级别选择
+ */
+async function initVocabularyLevels() {
+    try {
+        // 获取所有单词级别
+        const levels = await WordDataLoader.loadVocabularyLevels();
+        console.log('加载到的单词级别:', levels);
+        
+        if (levels.length === 0) {
+            console.warn('没有找到单词级别数据');
+            return;
+        }
+        
+        // 获取级别选择容器
+        const levelCategorySelector = document.getElementById('level-category-selector');
+        
+        // 清空现有内容
+        levelCategorySelector.innerHTML = '';
+        
+        // 添加级别按钮
+        levels.forEach((level, index) => {
+            const button = document.createElement('button');
+            button.className = 'level-category' + (index === 0 ? ' active' : '');
+            button.setAttribute('data-category', level.name);
+            button.setAttribute('data-level-id', level.id);
+            button.textContent = level.name;
+            levelCategorySelector.appendChild(button);
+        });
+        
+        // 默认选择第一个级别并加载其章节
+        if (levels.length > 0) {
+            loadChaptersForLevel(levels[0].id);
+        }
+    } catch (error) {
+        console.error('初始化单词级别选择失败:', error);
+    }
+}
+
+/**
  * 设置级别分类按钮的事件处理
  */
 function setupLevelCategoryButtons() {
-    const categoryButtons = document.querySelectorAll('.level-category');
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', function() {
+    document.addEventListener('click', function(e) {
+        // 使用事件委托，处理所有.level-category按钮的点击
+        if (e.target && e.target.classList.contains('level-category')) {
             // 移除所有按钮的active类
-            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.level-category').forEach(btn => {
+                btn.classList.remove('active');
+            });
             
             // 给当前点击的按钮添加active类
-            this.classList.add('active');
+            e.target.classList.add('active');
             
-            // 获取选中的类别
-            const category = this.getAttribute('data-category');
-            console.log('选择的单词分类:', category);
+            // 获取选中的级别ID
+            const levelId = e.target.getAttribute('data-level-id');
+            console.log('选择的单词级别ID:', levelId);
             
-            // 可以在这里根据类别更新关卡数据
-            // 目前是演示，所以所有类别都使用相同的关卡数据
-        });
+            // 加载该级别的章节
+            loadChaptersForLevel(levelId);
+            
+            // 保存当前选择的级别
+            WordLevelSystem.currentCategory = e.target.getAttribute('data-category');
+            WordLevelSystem.currentLevelId = levelId;
+        }
     });
+}
+
+/**
+ * 根据级别ID加载章节
+ * @param {number} levelId - 级别ID
+ */
+async function loadChaptersForLevel(levelId) {
+    try {
+        // 加载章节数据
+        const chapters = await WordDataLoader.loadLevelChapters(levelId);
+        console.log(`加载到级别${levelId}的章节:`, chapters);
+        
+        // 渲染关卡选择界面
+        renderLevelItems(chapters);
+    } catch (error) {
+        console.error(`加载级别${levelId}的章节失败:`, error);
+    }
+}
+
+/**
+ * 渲染关卡选择项
+ * @param {Array} chapters - 章节数组
+ */
+function renderLevelItems(chapters) {
+    // 获取关卡网格容器
+    const levelGrid = document.getElementById('level-grid');
+    
+    // 清空现有内容
+    if (levelGrid) {
+        levelGrid.innerHTML = '';
+        
+        // 添加关卡项
+        chapters.forEach(chapter => {
+            const levelItem = document.createElement('div');
+            levelItem.className = 'level-item';
+            levelItem.setAttribute('data-level', chapter.id);
+            
+            const levelTitle = document.createElement('h3');
+            levelTitle.textContent = chapter.name;
+            
+            const levelDesc = document.createElement('p');
+            levelDesc.textContent = chapter.description || chapter.name;
+            
+            levelItem.appendChild(levelTitle);
+            levelItem.appendChild(levelDesc);
+            levelGrid.appendChild(levelItem);
+        });
+    }
 }
 
 /**
  * 设置关卡项的事件处理
  */
 function setupLevelItems() {
-    const levelItems = document.querySelectorAll('.level-item');
-    levelItems.forEach(item => {
-        item.addEventListener('click', function() {
+    // 使用事件委托处理关卡项点击
+    document.addEventListener('click', function(e) {
+        // 找到被点击的关卡项元素
+        let levelItem = e.target;
+        
+        // 向上查找直到找到.level-item元素或null
+        while (levelItem && !levelItem.classList.contains('level-item')) {
+            levelItem = levelItem.parentElement;
+        }
+        
+        if (levelItem && levelItem.hasAttribute('data-level')) {
             // 获取关卡编号
-            const level = this.getAttribute('data-level');
+            const level = levelItem.getAttribute('data-level');
             console.log('选择的关卡:', level);
             
             // 保存所选关卡索引
@@ -199,7 +303,7 @@ function setupLevelItems() {
             
             // 开始游戏
             WordGame.startGame();
-        });
+        }
     });
 }
 

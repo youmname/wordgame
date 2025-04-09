@@ -123,17 +123,25 @@ const WordGame = {
             
             let wordPairs = null;
             
-            // 使用当前选择的级别
-            if (dataSource === 'chapter' && WordLevelSystem.levelData.currentLevel != null) {
-                // 如果是按级别获取且已选择级别，使用该级别的数据
-                const chapter = WordLevelSystem.levelData.currentLevel;
-                console.log("加载指定关卡数据:", chapter);
-                return this.startLevel(chapter);
-            } else if (dataSource === 'chapter') {
-                // 如果没有特定级别，使用第一级数据
-                console.log("加载默认级别数据");
-                // 从默认数据库中获取单词（可以按需修改）
-                wordPairs = await WordDataLoader.getRandomWords(maxPairs);
+            // 使用当前选择的级别和章节
+            if (dataSource === 'chapter') {
+                if (WordLevelSystem.levelData && WordLevelSystem.levelData.currentLevel) {
+                    // 如果已选择特定章节，使用该章节
+                    const chapterId = WordLevelSystem.levelData.currentLevel;
+                    console.log("加载指定章节ID:", chapterId);
+                    
+                    wordPairs = await this.loadChapterWordsById(chapterId);
+                    
+                    if (!wordPairs || wordPairs.length === 0) {
+                        console.error("加载章节单词失败");
+                        WordUtils.ErrorManager.showToast('无法加载该章节单词，请选择其他章节');
+                        return false;
+                    }
+                } else {
+                    // 如果没有特定章节，使用默认数据
+                    console.warn("未选择特定章节，使用随机单词");
+                    wordPairs = await WordDataLoader.getRandomWords(maxPairs);
+                }
             } else if (dataSource === 'random') {
                 // 从随机单词库获取单词
                 wordPairs = await WordDataLoader.getRandomWords(maxPairs);
@@ -180,64 +188,57 @@ const WordGame = {
     },
     
     /**
-     * 直接跳转到特定关卡
-     * @param {string} chapter - 关卡章节名
+     * 根据章节ID加载单词
+     * @param {number} chapterId - 章节ID
+     * @returns {Promise<Array>} 单词数组Promise
      */
-    async startLevel(chapter) {
-        console.log("直接跳转到关卡:", chapter);
-        WordUtils.LoadingManager.show('正在加载关卡...');
+    async loadChapterWordsById(chapterId) {
+        console.log("根据ID加载章节单词:", chapterId);
+        WordUtils.LoadingManager.show('正在加载单词数据...');
         
         try {
-            let wordPairs = null;
+            // 构建API请求URL
+            const endpoint = WordConfig.API.WORDS_ENDPOINT.replace('{id}', chapterId);
+            const fullUrl = WordConfig.API.BASE_URL + endpoint;
+            console.log("API请求URL:", fullUrl);
             
-            // 检查是否是Excel工作表名称
-            if (chapter && !chapter.match(/^第\d+章/)) {
-                console.log("检测到Excel工作表名称，直接从Excel数据获取");
-                
-                // 从Excel数据中获取
-                wordPairs = WordDataLoader.getChapterWords(chapter);
-                
-                if (!wordPairs || wordPairs.length === 0) {
-                    WordUtils.LoadingManager.hide();
-                    WordUtils.ErrorManager.showToast('无法从Excel中获取该章节数据');
-                    return false;
-                }
-            } else {
-                // 从API加载关卡数据
-                wordPairs = await WordDataLoader.loadChapterWords(chapter);
-                
-                if (!wordPairs || wordPairs.length === 0) {
-                    WordUtils.LoadingManager.hide();
-                    WordUtils.ErrorManager.showToast('无法加载该关卡数据，请稍后再试');
-                    return false;
-                }
+            const response = await fetch(fullUrl);
+            
+            // 检查响应状态
+            if (!response.ok) {
+                throw new Error(`获取单词失败: ${response.status} - ${response.statusText}`);
             }
             
-            // 将数据传递给游戏
-            this.wordPairs = wordPairs;
+            const wordsData = await response.json();
+            console.log("API返回的单词数据:", wordsData);
             
-            // 设置游戏参数
-            const boardSizeElement = document.getElementById('board-size');
-            const boardSize = boardSizeElement ? parseInt(boardSizeElement.value) : 8;
-            const difficulty = document.getElementById('difficulty').value || 'normal';
+            if (!wordsData || wordsData.length === 0) {
+                WordUtils.ErrorManager.showToast('该章节没有单词数据，请选择其他章节');
+                WordUtils.LoadingManager.hide();
+                return null;
+            }
             
-            // 根据难度设置时间
-            this.setDifficulty(difficulty);
+            // 转换为游戏需要的格式
+            const wordPairs = wordsData.map(word => ({
+                word: word.word || "未知单词",
+                definition: word.meaning || "未知定义"
+            }));
             
-            // 切换到游戏界面
-            WordUI.switchScreen('game-screen');
+            console.log("转换后的单词对:", wordPairs.length);
             
-            // 初始化游戏
-            this.initGameState(boardSize);
+            if (wordPairs.length < 2) {
+                WordUtils.ErrorManager.showToast('该章节单词数量不足，请选择其他章节');
+                WordUtils.LoadingManager.hide();
+                return null;
+            }
             
             WordUtils.LoadingManager.hide();
-            console.log("成功启动关卡:", chapter);
-            return true;
+            return wordPairs;
         } catch (error) {
-            console.error("启动关卡失败:", error);
+            console.error('加载章节单词失败:', error);
+            WordUtils.ErrorManager.showToast(`无法加载章节单词: ${error.message}`);
             WordUtils.LoadingManager.hide();
-            WordUtils.ErrorManager.showToast(`启动关卡失败: ${error.message}`);
-            return false;
+            return null;
         }
     },
     
