@@ -73,12 +73,17 @@ const dbPath = 'D:\\vocabulary-project\\database\\vocabulary.db';
 console.log(`连接数据库：${dbPath}`);
 
 // 创建数据库连接
-const db = new sqlite3.Database(dbPath, (err) => {
+const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
         console.error('无法连接到数据库:', err.message);
         process.exit(1);
     }
     console.log('已成功连接到SQLite数据库');
+
+    // 配置数据库连接，增加超时和busy_timeout设置
+    db.configure('busyTimeout', 30000); // 30秒超时
+    db.run('PRAGMA journal_mode = WAL;'); // 使用WAL模式可以减少锁定
+    db.run('PRAGMA synchronous = NORMAL;'); // 降低同步级别可提高性能
 
     // 初始化数据库表结构
     initializeDatabase();
@@ -167,7 +172,9 @@ const initializeDatabase = () => {
                     }
                     
                     // 检查是否已有level_id列
-                    const hasLevelId = columns && columns.some(col => col.name === 'level_id');
+                    const hasLevelId = columns && Array.isArray(columns) ? 
+                        columns.some(col => col.name === 'level_id') : 
+                        (columns && columns.name === 'level_id');
                     
                     if (!hasLevelId) {
                         console.log('需要迁移Chapters表数据...');
@@ -183,9 +190,8 @@ const initializeDatabase = () => {
                                 
                                 // 2. 迁移数据到新表
                                 db.run(`
-                                    INSERT INTO Chapters_New (id, name, description, order_num, level_id, created_at)
-                                    SELECT id, name, description, order_num, ${kaoyanLevelId}, 
-                                           COALESCE(created_at, CURRENT_TIMESTAMP)
+                                    INSERT INTO Chapters_New (id, name, description, order_num, level_id)
+                                    SELECT id, name, description, order_num, ${kaoyanLevelId}
                                     FROM Chapters
                                 `, [], (err) => {
                                     if (err) {
@@ -243,8 +249,15 @@ const initializeDatabase = () => {
         CREATE TABLE IF NOT EXISTS Words (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             word TEXT NOT NULL,
-            definition TEXT NOT NULL,
+            meaning TEXT NOT NULL,
             phonetic TEXT,
+            phrase TEXT,
+            example TEXT,
+            morphology TEXT,
+            note TEXT,
+            level_id TEXT,
+            chapter_id TEXT,
+            image_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `;
@@ -954,12 +967,9 @@ app.get('/api/admin/users', verifyAdminToken, (req, res) => {
     });
 });
 
-// 获取所有章节路由
+// 获取所有章节
 app.get('/api/chapters', (req, res) => {
-    console.log('处理 /api/chapters 请求');
-    
-    // 添加支持level_id过滤
-    const levelId = req.query.level_id;
+    const levelId = req.query.levelId;
     
     let query = 'SELECT * FROM Chapters';
     let params = [];
@@ -973,54 +983,303 @@ app.get('/api/chapters', (req, res) => {
     
     db.all(query, params, (err, rows) => {
         if (err) {
-            console.error('数据库查询章节失败:', err.message);
+            console.error('获取章节列表失败:', err);
             return res.status(500).json({
                 success: false,
-                message: '数据库查询错误',
-                error: err.message
+                message: '数据库查询错误'
             });
         }
 
-        console.log(`数据库成功返回 ${rows ? rows.length : 0} 条章节数据`);
-        res.json({
+        return res.json({
             success: true,
             chapters: rows || []
         });
     });
 });
 
-// 获取特定章节的所有单词路由
+// 创建新章节
+app.post('/api/chapters', authenticateToken, (req, res) => {
+    const { name, description, level_id, order_num } = req.body;
+    
+    // 验证必要字段
+    if (!name || !level_id) {
+        return res.status(400).json({
+            success: false,
+            message: '章节名称和级别ID不能为空'
+        });
+    }
+
+    // 检查级别是否存在
+    db.get('SELECT id FROM VocabularyLevels WHERE id = ?', [level_id], (err, level) => {
+        if (err) {
+            console.error('验证级别错误:', err);
+            return res.status(500).json({
+                success: false,
+                message: '服务器错误'
+            });
+        }
+        
+        if (!level) {
+            return res.status(400).json({
+                success: false,
+                message: '指定的级别不存在'
+            });
+        }
+        
+        // 获取默认排序序号（如果未提供）
+        const getOrderNum = (callback) => {
+            if (order_num) {
+                callback(order_num);
+        } else {
+                db.get('SELECT MAX(order_num) AS max_order FROM Chapters WHERE level_id = ?', [level_id], (err, result) => {
+                    if (err) {
+                        console.error('获取最大排序序号错误:', err);
+                        callback(1); // 默认为1
+                    } else {
+                        callback((result.max_order || 0) + 1);
+                    }
+                });
+            }
+        };
+        
+        getOrderNum((finalOrderNum) => {
+            // 插入新章节
+            db.run(
+                'INSERT INTO Chapters (name, description, level_id, order_num) VALUES (?, ?, ?, ?)',
+                [name, description || '', level_id, finalOrderNum],
+                function(err) {
+                    if (err) {
+                        console.error('创建章节错误:', err);
+                        return res.status(500).json({
+                            success: false,
+                            message: '创建章节失败: ' + err.message
+                        });
+                    }
+                    
+                    // 返回成功结果
+                    return res.status(201).json({
+                        success: true,
+                        message: '章节创建成功',
+                        chapterId: this.lastID,
+                        chapter: {
+                            id: this.lastID,
+                            name,
+                            description: description || '',
+                            level_id,
+                            order_num: finalOrderNum
+                        }
+                    });
+                }
+            );
+        });
+    });
+});
+
+// 获取章节信息
+app.get('/api/chapters/:chapterId', (req, res) => {
+    const chapterId = req.params.chapterId;
+    
+    db.get('SELECT * FROM Chapters WHERE id = ?', [chapterId], (err, row) => {
+        if (err) {
+            console.error('获取章节详情失败:', err.message);
+            return res.status(500).json({
+                success: false,
+                message: '数据库查询错误',
+                error: err.message
+            });
+        }
+        
+        if (!row) {
+            return res.status(404).json({
+                success: false,
+                message: '章节不存在'
+            });
+        }
+        
+    res.json({
+        success: true,
+            chapter: row
+        });
+    });
+});
+
+// 更新章节
+app.put('/api/chapters/:chapterId', authenticateToken, (req, res) => {
+    const chapterId = req.params.chapterId;
+    const { name, description, level_id, order_num } = req.body;
+    
+    // 验证必要字段
+    if (!name || !level_id) {
+        return res.status(400).json({
+            success: false,
+            message: '章节名称和级别ID不能为空'
+        });
+    }
+
+    // 检查章节是否存在
+    db.get('SELECT id FROM Chapters WHERE id = ?', [chapterId], (err, chapter) => {
+        if (err) {
+            console.error('验证章节错误:', err);
+            return res.status(500).json({
+                success: false,
+                message: '服务器错误'
+            });
+        }
+        
+        if (!chapter) {
+            return res.status(404).json({
+                success: false,
+                message: '章节不存在'
+            });
+        }
+        
+        // 检查级别是否存在
+        db.get('SELECT id FROM VocabularyLevels WHERE id = ?', [level_id], (err, level) => {
+            if (err) {
+                console.error('验证级别错误:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: '服务器错误'
+                });
+            }
+            
+            if (!level) {
+                return res.status(400).json({
+                    success: false,
+                    message: '指定的级别不存在'
+                });
+            }
+            
+            // 更新章节
+            db.run(
+                'UPDATE Chapters SET name = ?, description = ?, level_id = ?, order_num = ? WHERE id = ?',
+                [name, description || '', level_id, order_num || 1, chapterId],
+                function(err) {
+                    if (err) {
+                        console.error('更新章节错误:', err);
+                        return res.status(500).json({
+                            success: false,
+                            message: '更新章节失败: ' + err.message
+                        });
+                    }
+                    
+                    return res.json({
+            success: true,
+                        message: '章节更新成功',
+                        chapter: {
+                            id: chapterId,
+                            name,
+                            description: description || '',
+                            level_id,
+                            order_num: order_num || 1
+                        }
+                    });
+                }
+            );
+        });
+    });
+});
+
+// 获取特定章节的单词
 app.get('/api/chapters/:chapterId/words', (req, res) => {
     const chapterId = req.params.chapterId;
     
+    // 构建查询 - 使用正确的字段名和表名
     const query = `
-        SELECT w.id, w.word, w.definition, w.phonetic, wm.order_num
+        SELECT w.id, w.word, w.meaning as definition, w.phonetic, wm.order_num
         FROM Words w
         JOIN WordMappings wm ON w.id = wm.word_id
         WHERE wm.chapter_id = ?
         ORDER BY wm.order_num
     `;
     
-    db.all(query, [chapterId], (err, rows) => {
+    // 执行查询
+    db.all(query, [chapterId], (err, words) => {
         if (err) {
-            console.error(`查询章节 ${chapterId} 的单词失败:`, err.message);
-            return res.status(500).json({ 
-                success: false, 
-                message: '查询单词失败',
-                error: err.message 
+            console.error(`获取章节 ${chapterId} 的单词失败:`, err.message);
+            return res.status(500).json({
+                success: false,
+                message: '数据库查询错误',
+                error: err.message
             });
         }
         
-        console.log(`成功查询到章节 ${chapterId} 的 ${rows.length} 个单词`);
-        
-        // 兼容旧版API，直接返回数组
-        res.json(rows);
+        console.log(`数据库成功返回章节 ${chapterId} 的 ${words ? words.length : 0} 个单词`);
+        res.json({
+            success: true,
+            words: words || []
+        });
     });
 });
 
-// 获取所有单词级别
+// 删除章节
+app.delete('/api/chapters/:chapterId', authenticateToken, (req, res) => {
+    const chapterId = req.params.chapterId;
+    
+    // 检查章节是否存在
+    db.get('SELECT id FROM Chapters WHERE id = ?', [chapterId], (err, chapter) => {
+        if (err) {
+            console.error('验证章节错误:', err);
+            return res.status(500).json({
+            success: false,
+            message: '服务器错误'
+        });
+    }
+        
+        if (!chapter) {
+            return res.status(404).json({
+                success: false,
+                message: '章节不存在'
+            });
+        }
+        
+        // 开始事务
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            
+            try {
+                // 先删除章节中的单词映射
+                db.run('DELETE FROM WordMappings WHERE chapter_id = ?', [chapterId], function(err) {
+                    if (err) {
+                        throw new Error('删除单词映射失败: ' + err.message);
+                    }
+                    
+                    // 删除章节
+                    db.run('DELETE FROM Chapters WHERE id = ?', [chapterId], function(err) {
+        if (err) {
+                            throw new Error('删除章节失败: ' + err.message);
+                        }
+                        
+                        // 提交事务
+                        db.run('COMMIT', function(err) {
+                            if (err) {
+                                throw new Error('提交事务失败: ' + err.message);
+                            }
+                            
+                            return res.json({
+                                success: true,
+                                message: '章节删除成功'
+                            });
+                        });
+                    });
+                });
+            } catch (error) {
+                // 回滚事务
+                db.run('ROLLBACK');
+                console.error('删除章节过程中发生错误:', error);
+                
+            return res.status(500).json({
+                success: false,
+                    message: error.message
+                });
+            }
+        });
+    });
+});
+
+// 获取所有词汇级别
 app.get('/api/vocabulary-levels', (req, res) => {
-    db.all('SELECT * FROM VocabularyLevels ORDER BY order_num', [], (err, rows) => {
+    db.all('SELECT * FROM Categories ORDER BY order_num', [], (err, rows) => {
         if (err) {
             console.error('获取单词级别失败:', err.message);
             return res.status(500).json({
@@ -1042,7 +1301,13 @@ app.get('/api/vocabulary-levels', (req, res) => {
 app.get('/api/vocabulary-levels/:levelId/chapters', (req, res) => {
     const levelId = req.params.levelId;
     
-    db.all('SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num', [levelId], (err, rows) => {
+    // 构建查询 - 使用正确的字段名和表名
+    const query = `
+        SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num
+    `;
+    
+    // 执行查询
+    db.all(query, [levelId], (err, rows) => {
         if (err) {
             console.error(`获取级别 ${levelId} 的章节失败:`, err.message);
             return res.status(500).json({
@@ -1060,78 +1325,6 @@ app.get('/api/vocabulary-levels/:levelId/chapters', (req, res) => {
     });
 });
 
-// 创建章节API
-app.post('/api/chapters', (req, res) => {
-    const { name, description, level_id, order_num } = req.body;
-    
-    // 验证必要字段
-    if (!name || !level_id) {
-        return res.status(400).json({
-            success: false,
-            message: '缺少必要字段（名称或级别ID）'
-        });
-    }
-    
-    // 验证级别是否存在
-    db.get('SELECT id FROM VocabularyLevels WHERE id = ?', [level_id], (err, level) => {
-        if (err) {
-            console.error('验证级别错误:', err);
-            return res.status(500).json({
-                success: false,
-                message: '服务器错误'
-            });
-        }
-        
-        if (!level) {
-            return res.status(400).json({
-                success: false,
-                message: '指定的级别不存在'
-            });
-        }
-        
-        // 如果没有提供排序号，获取下一个顺序值
-        if (order_num === undefined || order_num === null) {
-            db.get('SELECT MAX(order_num) as max_order FROM Chapters WHERE level_id = ?', [level_id], (err, result) => {
-                if (err) {
-                    console.error('获取最大排序号错误:', err);
-                    return res.status(500).json({
-                        success: false,
-                        message: '服务器错误'
-                    });
-                }
-                
-                const nextOrderNum = (result.max_order || 0) + 1;
-                insertChapter(nextOrderNum);
-            });
-        } else {
-            insertChapter(order_num);
-        }
-    });
-    
-    // 插入章节
-    function insertChapter(orderNum) {
-        db.run(
-            'INSERT INTO Chapters (name, description, level_id, order_num) VALUES (?, ?, ?, ?)',
-            [name, description || '', level_id, orderNum],
-            function(err) {
-                if (err) {
-                    console.error('创建章节错误:', err);
-                    return res.status(500).json({
-                        success: false,
-                        message: '创建章节失败'
-                    });
-                }
-                
-                return res.json({
-                    success: true,
-                    message: '章节创建成功',
-                    chapterId: this.lastID
-                });
-            }
-        );
-    }
-});
-
 // 导入单词API
 app.post('/api/import-words', (req, res) => {
     const { chapterId, words } = req.body;
@@ -1143,16 +1336,16 @@ app.post('/api/import-words', (req, res) => {
             message: '缺少必要字段或单词数据无效'
         });
     }
-    
+
     // 验证章节是否存在
     db.get('SELECT id FROM Chapters WHERE id = ?', [chapterId], (err, chapter) => {
         if (err) {
             console.error('验证章节错误:', err);
             return res.status(500).json({
                 success: false,
-                message: '服务器错误'
-            });
-        }
+            message: '服务器错误'
+        });
+    }
         
         if (!chapter) {
             return res.status(400).json({
@@ -1173,28 +1366,28 @@ app.post('/api/import-words', (req, res) => {
                 if (index >= words.length) {
                     // 所有单词处理完毕，提交事务
                     db.run('COMMIT', (err) => {
-                        if (err) {
+                if (err) {
                             console.error('提交事务错误:', err);
-                            return res.status(500).json({
-                                success: false,
+                    return res.status(500).json({
+                        success: false,
                                 message: '导入单词失败'
-                            });
-                        }
-                        
+                    });
+                }
+                
                         return res.json({
-                            success: true,
+                    success: true,
                             message: '单词导入成功',
                             imported: importCount,
                             errors: errors.length > 0 ? errors : undefined
-                        });
-                    });
+                });
+            });
                     return;
                 }
                 
                 const word = words[index];
                 
                 // 验证单词数据
-                if (!word.word || !word.meaning) {
+                if (!word.word || !word.definition) {
                     errors.push(`跳过第${index + 1}个单词：缺少必要字段`);
                     processNextWord(index + 1);
                     return;
@@ -1215,8 +1408,8 @@ app.post('/api/import-words', (req, res) => {
                         // 更新已存在的单词
                         wordId = existingWord.id;
                         db.run(
-                            'UPDATE Words SET meaning = ?, phonetic = ?, example = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                            [word.meaning, word.phonetic || '', word.example || '', wordId],
+                            'UPDATE Words SET definition = ?, phonetic = ?, example = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                            [word.definition, word.phonetic || '', word.example || '', wordId],
                             (err) => {
                                 if (err) {
                                     console.error('更新单词错误:', err);
@@ -1231,8 +1424,8 @@ app.post('/api/import-words', (req, res) => {
                     } else {
                         // 插入新单词
                         db.run(
-                            'INSERT INTO Words (word, meaning, phonetic, example, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
-                            [word.word, word.meaning, word.phonetic || '', word.example || ''],
+                            'INSERT INTO Words (word, definition, phonetic, example, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+                            [word.word, word.definition, word.phonetic || '', word.example || ''],
                             function(err) {
                                 if (err) {
                                     console.error('插入单词错误:', err);
@@ -1305,8 +1498,8 @@ app.post('/api/import-words', (req, res) => {
                                     }
                                 );
                             }
-                        });
-                    });
+    });
+});
                 }
             };
             
@@ -1329,7 +1522,7 @@ app.get('/api/words/search', (req, res) => {
     let params = [];
     
     if (query) {
-        conditions.push('(w.word LIKE ? OR w.definition LIKE ?)');
+        conditions.push('(w.word LIKE ? OR w.meaning LIKE ?)');
         params.push(`%${query}%`, `%${query}%`);
     }
     
@@ -1349,34 +1542,41 @@ app.get('/api/words/search', (req, res) => {
     const countSql = `
         SELECT COUNT(DISTINCT w.id) as total
         FROM Words w
-        JOIN WordMappings wm ON w.id = wm.word_id
-        JOIN Chapters c ON wm.chapter_id = c.id
+        LEFT JOIN WordMappings wm ON w.id = wm.word_id
+        LEFT JOIN Chapters c ON wm.chapter_id = c.id
         ${whereClause}
     `;
     
     // 查询单词数据
     const dataSql = `
-        SELECT 
-            w.id, w.word, w.phonetic, w.definition, 
-            c.id as chapter_id, c.name as chapter_name,
-            c.level_id, vl.name as level_name
+        SELECT DISTINCT
+            w.id, 
+            w.word, 
+            w.phonetic as phonetic, 
+            w.meaning as definition,
+            w.example,
+            w.image_path,
+            c.id as chapter_id, 
+            c.name as chapter_name,
+            c.level_id, 
+            vl.name as level_name
         FROM Words w
-        JOIN WordMappings wm ON w.id = wm.word_id
-        JOIN Chapters c ON wm.chapter_id = c.id
-        JOIN VocabularyLevels vl ON c.level_id = vl.id
+        LEFT JOIN WordMappings wm ON w.id = wm.word_id
+        LEFT JOIN Chapters c ON wm.chapter_id = c.id
+        LEFT JOIN VocabularyLevels vl ON c.level_id = vl.id
         ${whereClause}
-        GROUP BY w.id
         ORDER BY w.word
         LIMIT ? OFFSET ?
     `;
     
     // 执行查询
     db.get(countSql, params, (err, countResult) => {
-        if (err) {
+            if (err) {
             console.error('统计单词数量失败:', err);
-            return res.status(500).json({
-                success: false,
-                message: '查询失败'
+                return res.status(500).json({
+                    success: false,
+                message: '查询失败',
+                error: err.message
             });
         }
         
@@ -1384,106 +1584,151 @@ app.get('/api/words/search', (req, res) => {
         
         // 查询分页数据
         db.all(dataSql, [...params, size, offset], (err, words) => {
-            if (err) {
+                        if (err) {
                 console.error('查询单词失败:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: '查询失败'
+                            return res.status(500).json({
+                                success: false,
+                    message: '查询失败',
+                    error: err.message
+            });
+        }
+        
+            // 处理空结果
+            if (!words || words.length === 0) {
+                return res.json({
+            success: true,
+                    total: 0,
+                    page,
+                    size,
+                    words: []
                 });
             }
             
             return res.json({
-                success: true,
+                                success: true,
                 total,
                 page,
                 size,
-                words: words || []
-            });
+                words: words
+                });
         });
     });
 });
 
 // 单词管理API端点
-app.post('/api/words', verifyAdminToken, (req, res) => {
-    const { word, phonetic, definition, chapter_id } = req.body;
+app.post('/api/words', authenticateToken, (req, res) => {
+    const { word, meaning, phonetic, phrase, example, morphology, note, level_id, chapter_id, image_path } = req.body;
     
-    if (!word || !definition || !chapter_id) {
+    // 验证必要字段
+    if (!word || !meaning || !level_id) {
         return res.status(400).json({
             success: false,
-            message: '缺少必要参数'
+            message: '缺少必要字段'
         });
     }
     
-    // 验证章节是否存在
-    db.get('SELECT * FROM Chapters WHERE id = ?', [chapter_id], (err, chapter) => {
-        if (err || !chapter) {
-            return res.status(404).json({
-                success: false,
-                message: '章节不存在'
-            });
-        }
+    // 生成章节ID (如果没有提供)
+    const actualChapterId = chapter_id || `${level_id}未分类`;
+    
+    // 开始事务
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
         
-        // 开始事务
-        db.serialize(() => {
-            db.run('BEGIN TRANSACTION');
-            
-            try {
-                // 获取最大序号
-                db.get('SELECT MAX(order_num) as max_order FROM WordMappings WHERE chapter_id = ?', [chapter_id], (err, result) => {
-                    if (err) {
-                        throw new Error('获取最大序号失败: ' + err.message);
-                    }
-                    
-                    const nextOrder = (result && result.max_order ? result.max_order : 0) + 1;
-                    
-                    // 插入单词
+        try {
+            // 1. 确保level_id存在于VocabularyLevels表中
+            db.get('SELECT id FROM VocabularyLevels WHERE id = ?', [level_id], (err, level) => {
+                if (err) {
+                    throw new Error('查询级别失败: ' + err.message);
+                }
+                
+                if (!level) {
+                    // 级别不存在，创建级别
                     db.run(
-                        'INSERT INTO Words (word, phonetic, definition, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-                        [word, phonetic || '', definition],
+                        'INSERT INTO VocabularyLevels (id, name, description, order_num) VALUES (?, ?, ?, ?)',
+                        [level_id, level_id, level_id + ' 词汇', 100],
+                        function(err) {
+                            if (err) {
+                                throw new Error('创建级别失败: ' + err.message);
+                            }
+                            
+                            checkChapter();
+                    }
+                );
+            } else {
+                    checkChapter();
+                }
+                
+                // 2. 确保chapter_id存在于Chapters表中
+                function checkChapter() {
+                    db.get('SELECT id FROM Chapters WHERE id = ?', [actualChapterId], (err, chapter) => {
+                        if (err) {
+                            throw new Error('查询章节失败: ' + err.message);
+                        }
+                        
+                        if (!chapter) {
+                            // 章节不存在，创建章节
+                            db.get('SELECT MAX(order_num) as max_order FROM Chapters WHERE level_id = ?', [level_id], (err, result) => {
+                                if (err) {
+                                    throw new Error('获取章节顺序失败: ' + err.message);
+                                }
+                                
+                                const orderNum = ((result && result.max_order) || 0) + 1;
+                                
+                                db.run(
+                                    'INSERT INTO Chapters (id, name, description, order_num, level_id) VALUES (?, ?, ?, ?, ?)',
+                                    [actualChapterId, actualChapterId, actualChapterId, orderNum, level_id],
+                                    function(err) {
+                                        if (err) {
+                                            throw new Error('创建章节失败: ' + err.message);
+                                        }
+                                        
+                                        insertWord();
+                                    }
+                                );
+                            });
+                        } else {
+                            insertWord();
+                        }
+                    });
+                }
+                
+                // 3. 插入单词
+                function insertWord() {
+                    db.run(
+                        `INSERT INTO Words (word, meaning, phonetic, phrase, example, morphology, note, level_id, chapter_id, image_path)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [word, meaning, phonetic, phrase, example, morphology, note, level_id, actualChapterId, image_path],
                         function(err) {
                             if (err) {
                                 throw new Error('插入单词失败: ' + err.message);
                             }
                             
-                            const wordId = this.lastID;
-                            
-                            // 创建映射关系
-                            db.run(
-                                'INSERT INTO WordMappings (word_id, chapter_id, order_num) VALUES (?, ?, ?)',
-                                [wordId, chapter_id, nextOrder],
-                                err => {
-                                    if (err) {
-                                        throw new Error('创建映射关系失败: ' + err.message);
-                                    }
-                                    
-                                    // 提交事务
-                                    db.run('COMMIT', err => {
-                                        if (err) {
-                                            throw new Error('提交事务失败: ' + err.message);
-                                        }
-                                        
-                                        return res.json({
-                                            success: true,
-                                            message: '单词添加成功',
-                                            word_id: wordId
-                                        });
-                                    });
+                            // 提交事务
+                            db.run('COMMIT', (err) => {
+                                if (err) {
+                                    throw new Error('提交事务失败: ' + err.message);
                                 }
-                            );
+                                
+                            res.json({
+                                success: true,
+                                    message: '单词添加成功',
+                                    wordId: this.lastID
+                });
+            });
                         }
                     );
-                });
-            } catch (error) {
-                // 回滚事务
-                db.run('ROLLBACK');
-                console.error('添加单词失败:', error);
-                
-                return res.status(500).json({
-                    success: false,
-                    message: '添加单词失败: ' + error.message
-                });
-            }
-        });
+                }
+            });
+        } catch (error) {
+            // 回滚事务
+            db.run('ROLLBACK');
+            console.error('添加单词失败:', error);
+            
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
     });
 });
 
@@ -1503,7 +1748,7 @@ app.put('/api/words/:id', verifyAdminToken, (req, res) => {
     db.get('SELECT * FROM Words WHERE id = ?', [wordId], (err, existingWord) => {
         if (err || !existingWord) {
             return res.status(404).json({
-                success: false,
+            success: false,
                 message: '单词不存在'
             });
         }
@@ -1512,7 +1757,7 @@ app.put('/api/words/:id', verifyAdminToken, (req, res) => {
         db.get('SELECT * FROM Chapters WHERE id = ?', [chapter_id], (err, chapter) => {
             if (err || !chapter) {
                 return res.status(404).json({
-                    success: false,
+            success: false,
                     message: '章节不存在'
                 });
             }
@@ -1527,7 +1772,7 @@ app.put('/api/words/:id', verifyAdminToken, (req, res) => {
                         'UPDATE Words SET word = ?, phonetic = ?, definition = ? WHERE id = ?',
                         [word, phonetic || '', definition, wordId],
                         err => {
-                            if (err) {
+                        if (err) {
                                 throw new Error('更新单词失败: ' + err.message);
                             }
                             
@@ -1536,7 +1781,7 @@ app.put('/api/words/:id', verifyAdminToken, (req, res) => {
                                 'SELECT * FROM WordMappings WHERE word_id = ? AND chapter_id = ?',
                                 [wordId, chapter_id],
                                 (err, mapping) => {
-                                    if (err) {
+            if (err) {
                                         throw new Error('检查映射关系失败: ' + err.message);
                                     }
                                     
@@ -1555,7 +1800,7 @@ app.put('/api/words/:id', verifyAdminToken, (req, res) => {
                                                 'DELETE FROM WordMappings WHERE word_id = ?',
                                                 [wordId],
                                                 err => {
-                                                    if (err) {
+                        if (err) {
                                                         throw new Error('删除旧映射关系失败: ' + err.message);
                                                     }
                                                     
@@ -1574,31 +1819,31 @@ app.put('/api/words/:id', verifyAdminToken, (req, res) => {
                                                                     throw new Error('提交事务失败: ' + err.message);
                                                                 }
                                                                 
-                                                                return res.json({
-                                                                    success: true,
+        return res.json({
+            success: true,
                                                                     message: '单词更新成功'
                                                                 });
-                                                            });
-                                                        }
+                            });
+                        }
                                                     );
-                                                }
-                                            );
+                    }
+                );
                                         });
-                                    } else {
+            } else {
                                         // 映射关系已存在，直接提交事务
                                         db.run('COMMIT', err => {
-                                            if (err) {
+                        if (err) {
                                                 throw new Error('提交事务失败: ' + err.message);
                                             }
                                             
                                             return res.json({
-                                                success: true,
+                                success: true,
                                                 message: '单词更新成功'
                                             });
-                                        });
-                                    }
-                                }
-                            );
+                            });
+                        }
+                    }
+                );
                         }
                     );
                 } catch (error) {
@@ -1636,13 +1881,13 @@ app.delete('/api/words/:id', verifyAdminToken, (req, res) => {
             try {
                 // 先删除映射关系
                 db.run('DELETE FROM WordMappings WHERE word_id = ?', [wordId], err => {
-                    if (err) {
+            if (err) {
                         throw new Error('删除映射关系失败: ' + err.message);
                     }
                     
                     // 再删除单词
                     db.run('DELETE FROM Words WHERE id = ?', [wordId], err => {
-                        if (err) {
+                            if (err) {
                             throw new Error('删除单词失败: ' + err.message);
                         }
                         
@@ -1690,10 +1935,10 @@ app.get('/api/verify-token', (req, res) => {
         
         // 检查用户是否存在
         db.get('SELECT id, username, user_type FROM Users WHERE id = ?', [decoded.userId], (err, user) => {
-            if (err) {
+                            if (err) {
                 console.error('验证Token时查询用户失败:', err);
-                return res.status(500).json({
-                    success: false,
+                                return res.status(500).json({
+                                    success: false,
                     message: '数据库错误'
                 });
             }
@@ -1706,7 +1951,7 @@ app.get('/api/verify-token', (req, res) => {
             }
             
             return res.json({
-                success: true,
+                                success: true,
                 message: 'Token有效',
                 user: {
                     id: user.id,
@@ -1720,6 +1965,297 @@ app.get('/api/verify-token', (req, res) => {
         return res.status(401).json({
             success: false,
             message: 'Token无效或已过期'
+        });
+    }
+});
+
+// 新增批量导入API
+app.post('/api/words/bulk-import', authenticateToken, (req, res) => {
+    const { jsonData } = req.body;
+    
+    if (!jsonData) {
+        return res.status(400).json({
+            success: false,
+            message: '缺少JSON数据'
+        });
+    }
+    
+    try {
+        // 解析JSON数据
+        let wordsList;
+        if (typeof jsonData === 'string') {
+            wordsList = JSON.parse(jsonData);
+                } else {
+            wordsList = jsonData;
+        }
+        
+        if (!Array.isArray(wordsList)) {
+            return res.status(400).json({
+                success: false,
+                message: 'JSON数据必须是数组格式'
+            });
+        }
+        
+        // 开始事务
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            
+            let processed = 0;
+            let success = 0;
+            let skipped = 0;
+            let errors = [];
+            const total = wordsList.length;
+            
+            // 确保所有单词所需的级别都存在
+            const levelIds = new Set();
+            wordsList.forEach(word => {
+                if (word.level_id) {
+                    levelIds.add(word.level_id);
+                }
+            });
+            
+            // 创建所有需要的级别
+            const createLevels = (callback) => {
+                if (levelIds.size === 0) {
+                    callback();
+                    return;
+                }
+                
+                let processed = 0;
+                const levels = Array.from(levelIds);
+                
+                levels.forEach(levelId => {
+                    db.get('SELECT id FROM Categories WHERE id = ?', [levelId], (err, level) => {
+                        if (err) {
+                            errors.push(`检查词汇级别 "${levelId}" 失败:`, err);
+                        } else if (!level) {
+                            // 创建级别
+                            db.run(
+                                'INSERT INTO Categories (id, name, description, order_num) VALUES (?, ?, ?, ?)',
+                                [levelId, levelId, levelId + ' 词汇', 100],
+                                function(err) {
+                                    if (err) {
+                                        errors.push(`创建词汇级别 "${levelId}" 失败:`, err);
+                                    }
+                                }
+                            );
+                        }
+                        
+                        processed++;
+                        if (processed === levels.length) {
+                            callback();
+                        }
+                    });
+                });
+            };
+            
+            // 处理所有单词
+            const processWords = () => {
+                // 获取所有章节ID
+                const chapterIds = new Set();
+                wordsList.forEach(word => {
+                    if (word.chapter_id) {
+                        chapterIds.add(word.chapter_id);
+                    } else if (word.level_id) {
+                        // 生成默认章节ID
+                        chapterIds.add(`${word.level_id}未分类`);
+                    }
+                });
+                
+                // 创建所有需要的章节
+                const createChapters = (callback) => {
+                    if (chapterIds.size === 0) {
+                        callback();
+                        return;
+                    }
+                    
+                    let processed = 0;
+                    const chapters = Array.from(chapterIds);
+                    
+                    chapters.forEach(chapterId => {
+                        db.get('SELECT id FROM Chapters WHERE id = ?', [chapterId], (err, chapter) => {
+                            if (err) {
+                                errors.push(`检查章节 ${chapterId} 失败:`, err);
+                                checkComplete();
+                                return;
+                            }
+                            
+                            if (!chapter) {
+                                // 提取level_id
+                                let levelId = null;
+                                for (const word of wordsList) {
+                                    if (word.chapter_id === chapterId && word.level_id) {
+                                        levelId = word.level_id;
+                                        break;
+                                    } else if (chapterId.startsWith(word.level_id)) {
+                                        levelId = word.level_id;
+                                        break;
+                                    }
+                                }
+                                
+                                if (!levelId) {
+                                    errors.push(`无法确定章节 ${chapterId} 的级别`);
+                                    checkComplete();
+                                    return;
+                                }
+                                
+                                // 获取章节顺序
+                                db.get('SELECT MAX(order_num) as max_order FROM Chapters WHERE level_id = ?', [levelId], (err, result) => {
+                                    if (err) {
+                                        errors.push(`获取章节顺序失败:`, err);
+                                        checkComplete();
+                                        return;
+                                    }
+                                    
+                                    const orderNum = ((result && result.max_order) || 0) + 1;
+                                    
+                                    // 创建章节
+                                    db.run(
+                                        'INSERT INTO Chapters (id, name, description, order_num, level_id) VALUES (?, ?, ?, ?, ?)',
+                                        [chapterId, chapterId, chapterId, orderNum, levelId],
+                                        function(err) {
+                                            if (err) {
+                                                errors.push(`创建章节 ${chapterId} 失败:`, err);
+                                            }
+                                            checkComplete();
+                                        }
+                                    );
+                                });
+            } else {
+                                checkComplete();
+                            }
+                            
+                            function checkComplete() {
+                                processed++;
+                                if (processed === chapters.length) {
+                                    callback();
+                                }
+                            }
+                        });
+                    });
+                };
+                
+                // 导入所有单词
+                const importWords = () => {
+                    if (wordsList.length === 0) {
+                        finishImport();
+                        return;
+                    }
+                    
+                    const processNextWord = (index) => {
+                        if (index >= wordsList.length) {
+                            finishImport();
+                            return;
+                        }
+                        
+                        const wordData = wordsList[index];
+                        
+                        // 清理数据
+                        for (const key in wordData) {
+                            if (wordData[key] === undefined || wordData[key] === null ||
+                                wordData[key] === 'NaN' || wordData[key] === 'undefined' ||
+                                wordData[key] === Infinity || wordData[key] === -Infinity) {
+                                wordData[key] = null;
+                            }
+                            if (typeof wordData[key] === 'string' && wordData[key].trim() === '') {
+                                wordData[key] = null;
+                            }
+                        }
+                        
+                        // 验证必要字段
+                        if (!wordData.word || !wordData.meaning) {
+                            skipped++;
+                            processed++;
+                            errors.push(`跳过单词 #${index + 1}: 缺少必要字段`);
+                            processNextWord(index + 1);
+                            return;
+                        }
+                        
+                        // 处理level_id和chapter_id
+                        const level_id = wordData.level_id || 'default';
+                        const chapter_id = wordData.chapter_id || `${level_id}未分类`;
+                        
+                        // 插入单词
+                        db.run(
+                            `INSERT INTO Words (word, meaning, phonetic, phrase, example, morphology, note, level_id, chapter_id, image_path)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [
+                                wordData.word,
+                                wordData.meaning,
+                                wordData.phonetic || null,
+                                wordData.phrase || null,
+                                wordData.example || null,
+                                wordData.morphology || null,
+                                wordData.note || null,
+                                level_id,
+                                chapter_id,
+                                wordData.image_path || null
+                            ],
+                    function(err) {
+                                processed++;
+                                
+                        if (err) {
+                                    errors.push(`导入单词 "${wordData.word}" 失败:`, err);
+                                } else {
+                                    success++;
+                                }
+                                
+                                // 打印进度
+                                if (processed % 100 === 0 || processed === total) {
+                                    console.log(`导入进度: ${Math.floor((processed / total) * 100)}% (${processed}/${total})`);
+                                }
+                                
+                                processNextWord(index + 1);
+                            }
+                        );
+                    };
+                    
+                    // 开始处理第一个单词
+                    processNextWord(0);
+                };
+                
+                // 执行流程：先创建级别，再创建章节，最后导入单词
+                createLevels(() => {
+                    createChapters(() => {
+                        importWords();
+                    });
+                });
+            };
+            
+            // 开始处理
+            processWords();
+            
+            // 完成导入
+            function finishImport() {
+                db.run('COMMIT', (err) => {
+                    if (err) {
+                        console.error('提交事务失败:', err);
+                        db.run('ROLLBACK');
+                            return res.status(500).json({
+                                success: false,
+                            message: '批量导入失败: ' + err.message
+                            });
+                        }
+                        
+                        res.json({
+                            success: true,
+                        message: '批量导入成功',
+                        stats: {
+                            total: total,
+                            imported: success,
+                            skipped: skipped,
+                            errors: errors.length
+                        },
+                        errors: errors.length > 0 ? errors : undefined
+                    });
+                });
+            }
+        });
+    } catch (error) {
+        console.error('批量导入单词错误:', error);
+        return res.status(500).json({
+            success: false,
+            message: '处理JSON数据失败: ' + error.message
         });
     }
 });
@@ -1766,3 +2302,39 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('未处理的Promise拒绝:', reason);
     // 在生产环境中，这里可以添加报警通知等机制
 });
+
+// 检查并创建默认的词汇级别
+const checkAndCreateDefaultVocabularyLevels = () => {
+    const defaultLevels = [
+        { name: '考研英语', description: '考研英语常用词汇', order_num: 1 },
+        { name: '四级英语', description: '大学英语四级词汇', order_num: 2 },
+        { name: '六级英语', description: '大学英语六级词汇', order_num: 3 },
+        { name: '托福英语', description: '托福考试词汇', order_num: 4 },
+        { name: '雅思英语', description: '雅思考试词汇', order_num: 5 }
+    ];
+    
+    defaultLevels.forEach(level => {
+        db.get('SELECT id FROM VocabularyLevels WHERE name = ?', [level.name], (err, result) => {
+            if (err) {
+                console.error(`检查词汇级别 "${level.name}" 失败:`, err);
+                return;
+            }
+            
+            if (!result) {
+                db.run(
+                    'INSERT INTO VocabularyLevels (name, description, order_num) VALUES (?, ?, ?)',
+                    [level.name, level.description, level.order_num],
+                    err => {
+                        if (err) {
+                            console.error(`创建词汇级别 "${level.name}" 失败:`, err);
+                        } else {
+                            console.log(`词汇级别 "${level.name}" 创建成功`);
+                        }
+                    }
+                );
+            } else {
+                console.log(`词汇级别 "${level.name}" 已存在`);
+            }
+        });
+    });     
+};

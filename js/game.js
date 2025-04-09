@@ -135,8 +135,8 @@ const WordGame = {
                     if (!wordPairs || wordPairs.length === 0) {
                         console.error("加载章节单词失败");
                         WordUtils.ErrorManager.showToast('无法加载该章节单词，请选择其他章节');
-                        return false;
-                    }
+                    return false;
+                }
                 } else {
                     // 如果没有特定章节，使用默认数据
                     console.warn("未选择特定章节，使用随机单词");
@@ -161,9 +161,9 @@ const WordGame = {
             // 检查是否成功获取了单词对
             if (!wordPairs || wordPairs.length === 0) {
                 WordUtils.ErrorManager.showToast('无法获取单词数据，请选择其他数据源或重试');
-                return false;
-            }
-            
+                    return false;
+                }
+                
             // 保存单词对到游戏状态
             this.wordPairs = wordPairs;
             
@@ -185,8 +185,8 @@ const WordGame = {
             WordUtils.ErrorManager.showToast('游戏启动失败，请稍后再试');
             return false;
         }
-    },
-    
+    }, 
+
     /**
      * 根据章节ID加载单词
      * @param {number} chapterId - 章节ID
@@ -207,11 +207,11 @@ const WordGame = {
             // 检查响应状态
             if (!response.ok) {
                 throw new Error(`获取单词失败: ${response.status} - ${response.statusText}`);
-            }
+                }
             
             const wordsData = await response.json();
             console.log("API返回的单词数据:", wordsData);
-            
+                
             if (!wordsData || wordsData.length === 0) {
                 WordUtils.ErrorManager.showToast('该章节没有单词数据，请选择其他章节');
                 WordUtils.LoadingManager.hide();
