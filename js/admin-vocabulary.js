@@ -166,8 +166,26 @@ function setupEventListeners() {
     // 保存单词按钮点击事件
     document.getElementById('btn-save-word').addEventListener('click', saveWord);
     
-    // 单词搜索
+    // 单词搜索 - 输入延迟搜索
     document.getElementById('word-search').addEventListener('input', debounce(searchWords, 500));
+    
+    // 单词搜索 - 按回车键立即搜索
+    document.getElementById('word-search').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // 阻止表单提交
+            searchWords(); // 立即执行搜索
+            showToast('正在搜索...', 'info');
+        }
+    });
+    
+    // 单词搜索 - 搜索按钮点击事件
+    const searchButton = document.getElementById('btn-search-word');
+    if (searchButton) {
+        searchButton.addEventListener('click', function() {
+            searchWords();
+            showToast('正在搜索...', 'info');
+        });
+    }
     
     // 级别筛选
     document.getElementById('level-filter').addEventListener('change', filterWords);
@@ -795,26 +813,88 @@ function filterWords() {
  * 搜索单词
  */
 function searchWords() {
-    const searchInput = document.getElementById('search-input');
+    const searchInput = document.getElementById('word-search');
     const levelSelect = document.getElementById('level-filter');
     const chapterSelect = document.getElementById('chapter-filter');
     
-    // 如果选择了特定章节，直接加载该章节的单词
-    if (chapterSelect && chapterSelect.value) {
+    const searchValue = searchInput.value.trim();
+    console.log('搜索关键词:', searchValue);
+    
+    // 如果搜索关键词为空且选择了特定章节，直接加载该章节的单词
+    if (!searchValue && chapterSelect && chapterSelect.value) {
+        console.log('搜索关键词为空，但选择了章节，直接加载章节单词');
         loadWordsByChapter(chapterSelect.value, 1, pageSize);
         return;
     }
     
+    // 如果搜索关键词为空且没有选择特定章节，则重置所有筛选并加载所有单词
+    if (!searchValue && (!chapterSelect || !chapterSelect.value)) {
+        console.log('搜索关键词为空，重置筛选并加载所有单词');
+        loadWords(1, pageSize, {
+            levelId: levelSelect.value !== '' ? levelSelect.value : null
+        });
+        return;
+    }
+    
+    // 构建筛选条件
     const filters = {
-        query: searchInput.value.trim(),
+        query: searchValue,
         levelId: levelSelect.value !== '' ? levelSelect.value : null,
         chapterId: chapterSelect.value !== '' ? chapterSelect.value : null
     };
     
-    console.log('执行搜索:', filters);
+    console.log('执行搜索，筛选条件:', filters);
     
-    // 重置到第一页并加载数据
-    loadWords(1, pageSize, filters);
+    // 显示加载动画
+    showLoading('正在搜索单词...');
+    
+    // 构建URL
+    let url = `${API_BASE_URL}/words/search?q=${encodeURIComponent(filters.query)}`;
+    
+    // 添加级别筛选
+    if (filters.levelId) {
+        url += `&levelId=${filters.levelId}`;
+    }
+    
+    // 添加分页参数
+    url += `&page=1&size=${pageSize}`;
+    
+    console.log('搜索API请求URL:', url);
+    
+    // 执行API请求
+    fetch(url, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`搜索失败: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        hideLoading();
+        
+        console.log('搜索结果:', data);
+        
+        if (data.success) {
+            // 显示搜索结果
+            showToast(`找到 ${data.total || (data.words ? data.words.length : 0)} 个匹配单词`, 'success');
+            displaySearchResults(data.words || []);
+        } else {
+            throw new Error(data.message || '搜索失败');
+        }
+    })
+    .catch(error => {
+        console.error('搜索单词失败:', error);
+        hideLoading();
+        showToast('搜索失败: ' + error.message, 'error');
+        
+        // 显示空结果
+        displaySearchResults([]);
+    });
 }
 
 /**
@@ -822,29 +902,88 @@ function searchWords() {
  * @param {Array} words - 搜索结果单词数组
  */
 function displaySearchResults(words) {
-    const wordList = document.getElementById('word-list');
+    // 获取表格主体元素
+    const tbody = document.getElementById('vocabulary-tbody');
     
-    if (!words || words.length === 0) {
-        wordList.innerHTML = '<tr><td colspan="5">没有找到匹配的单词</td></tr>';
+    if (!tbody) {
+        console.warn('未找到vocabulary-tbody元素');
         return;
     }
     
-    let html = '';
+    // 清空表格
+    tbody.innerHTML = '';
+    
+    // 没有结果时显示提示
+    if (!words || words.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="center-align">没有找到匹配的单词</td></tr>';
+        return;
+    }
+    
+    // 填充表格行
     words.forEach(word => {
-        html += `
-        <tr>
-            <td>${word.word}</td>
-            <td>${word.phonetic || ''}</td>
-            <td>${word.definition || word.meaning || ''}</td>
-            <td>${word.chapter_name || ''}</td>
-            <td>
-                <button class="btn btn-sm btn-primary" onclick="editWord(${word.id})">编辑</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteWord(${word.id})">删除</button>
-            </td>
-        </tr>`;
+        const tr = document.createElement('tr');
+        
+        // ID
+        const tdId = document.createElement('td');
+        tdId.textContent = word.id || '无ID';
+        tr.appendChild(tdId);
+        
+        // 单词
+        const tdWord = document.createElement('td');
+        tdWord.textContent = word.word || '无单词';
+        tr.appendChild(tdWord);
+        
+        // 音标
+        const tdPhonetic = document.createElement('td');
+        tdPhonetic.textContent = word.phonetic || '-';
+        tr.appendChild(tdPhonetic);
+        
+        // 含义
+        const tdDefinition = document.createElement('td');
+        tdDefinition.textContent = word.meaning || '-';
+        tr.appendChild(tdDefinition);
+        
+        // 所属章节
+        const tdChapter = document.createElement('td');
+        tdChapter.textContent = word.chapter_name || '未分配章节';
+        tr.appendChild(tdChapter);
+        
+        // 操作
+        const tdActions = document.createElement('td');
+        tdActions.className = 'word-actions';
+        
+        // 编辑按钮
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-small edit';
+        editBtn.innerHTML = '<i class="material-icons">edit</i>编辑';
+        editBtn.addEventListener('click', () => editWord(word));
+        tdActions.appendChild(editBtn);
+        
+        // 删除按钮
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-small delete';
+        deleteBtn.innerHTML = '<i class="material-icons">delete</i>删除';
+        deleteBtn.addEventListener('click', () => showDeleteConfirmation('word', word.id, `确定要删除单词 "${word.word}" 吗？`));
+        tdActions.appendChild(deleteBtn);
+        
+        tr.appendChild(tdActions);
+        tbody.appendChild(tr);
     });
     
-    wordList.innerHTML = html;
+    // 更新分页状态
+    paginationState.update(1, pageSize, words.length);
+    
+    // 更新分页控件
+    const totalPages = Math.ceil(words.length / pageSize);
+    if (totalPages > 1) {
+        updatePagination(1, totalPages);
+    } else {
+        // 如果只有一页，清空分页控件
+        const pagination = document.getElementById('vocabulary-pagination');
+        if (pagination) {
+            pagination.innerHTML = '';
+        }
+    }
 }
 
 /**
