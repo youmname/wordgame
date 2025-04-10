@@ -11,7 +11,7 @@ const API_ENDPOINTS = {
     VOCABULARY_LEVELS: '/vocabulary-levels',
     LEVEL_CHAPTERS: '/vocabulary-levels/{id}/chapters',
     CHAPTERS: '/chapters',
-    WORDS: '/chapters/{id}/words',
+    WORDS: '/words',
     IMPORT_WORDS: '/import-words',
     WORDS_SEARCH: '/words/search',
     WORDS_MANAGE: '/words',
@@ -27,10 +27,31 @@ let vocabularyLevels = [];
 let currentLevelId = null;
 let excelData = null;
 
-// 删除模拟数据
-const MOCK_VOCABULARY_DATA = null;
-const MOCK_CHAPTER_DATA = null;
-const MOCK_LEVEL_DATA = null;
+// 分页状态管理
+const paginationState = {
+  currentPage: 1,     // 当前页码
+  pageSize: 20,       // 每页显示数量
+  totalItems: 0,      // 总记录数
+  
+  // 获取总页数
+  getTotalPages() {
+    return Math.max(1, Math.ceil(this.totalItems / this.pageSize));
+  },
+  
+  // 更新状态
+  update(page, size, total) {
+    if (page !== undefined) this.currentPage = parseInt(page) || 1;
+    if (size !== undefined) this.pageSize = parseInt(size) || 20;
+    if (total !== undefined) this.totalItems = parseInt(total) || 0;
+    
+    console.log(`分页状态已更新: 页码=${this.currentPage}, 每页=${this.pageSize}, 总数=${this.totalItems}, 总页数=${this.getTotalPages()}`);
+  },
+  
+  // 重置到第一页(保留其他参数)
+  reset() {
+    this.currentPage = 1;
+  }
+};
 
 /**
  * 页面加载时初始化
@@ -139,15 +160,11 @@ function setupEventListeners() {
     document.getElementById('import-level-select').addEventListener('change', updateChapterDropdown);
     document.getElementById('word-level').addEventListener('change', updateWordChapterDropdown);
     
-    // 添加按钮点击事件
+    // 添加单词按钮点击事件
     document.getElementById('btn-add-word').addEventListener('click', showAddWordModal);
-    document.getElementById('btn-add-level').addEventListener('click', showAddLevelModal);
-    document.getElementById('btn-add-chapter').addEventListener('click', showAddChapterModal);
     
-    // 保存按钮点击事件
+    // 保存单词按钮点击事件
     document.getElementById('btn-save-word').addEventListener('click', saveWord);
-    document.getElementById('btn-save-level').addEventListener('click', saveLevel);
-    document.getElementById('btn-save-chapter').addEventListener('click', saveChapter);
     
     // 单词搜索
     document.getElementById('word-search').addEventListener('input', debounce(searchWords, 500));
@@ -157,9 +174,6 @@ function setupEventListeners() {
     
     // 章节筛选
     document.getElementById('chapter-filter').addEventListener('change', filterWords);
-    
-    // 章节级别筛选
-    document.getElementById('chapter-level-filter').addEventListener('change', filterChapters);
     
     // 添加测试API按钮
     const buttonContainer = document.querySelector('.action-buttons');
@@ -188,6 +202,9 @@ async function loadInitialData() {
         
         // 更新级别下拉框
         await updateLevelDropdowns();
+        
+        // 初始化分页状态
+        paginationState.update(1, 20, 0);
         
         // 加载单词数据
         await loadWords();
@@ -236,7 +253,7 @@ async function loadVocabularyLevels() {
         if (data.levels.length > 0) {
             levelSelect.value = data.levels[0].id;
             M.FormSelect.init(levelSelect);
-            await loadChapters(data.levels[0].id);
+            // 不再需要加载章节管理相关数据
         }
     } catch (error) {
         console.error('加载词汇级别失败:', error);
@@ -252,9 +269,7 @@ function updateLevelDropdowns() {
     const levelSelects = [
         document.getElementById('level-filter'),
         document.getElementById('import-level-select'),
-        document.getElementById('word-level'),
-        document.getElementById('chapter-level-select'),
-        document.getElementById('chapter-level-filter')
+        document.getElementById('word-level')
     ];
     
     // 清空并重新填充每个下拉框
@@ -398,117 +413,130 @@ function loadWords(page = 1, size = 20, filters = {}) {
     // 显示加载动画
     showLoading('加载单词...');
     
-    // 构建API URL
+    // 更新分页状态
+    paginationState.update(page, size);
+    
+    // 构建URL
     let url;
-    let queryParams = new URLSearchParams();
+    
+    // 根据筛选条件构建URL
+    if (filters.chapterId) {
+        // 使用章节ID加载单词
+        url = `${API_BASE_URL}/chapters/${filters.chapterId}/words`;
+    } else if (filters.query) {
+        // 搜索功能
+        url = `${API_BASE_URL}/words/search?q=${encodeURIComponent(filters.query)}`;
+    } else {
+        // 加载所有单词
+        url = `${API_BASE_URL}/words`;
+    }
     
     // 添加分页参数
-    queryParams.append('page', page);
-    queryParams.append('size', size);
+    url += url.includes('?') ? '&' : '?';
+    url += `page=${paginationState.currentPage}&size=${paginationState.pageSize}`;
     
-    // 如果有筛选条件，添加到查询参数
+    // 添加级别筛选
     if (filters.levelId) {
-        queryParams.append('levelId', filters.levelId);
-    }
-    if (filters.levelName) {
-        queryParams.append('levelName', filters.levelName);
-    }
-    if (filters.chapterId) {
-        queryParams.append('chapterId', filters.chapterId);
-    }
-    if (filters.query) {
-        queryParams.append('query', filters.query);
+        url += `&levelId=${filters.levelId}`;
     }
     
-    // 使用/api/words/search端点
-    url = `${API_BASE_URL}/words/search?${queryParams.toString()}`;
-    
+    // 记录API请求URL
     console.log('请求URL:', url);
     
-    // 发送API请求
     return fetch(url, {
         headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': 'Bearer ' + token,
             'Accept': 'application/json'
         }
     })
     .then(response => {
         if (!response.ok) {
-            return response.text().then(text => {
-                console.error('API错误:', text);
-                throw new Error(`获取单词失败：${response.status}`);
-            });
+            throw new Error(`获取单词失败: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('获取单词成功:', data);
+        hideLoading();
         
-        if (!data.success) {
+        console.log('API响应:', data);
+        
+        // 检查是否返回成功
+        if (data.success) {
+            // 更新分页状态
+            paginationState.update(
+                data.page || paginationState.currentPage,
+                data.size || paginationState.pageSize,
+                data.total || (data.words ? data.words.length : 0)
+            );
+            
+            // 显示单词数据
+            displayWords(data.words || []);
+            return data.words || [];
+        } else {
             throw new Error(data.message || '获取单词失败');
         }
-        
-        // 更新总记录数
-        totalWords = data.total;
-        
-        // 处理并显示单词
-        displayWords(data.words);
-        
-        // 更新分页
-        updatePagination(page, Math.ceil(data.total / size));
-        
-        hideLoading();
-        return data.words;
     })
     .catch(error => {
         console.error('加载单词失败:', error);
-        
-        // 在表格中显示错误信息
-        const tbody = document.getElementById('vocabulary-tbody');
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="center-align red-text">加载失败: ${error.message}</td></tr>`;
-        }
-        
-        showToast('加载单词失败: ' + error.message, 'error');
         hideLoading();
+        showToast('加载单词失败: ' + error.message, 'error');
+        
+        // 显示空单词列表
+        displayWords([]);
+        return [];
     });
 }
 
 /**
  * 处理并显示单词数据
- * @param {Array} words - 单词数据
- * @param {number} page - 页码
- * @param {number} size - 每页大小
- * @param {Object} filters - 过滤条件
- * @returns {Array} 处理后的单词数据
+ * @param {Array} words - 单词数据数组
+ * @param {number} total - 总记录数(如果提供)
+ * @param {number} currentPageNum - 当前页码
+ * @param {number} pageSizeNum - 每页大小
  */
-function processAndDisplayWords(words, page, size, filters) {
-    console.log('处理并显示单词:', words.length, '页码:', page, '每页:', size);
+function displayWords(words, total = null, currentPageNum = null, pageSizeNum = null) {
+    console.log('【后端分页】显示单词数据:', 
+                '数据条数:', words.length, 
+                '总记录数:', total, 
+                '当前页码:', currentPageNum, 
+                '每页大小:', pageSizeNum);
     
-    // 计算总数和分页
-    const total = words.length;
-    totalWords = total;
+    // 获取当前选中的章节ID（如果有）
+    const chapterSelect = document.getElementById('chapter-filter');
+    const selectedChapterId = chapterSelect && chapterSelect.value ? chapterSelect.value : null;
+    let selectedChapterName = '';
     
-    // 前端分页
-    const start = (page - 1) * size;
-    const end = start + size;
-    const pagedWords = words.slice(start, end);
+    // 获取选中章节的名称（如果有）
+    if (selectedChapterId) {
+        for (const option of chapterSelect.options) {
+            if (option.value === selectedChapterId) {
+                selectedChapterName = option.textContent;
+                break;
+            }
+        }
+    }
+    
+    // 更新总记录数 - 优先使用传入的total参数，否则使用数组长度
+    totalWords = total !== null ? total : words.length;
+    
+    // 使用传入的页码和每页大小，否则使用全局变量
+    const displayCurrentPage = currentPageNum !== null ? currentPageNum : currentPage;
+    const displayPageSize = pageSizeNum !== null ? pageSizeNum : pageSize;
     
     // 清空表格
     const tbody = document.getElementById('vocabulary-tbody');
     if (!tbody) {
         console.warn('未找到vocabulary-tbody元素');
-        hideLoading();
-        return [];
+        return;
     }
     
     tbody.innerHTML = '';
     
     // 填充表格
-    if (pagedWords.length === 0) {
+    if (words.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="center-align">暂无单词数据</td></tr>';
     } else {
-        pagedWords.forEach(word => {
+        words.forEach(word => {
             const tr = document.createElement('tr');
             
             // ID
@@ -528,12 +556,20 @@ function processAndDisplayWords(words, page, size, filters) {
             
             // 含义 - 确保优先使用meaning字段
             const tdDefinition = document.createElement('td');
-            tdDefinition.textContent = word.meaning || word.definition || '-';
+            tdDefinition.textContent = word.meaning || '-';
             tr.appendChild(tdDefinition);
             
-            // 所属章节 - 添加默认值
+            // 所属章节 - 使用选中的章节名称或API返回的章节名称
             const tdChapter = document.createElement('td');
-            tdChapter.textContent = filters.chapterId ? getChapterNameById(filters.chapterId) : (word.chapter_name || '默认章节');
+            if (selectedChapterId && selectedChapterName) {
+                tdChapter.textContent = selectedChapterName;
+            } else if (word.chapter_name) {
+                tdChapter.textContent = word.chapter_name;
+            } else if (word.chapter_id) {
+                tdChapter.textContent = getChapterNameById(word.chapter_id);
+            } else {
+                tdChapter.textContent = '未分配章节';
+            }
             tr.appendChild(tdChapter);
             
             // 操作
@@ -559,11 +595,20 @@ function processAndDisplayWords(words, page, size, filters) {
         });
     }
     
-    // 更新分页
-    updatePagination(page, Math.ceil(total / size));
+    // 更新分页 - 使用totalWords和displayPageSize计算总页数
+    const totalPages = Math.ceil(totalWords / displayPageSize);
+    console.log(`更新分页: 当前页=${displayCurrentPage}, 总页数=${totalPages}, 总记录数=${totalWords}, 每页大小=${displayPageSize}`);
     
-    hideLoading();
-    return pagedWords;
+    // 只有当总页数大于1时才显示分页控件
+    if (totalPages > 1) {
+        updatePagination(displayCurrentPage, totalPages);
+    } else {
+        // 如果只有一页，清空分页控件
+        const pagination = document.getElementById('vocabulary-pagination');
+        if (pagination) {
+            pagination.innerHTML = '';
+        }
+    }
 }
 
 /**
@@ -572,12 +617,22 @@ function processAndDisplayWords(words, page, size, filters) {
  * @returns {string} 章节名称
  */
 function getChapterNameById(chapterId) {
-    // 尝试从全局缓存中获取章节信息
+    // 首先尝试从全局缓存中获取章节信息
     if (window.chaptersCache && window.chaptersCache[chapterId]) {
         return window.chaptersCache[chapterId].name;
     }
     
-    // 如果没有缓存，则显示ID
+    // 尝试从当前选择的章节获取名称
+    const chapterSelect = document.getElementById('chapter-filter');
+    if (chapterSelect) {
+        for (const option of chapterSelect.options) {
+            if (option.value === chapterId.toString()) {
+                return option.textContent;
+            }
+        }
+    }
+    
+    // 如果没有找到名称，则显示ID
     return `章节${chapterId}`;
 }
 
@@ -587,8 +642,31 @@ function getChapterNameById(chapterId) {
  * @param {number} totalPages - 总页数
  */
 function updatePagination(currentPage, totalPages) {
+    console.log('【后端分页】更新分页控件:', '当前页:', currentPage, '总页数:', totalPages);
+    
     const pagination = document.getElementById('vocabulary-pagination');
+    if (!pagination) {
+        console.warn('未找到分页控件元素');
+        return;
+    }
+    
+    // 清空现有分页控件
     pagination.innerHTML = '';
+    
+    // 如果总页数小于等于1，不显示分页控件
+    if (totalPages <= 1) {
+        console.log('【后端分页】只有一页或没有数据，不显示分页控件');
+        return;
+    }
+    
+    // 添加分页标题(可选)
+    const paginationInfo = document.createElement('li');
+    paginationInfo.className = 'disabled';
+    const paginationInfoA = document.createElement('a');
+    paginationInfoA.href = '#!';
+    paginationInfoA.textContent = `第${currentPage}页/共${totalPages}页`;
+    paginationInfo.appendChild(paginationInfoA);
+    pagination.appendChild(paginationInfo);
     
     // 前一页
     const prevLi = document.createElement('li');
@@ -597,7 +675,11 @@ function updatePagination(currentPage, totalPages) {
     prevA.href = '#!';
     prevA.innerHTML = '<i class="material-icons">chevron_left</i>';
     if (currentPage > 1) {
-        prevA.addEventListener('click', () => loadWords(currentPage - 1, pageSize));
+        prevA.addEventListener('click', () => {
+            console.log('【后端分页】点击上一页按钮，切换到页码:', currentPage - 1);
+            // 根据当前情况决定调用哪个加载函数
+            handlePageChange(currentPage - 1);
+        });
     }
     prevLi.appendChild(prevA);
     pagination.appendChild(prevLi);
@@ -611,12 +693,16 @@ function updatePagination(currentPage, totalPages) {
     
     for (let i = startPage; i <= endPage; i++) {
         const pageLi = document.createElement('li');
-        pageLi.className = i === currentPage ? 'active' : 'waves-effect';
+        pageLi.className = i === parseInt(currentPage) ? 'active' : 'waves-effect';
         const pageA = document.createElement('a');
         pageA.href = '#!';
         pageA.textContent = i;
-        if (i !== currentPage) {
-            pageA.addEventListener('click', () => loadWords(i, pageSize));
+        if (i !== parseInt(currentPage)) {
+            pageA.addEventListener('click', () => {
+                console.log('【后端分页】点击页码按钮，切换到页码:', i);
+                // 根据当前情况决定调用哪个加载函数
+                handlePageChange(i);
+            });
         }
         pageLi.appendChild(pageA);
         pagination.appendChild(pageLi);
@@ -629,50 +715,80 @@ function updatePagination(currentPage, totalPages) {
     nextA.href = '#!';
     nextA.innerHTML = '<i class="material-icons">chevron_right</i>';
     if (currentPage < totalPages) {
-        nextA.addEventListener('click', () => loadWords(currentPage + 1, pageSize));
+        nextA.addEventListener('click', () => {
+            console.log('【后端分页】点击下一页按钮，切换到页码:', currentPage + 1);
+            // 根据当前情况决定调用哪个加载函数
+            handlePageChange(currentPage + 1);
+        });
     }
     nextLi.appendChild(nextA);
     pagination.appendChild(nextLi);
 }
 
 /**
+ * 处理页码变化
+ * @param {number} newPage - 新的页码
+ */
+function handlePageChange(newPage) {
+    // 验证页码有效性
+    newPage = parseInt(newPage) || 1;
+    const totalPages = paginationState.getTotalPages();
+    
+    if (newPage < 1) newPage = 1;
+    if (newPage > totalPages) newPage = totalPages;
+    
+    // 如果页码没有变化，不做操作
+    if (newPage === paginationState.currentPage) return;
+    
+    console.log(`切换到第 ${newPage} 页`);
+    
+    // 显示加载指示器
+    showLoading('加载第 ' + newPage + ' 页...');
+    
+    // 获取当前筛选条件
+    const filters = {};
+    const levelId = document.getElementById('level-filter').value;
+    const chapterId = document.getElementById('chapter-filter').value;
+    const searchInput = document.getElementById('word-search');
+    
+    if (levelId) filters.levelId = levelId;
+    if (chapterId) filters.chapterId = chapterId;
+    if (searchInput && searchInput.value.trim()) {
+        filters.query = searchInput.value.trim();
+    }
+    
+    // 加载新页面数据
+    loadWords(newPage, paginationState.pageSize, filters)
+        .catch(error => {
+            console.error('页面切换失败:', error);
+            showToast('加载失败，请重试', 'error');
+        });
+}
+
+/**
  * 过滤单词列表
  */
 function filterWords() {
-    const levelSelect = document.getElementById('level-filter');
-    const chapterSelect = document.getElementById('chapter-filter');
-    const searchInput = document.getElementById('search-input');
+    // 获取筛选条件
+    const levelId = document.getElementById('level-filter').value;
+    const chapterId = document.getElementById('chapter-filter').value;
+    const searchInput = document.getElementById('word-search');
     
-    // 如果元素不存在，提前返回
-    if (!levelSelect || !chapterSelect) {
-        console.error('找不到级别或章节选择器元素');
-        return;
-    }
-    
-    // 如果选择了特定章节，直接加载该章节的单词
-    if (chapterSelect.value) {
-        console.log(`已选择章节ID: ${chapterSelect.value}，直接加载该章节单词`);
-        loadWordsByChapter(chapterSelect.value);
-        return;
-    }
-    
-    // 准备筛选条件
-    let filters = {};
-    
-    // 处理级别筛选
-    if (levelSelect.value !== '') {
-        filters.levelId = levelSelect.value;
-    }
-    
-    // 处理搜索词
-    if (searchInput && searchInput.value) {
+    // 构建筛选对象
+    const filters = {};
+    if (levelId) filters.levelId = levelId;
+    if (chapterId) filters.chapterId = chapterId;
+    if (searchInput && searchInput.value.trim()) {
         filters.query = searchInput.value.trim();
     }
     
     console.log('应用筛选条件:', filters);
     
-    // 加载单词数据
-    loadWords(1, 20, filters);
+    // 重置分页状态到第一页
+    paginationState.reset();
+    
+    // 加载筛选后的数据
+    loadWords(1, paginationState.pageSize, filters);
 }
 
 /**
@@ -683,6 +799,12 @@ function searchWords() {
     const levelSelect = document.getElementById('level-filter');
     const chapterSelect = document.getElementById('chapter-filter');
     
+    // 如果选择了特定章节，直接加载该章节的单词
+    if (chapterSelect && chapterSelect.value) {
+        loadWordsByChapter(chapterSelect.value, 1, pageSize);
+        return;
+    }
+    
     const filters = {
         query: searchInput.value.trim(),
         levelId: levelSelect.value !== '' ? levelSelect.value : null,
@@ -692,7 +814,7 @@ function searchWords() {
     console.log('执行搜索:', filters);
     
     // 重置到第一页并加载数据
-    loadWords(1, 20, filters);
+    loadWords(1, pageSize, filters);
 }
 
 /**
@@ -1337,7 +1459,7 @@ function handleImportSuccess() {
     
     // 刷新列表
     loadWords();
-    loadChapters();
+    // 不再需要加载章节管理相关数据
 }
 
 // 增强单词保存功能，确保字段一致性
@@ -1345,11 +1467,15 @@ function saveWord() {
     const wordId = document.getElementById('word-id').value;
     const word = document.getElementById('word-word').value;
     const phonetic = document.getElementById('word-phonetic').value;
-    const definition = document.getElementById('word-definition').value;
+    const meaning = document.getElementById('word-definition').value;
     const levelId = document.getElementById('word-level').value;
     const chapterId = document.getElementById('word-chapter').value;
+    const phrase = document.getElementById('word-phrase')?.value || '';
+    const example = document.getElementById('word-example')?.value || '';
+    const morphology = document.getElementById('word-morphology')?.value || '';
+    const note = document.getElementById('word-note')?.value || '';
     
-    if (!word || !definition || !chapterId) {
+    if (!word || !meaning || !chapterId) {
         showToast('单词、释义和章节不能为空', 'error');
         return;
     }
@@ -1357,13 +1483,17 @@ function saveWord() {
     // 显示加载状态
     showLoading('保存单词...');
     
-    // 准备请求数据，确保字段名与后端一致
+    // 准备请求数据，确保字段名与数据库一致
     const requestData = {
         word: word,
         phonetic: phonetic || '',
-        meaning: definition, // 使用meaning字段，与后端一致
-        level_id: parseInt(levelId),
-        chapter_id: parseInt(chapterId)
+        meaning: meaning, // 使用meaning字段，与数据库Words表字段一致
+        phrase: phrase,
+        example: example,
+        morphology: morphology,
+        note: note,
+        level_id: levelId, // 保持原始字符串类型，不进行转换
+        chapter_id: chapterId // 保持原始字符串类型，不进行转换
     };
     
     let url, method;
@@ -1378,6 +1508,8 @@ function saveWord() {
         method = 'POST';
     }
     
+    console.log(`${method} ${url} 请求数据:`, requestData);
+    
     // 发送请求
     fetch(url, {
         method: method,
@@ -1389,8 +1521,15 @@ function saveWord() {
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(errorData => {
-                throw new Error(errorData.message || '保存单词失败');
+            return response.text().then(text => {
+                try {
+                    const errorData = JSON.parse(text);
+                    console.error('API错误响应:', errorData);
+                    throw new Error(errorData.message || '保存单词失败');
+                } catch (e) {
+                    console.error('API错误响应原文:', text);
+                    throw new Error('保存单词失败，服务器响应无效');
+                }
             });
         }
         return response.json();
@@ -1406,7 +1545,19 @@ function saveWord() {
             modal.close();
             
             // 重新加载单词列表
-            loadWords();
+            if (window.allWords) {
+                // 如果有特定章节加载，刷新该章节
+                const chapterSelect = document.getElementById('chapter-filter');
+                if (chapterSelect && chapterSelect.value) {
+                    loadWordsByChapter(chapterSelect.value, currentPage, pageSize);
+                } else {
+                    // 否则重新加载所有单词
+                    loadWords(currentPage, pageSize);
+                }
+            } else {
+                // 如果没有加载任何单词，默认加载
+                loadWords();
+            }
         } else {
             throw new Error(data.message || '保存单词失败');
         }
@@ -1414,7 +1565,7 @@ function saveWord() {
     .catch(error => {
         console.error('保存单词失败:', error);
         hideLoading();
-        showToast(error.message, 'error');
+        showToast('保存单词失败: ' + error.message, 'error');
     });
 }
 
@@ -1480,6 +1631,18 @@ function showAddWordModal() {
     document.getElementById('word-form').reset();
     document.getElementById('word-id').value = '';
     
+    // 清空所有字段
+    document.getElementById('word-word').value = '';
+    document.getElementById('word-phonetic').value = '';
+    document.getElementById('word-definition').value = '';
+    document.getElementById('word-phrase').value = '';
+    document.getElementById('word-example').value = '';
+    document.getElementById('word-morphology').value = '';
+    document.getElementById('word-note').value = '';
+    
+    // 更新标签
+    M.updateTextFields();
+    
     // 更新模态框标题
     document.querySelector('#word-modal .modal-title').textContent = '添加新单词';
     
@@ -1497,7 +1660,11 @@ function editWord(word) {
     document.getElementById('word-id').value = word.id;
     document.getElementById('word-word').value = word.word;
     document.getElementById('word-phonetic').value = word.phonetic || '';
-    document.getElementById('word-definition').value = word.meaning || word.definition || '';
+    document.getElementById('word-definition').value = word.meaning || '';
+    document.getElementById('word-phrase').value = word.phrase || '';
+    document.getElementById('word-example').value = word.example || '';
+    document.getElementById('word-morphology').value = word.morphology || '';
+    document.getElementById('word-note').value = word.note || '';
     
     // 选择级别和章节
     if (word.level_id) {
@@ -2007,7 +2174,7 @@ function deleteLevel(levelId) {
         // 重新加载级别列表和下拉框
         loadVocabularyLevels().then(() => {
             updateLevelDropdowns();
-            loadLevels();
+            // 不再需要加载级别管理相关数据
         });
     })
     .catch(error => {
@@ -2058,17 +2225,28 @@ function testDirectAPI() {
  * @param {Array} words - 单词数据数组
  */
 function displayWords(words) {
-    // 更新总记录数
-    totalWords = words.length;
-    
     // 清空表格
     const tbody = document.getElementById('vocabulary-tbody');
-    if (!tbody) {
-        console.warn('未找到vocabulary-tbody元素');
-        return;
+    tbody.innerHTML = '';
+    
+    // 显示数据范围信息
+    let rangeInfo = '';
+    if (paginationState.totalItems > 0) {
+        const startItem = (paginationState.currentPage - 1) * paginationState.pageSize + 1;
+        const endItem = Math.min(paginationState.currentPage * paginationState.pageSize, paginationState.totalItems);
+        rangeInfo = `显示 ${startItem}-${endItem}，共 ${paginationState.totalItems} 条`;
     }
     
-    tbody.innerHTML = '';
+    // 更新或创建范围信息元素
+    let rangeInfoElem = document.getElementById('data-range-info');
+    if (!rangeInfoElem) {
+        rangeInfoElem = document.createElement('div');
+        rangeInfoElem.id = 'data-range-info';
+        rangeInfoElem.className = 'right-align grey-text';
+        const tableContainer = document.querySelector('#vocabulary-table').parentNode;
+        tableContainer.insertBefore(rangeInfoElem, document.getElementById('vocabulary-pagination'));
+    }
+    rangeInfoElem.textContent = rangeInfo;
     
     // 填充表格
     if (words.length === 0) {
@@ -2094,12 +2272,18 @@ function displayWords(words) {
             
             // 含义 - 确保优先使用meaning字段
             const tdDefinition = document.createElement('td');
-            tdDefinition.textContent = word.meaning || word.definition || '-';
+            tdDefinition.textContent = word.meaning || '-';
             tr.appendChild(tdDefinition);
             
-            // 所属章节 - 添加默认值
+            // 所属章节 - 使用选中的章节名称或API返回的章节名称
             const tdChapter = document.createElement('td');
-            tdChapter.textContent = word.chapter_name || '默认章节';
+            if (word.chapter_name) {
+                tdChapter.textContent = word.chapter_name;
+            } else if (word.chapter_id) {
+                tdChapter.textContent = getChapterNameById(word.chapter_id);
+            } else {
+                tdChapter.textContent = '未分配章节';
+            }
             tr.appendChild(tdChapter);
             
             // 操作
@@ -2125,98 +2309,98 @@ function displayWords(words) {
         });
     }
     
-    // 更新分页
-    updatePagination(1, Math.ceil(totalWords / 20));
+    // 重要: 无论如何都更新分页控件
+    updatePagination();
 }
 
-// 添加直接API测试函数
-function directAPITest() {
-    showLoading('测试API中...');
+// // 添加直接API测试函数
+// function directAPITest() {
+//     showLoading('测试API中...');
     
-    // 尝试直接用fetch测试API
-    fetch('https://www.sanjinai.cn:5000/api/chapters/1/words', {
-        method: 'GET', 
-        headers: {
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                console.log('API返回:', text);
-                throw new Error(`API测试失败: ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('API测试成功，数据:', data);
+//     // 尝试直接用fetch测试API
+//     fetch('https://www.sanjinai.cn:5000/api/chapters/1/words', {
+//         method: 'GET', 
+//         headers: {
+//             'Accept': 'application/json'
+//         }
+//     })
+//     .then(response => {
+//         if (!response.ok) {
+//             return response.text().then(text => {
+//                 console.log('API返回:', text);
+//                 throw new Error(`API测试失败: ${response.status}`);
+//             });
+//         }
+//         return response.json();
+//     })
+//     .then(data => {
+//         console.log('API测试成功，数据:', data);
         
-        // 显示测试结果
-        const resultContainer = document.getElementById('test-result');
-        if (!resultContainer) {
-            const container = document.createElement('div');
-            container.id = 'test-result';
-            container.className = 'card-panel';
-            container.style.margin = '20px';
-            document.querySelector('.container').appendChild(container);
-        }
+//         // 显示测试结果
+//         const resultContainer = document.getElementById('test-result');
+//         if (!resultContainer) {
+//             const container = document.createElement('div');
+//             container.id = 'test-result';
+//             container.className = 'card-panel';
+//             container.style.margin = '20px';
+//             document.querySelector('.container').appendChild(container);
+//         }
         
-        const container = document.getElementById('test-result');
-        container.innerHTML = `
-            <h5>API测试结果</h5>
-            <p>API状态: <span class="green-text">成功</span></p>
-            <p>返回数据: ${JSON.stringify(data, null, 2)}</p>
-            <p>解决方法: 修改服务器端app.js，将查询中的w.phonetic改为w.pronunciation</p>
-            <pre class="code grey lighten-4 z-depth-1" style="padding: 10px;">
-const query = \`
-    SELECT w.id, w.word, w.definition, w.pronunciation AS phonetic, wm.order_num
-    FROM Words w
-    JOIN WordMappings wm ON w.id = wm.word_id
-    WHERE wm.chapter_id = ?
-    ORDER BY wm.order_num
-\`;
-            </pre>
-        `;
+//         const container = document.getElementById('test-result');
+//         container.innerHTML = `
+//             <h5>API测试结果</h5>
+//             <p>API状态: <span class="green-text">成功</span></p>
+//             <p>返回数据: ${JSON.stringify(data, null, 2)}</p>
+//             <p>解决方法: 修改服务器端app.js，将查询中的w.phonetic改为w.pronunciation</p>
+//             <pre class="code grey lighten-4 z-depth-1" style="padding: 10px;">
+// const query = \`
+//     SELECT w.id, w.word, w.definition, w.pronunciation AS phonetic, wm.order_num
+//     FROM Words w
+//     JOIN WordMappings wm ON w.id = wm.word_id
+//     WHERE wm.chapter_id = ?
+//     ORDER BY wm.order_num
+// \`;
+//             </pre>
+//         `;
         
-        hideLoading();
-        showToast('API测试成功', 'success');
-    })
-    .catch(error => {
-        console.error('API测试失败:', error);
+//         hideLoading();
+//         showToast('API测试成功', 'success');
+//     })
+//     .catch(error => {
+//         console.error('API测试失败:', error);
         
-        // 创建或更新测试结果容器
-        const resultContainer = document.getElementById('test-result');
-        if (!resultContainer) {
-            const container = document.createElement('div');
-            container.id = 'test-result';
-            container.className = 'card-panel';
-            container.style.margin = '20px';
-            document.querySelector('.container').appendChild(container);
-        }
+//         // 创建或更新测试结果容器
+//         const resultContainer = document.getElementById('test-result');
+//         if (!resultContainer) {
+//             const container = document.createElement('div');
+//             container.id = 'test-result';
+//             container.className = 'card-panel';
+//             container.style.margin = '20px';
+//             document.querySelector('.container').appendChild(container);
+//         }
         
-        const container = document.getElementById('test-result');
-        container.innerHTML = `
-            <h5>API测试结果</h5>
-            <p>API状态: <span class="red-text">失败</span></p>
-            <p>错误信息: ${error.message}</p>
-            <p>原因: 服务器代码中查询使用了不存在的列名 'w.phonetic'，而数据库中的列名是 'w.pronunciation'</p>
-            <p>解决方法: 修改服务器端app.js，将查询中的w.phonetic改为w.pronunciation</p>
-            <pre class="code grey lighten-4 z-depth-1" style="padding: 10px;">
-const query = \`
-    SELECT w.id, w.word, w.definition, w.pronunciation AS phonetic, wm.order_num
-    FROM Words w
-    JOIN WordMappings wm ON w.id = wm.word_id
-    WHERE wm.chapter_id = ?
-    ORDER BY wm.order_num
-\`;
-            </pre>
-        `;
+//         const container = document.getElementById('test-result');
+//         container.innerHTML = `
+//             <h5>API测试结果</h5>
+//             <p>API状态: <span class="red-text">失败</span></p>
+//             <p>错误信息: ${error.message}</p>
+//             <p>原因: 服务器代码中查询使用了不存在的列名 'w.phonetic'，而数据库中的列名是 'w.pronunciation'</p>
+//             <p>解决方法: 修改服务器端app.js，将查询中的w.phonetic改为w.pronunciation</p>
+//             <pre class="code grey lighten-4 z-depth-1" style="padding: 10px;">
+// const query = \`
+//     SELECT w.id, w.word, w.definition, w.pronunciation AS phonetic, wm.order_num
+//     FROM Words w
+//     JOIN WordMappings wm ON w.id = wm.word_id
+//     WHERE wm.chapter_id = ?
+//     ORDER BY wm.order_num
+// \`;
+//             </pre>
+//         `;
         
-        hideLoading();
-        showToast(`API测试失败: ${error.message}`, 'error');
-    });
-}
+//         hideLoading();
+//         showToast(`API测试失败: ${error.message}`, 'error');
+//     });
+// }
 
 // 根据级别加载章节
 async function loadChaptersByLevel(levelId) {
@@ -2556,40 +2740,51 @@ function handleChapterChange() {
     }
     
     // 获取当前选中的级别和章节
-    const levelId = parseInt(levelSelect.value, 10);
-    const chapterId = chapterSelect.value ? parseInt(chapterSelect.value, 10) : null;
+    const levelId = levelSelect.value;
+    const chapterId = chapterSelect.value;
 
     console.log(`筛选条件变更: 级别ID=${levelId}, 章节ID=${chapterId}`);
     
     // 如果有选择章节，则加载该章节的单词
     if (chapterId) {
-        loadWordsByChapter(chapterId);
+        loadWordsByChapter(chapterId, 1, pageSize);
     } 
-    // 否则加载整个级别的单词
+    // 否则如果选择了级别，使用级别筛选加载单词
     else if (levelId) {
-        loadWordsByLevel(levelId);
+        loadWords(1, pageSize, { levelId: levelId });
     } 
     // 如果都没有选择，则加载所有单词
     else {
-        loadAllWords();
+        loadWords(1, pageSize, {});
     }
 }
 
 /**
  * 加载特定章节的单词
  * @param {number|string} chapterId - 章节ID
+ * @param {number} page - 当前页码，默认为1
+ * @param {number} pageSize - 每页大小，默认为20
  */
-function loadWordsByChapter(chapterId) {
+function loadWordsByChapter(chapterId, page = 1, pageSize = 20) {
     // 显示加载动画
     showLoading('加载章节单词...');
     
     // 确保章节ID是URL编码的
     const encodedChapterId = encodeURIComponent(chapterId);
     
-    // 构建API URL
-    const url = `${API_BASE_URL}/chapters/${encodedChapterId}/words`;
+    // 保存当前分页状态到全局变量
+    currentPage = page;
     
-    console.log('请求章节单词URL:', url);
+    // 构建查询参数
+    let queryParams = new URLSearchParams();
+    queryParams.set('page', page);
+    queryParams.set('size', pageSize);
+    
+    // 构建API URL，添加分页参数
+    const url = `${API_BASE_URL}/chapters/${encodedChapterId}/words?${queryParams.toString()}`;
+    
+    console.log('【后端分页】请求章节单词URL:', url);
+    console.log('【后端分页】请求页码:', page, '每页大小:', pageSize);
     
     // 发送API请求
     fetch(url, {
@@ -2616,22 +2811,22 @@ function loadWordsByChapter(chapterId) {
         return response.json();
     })
     .then(data => {
-        console.log('获取章节单词成功:', data);
+        console.log('【后端分页】获取章节单词成功:', data);
+        console.log('【后端分页】API返回状态:', data.success ? '成功' : '失败', 
+            '总记录数:', data.total, 
+            '当前页:', data.page, 
+            '每页大小:', data.size,
+            '数据条数:', data.words ? data.words.length : 0);
+        
+        hideLoading();
         
         if (!data.success) {
             throw new Error(data.message || '获取章节单词失败');
         }
         
-        // 更新总记录数
-        totalWords = data.words.length;
-        
-        // 处理并显示单词
-        displayWords(data.words);
-        
-        // 更新分页
-        updatePagination(1, Math.ceil(totalWords / 20));
-        
-        hideLoading();
+        // 直接使用后端返回的分页数据
+        // 不再缓存到window.allWords
+        displayWords(data.words, data.total, data.page, data.size);
         
         // 如果没有单词，显示提示消息
         if (data.words.length === 0) {
@@ -2646,6 +2841,7 @@ function loadWordsByChapter(chapterId) {
     })
     .catch(error => {
         console.error('加载章节单词失败:', error);
+        hideLoading();
         
         // 在表格中显示错误信息
         const tbody = document.getElementById('vocabulary-tbody');
@@ -2654,6 +2850,143 @@ function loadWordsByChapter(chapterId) {
         }
         
         showToast('加载章节单词失败: ' + error.message, 'error');
-        hideLoading();
     });
+}
+
+/**
+ * 临时函数，用于捕获谁在调用已删除的displayPagedWords
+ */
+function displayPagedWords(page, pageSize) {
+    console.error('【调试】已删除的displayPagedWords函数被调用!', '页码:', page, '每页大小:', pageSize);
+    console.trace('【调试】调用堆栈:');
+    
+    // 临时解决方案：重定向到handlePageChange
+    handlePageChange(page);
+}
+
+function updatePagination() {
+    const paginationContainer = document.getElementById('vocabulary-pagination');
+    
+    // 确保分页容器存在
+    if (!paginationContainer) {
+        console.warn('分页容器未找到');
+        return;
+    }
+    
+    // 清空分页容器
+    paginationContainer.innerHTML = '';
+    
+    // 获取当前分页信息
+    const currentPage = paginationState.currentPage;
+    const totalPages = paginationState.getTotalPages();
+    
+    // 记录分页信息便于调试
+    console.log('分页信息:', {
+        当前页: currentPage,
+        总页数: totalPages,
+        总记录数: paginationState.totalItems,
+        每页大小: paginationState.pageSize
+    });
+    
+    // 如果总记录数为0，隐藏分页控件
+    if (paginationState.totalItems === 0) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    // 确保分页容器可见
+    paginationContainer.style.display = 'flex';
+    
+    // 创建"上一页"按钮
+    const prevLi = document.createElement('li');
+    prevLi.className = currentPage === 1 ? 'disabled' : 'waves-effect';
+    
+    const prevLink = document.createElement('a');
+    prevLink.href = '#!';
+    prevLink.innerHTML = '<i class="material-icons">chevron_left</i>';
+    if (currentPage > 1) {
+        prevLink.addEventListener('click', () => handlePageChange(currentPage - 1));
+    }
+    
+    prevLi.appendChild(prevLink);
+    paginationContainer.appendChild(prevLi);
+    
+    // 创建页码按钮（智能显示: 当页数过多时只显示部分）
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    // 调整startPage确保显示5个页码（如果有这么多）
+    if (endPage - startPage < 4 && totalPages > 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+    
+    // 添加第一页和省略号（如果需要）
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        const firstLink = document.createElement('a');
+        firstLink.href = '#!';
+        firstLink.textContent = '1';
+        firstLink.addEventListener('click', () => handlePageChange(1));
+        firstLi.appendChild(firstLink);
+        paginationContainer.appendChild(firstLi);
+        
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'disabled';
+            const ellipsisSpan = document.createElement('span');
+            ellipsisSpan.textContent = '...';
+            ellipsisLi.appendChild(ellipsisSpan);
+            paginationContainer.appendChild(ellipsisLi);
+        }
+    }
+    
+    // 添加页码按钮
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = i === currentPage ? 'active' : 'waves-effect';
+        
+        const pageLink = document.createElement('a');
+        pageLink.href = '#!';
+        pageLink.textContent = i;
+        if (i !== currentPage) {
+            pageLink.addEventListener('click', () => handlePageChange(i));
+        }
+        
+        pageLi.appendChild(pageLink);
+        paginationContainer.appendChild(pageLi);
+    }
+    
+    // 添加最后一页和省略号（如果需要）
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'disabled';
+            const ellipsisSpan = document.createElement('span');
+            ellipsisSpan.textContent = '...';
+            ellipsisLi.appendChild(ellipsisSpan);
+            paginationContainer.appendChild(ellipsisLi);
+        }
+        
+        const lastLi = document.createElement('li');
+        const lastLink = document.createElement('a');
+        lastLink.href = '#!';
+        lastLink.textContent = totalPages;
+        lastLink.addEventListener('click', () => handlePageChange(totalPages));
+        lastLi.appendChild(lastLink);
+        paginationContainer.appendChild(lastLi);
+    }
+    
+    // 创建"下一页"按钮
+    const nextLi = document.createElement('li');
+    nextLi.className = currentPage === totalPages ? 'disabled' : 'waves-effect';
+    
+    const nextLink = document.createElement('a');
+    nextLink.href = '#!';
+    nextLink.innerHTML = '<i class="material-icons">chevron_right</i>';
+    if (currentPage < totalPages) {
+        nextLink.addEventListener('click', () => handlePageChange(currentPage + 1));
+    }
+    
+    nextLi.appendChild(nextLink);
+    paginationContainer.appendChild(nextLi);
 }

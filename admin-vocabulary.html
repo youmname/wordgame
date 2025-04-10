@@ -416,8 +416,6 @@
                             <ul class="tabs">
                                 <li class="tab col s3"><a href="#tab-vocabulary" class="active">词汇管理</a></li>
                                 <li class="tab col s3"><a href="#tab-import">数据导入</a></li>
-                                <li class="tab col s3"><a href="#tab-levels">级别管理</a></li>
-                                <li class="tab col s3"><a href="#tab-chapters">章节管理</a></li>
                             </ul>
                         </div>
                     </div>
@@ -583,73 +581,6 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 级别管理选项卡 -->
-                    <div id="tab-levels" class="tab-content" style="display:none;">
-                        <div class="row">
-                            <div class="col s12">
-                                <div class="card-title">词汇级别管理</div>
-                                <button class="btn-small" id="btn-add-level">
-                                    <i class="material-icons">add</i>添加新级别
-                                </button>
-                                
-                                <!-- 级别表格 -->
-                                <table class="highlight responsive-table striped" id="levels-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>级别名称</th>
-                                            <th>描述</th>
-                                            <th>排序顺序</th>
-                                            <th>创建时间</th>
-                                            <th>操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="levels-tbody">
-                                        <!-- 数据将通过JavaScript动态添加 -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 章节管理选项卡 -->
-                    <div id="tab-chapters" class="tab-content" style="display:none;">
-                        <div class="row">
-                            <div class="col s12">
-                                <div class="card-title">章节管理</div>
-                                <button class="btn-small" id="btn-add-chapter">
-                                    <i class="material-icons">add</i>添加新章节
-                                </button>
-                                
-                                <!-- 级别筛选 -->
-                                <div class="input-field" style="width: 200px; margin-top: 0;">
-                                    <select id="chapter-level-filter">
-                                        <option value="">所有级别</option>
-                                    </select>
-                                    <label>级别筛选</label>
-                                </div>
-                                
-                                <!-- 章节表格 -->
-                                <table class="highlight responsive-table striped" id="chapters-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>章节名称</th>
-                                            <th>描述</th>
-                                            <th>所属级别</th>
-                                            <th>排序顺序</th>
-                                            <th>创建时间</th>
-                                            <th>操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="chapters-tbody">
-                                        <!-- 数据将通过JavaScript动态添加 -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -707,6 +638,36 @@
                     </div>
                 </div>
                 <div class="row">
+                    <div class="col s12">
+                        <div class="input-field">
+                            <textarea id="word-phrase" class="materialize-textarea"></textarea>
+                            <label for="word-phrase">常用短语</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s12">
+                        <div class="input-field">
+                            <textarea id="word-example" class="materialize-textarea"></textarea>
+                            <label for="word-example">例句</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">
+                        <div class="input-field">
+                            <input id="word-morphology" type="text">
+                            <label for="word-morphology">词形变化</label>
+                        </div>
+                    </div>
+                    <div class="col s12 m6">
+                        <div class="input-field">
+                            <input id="word-note" type="text">
+                            <label for="word-note">备注</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
                     <div class="col s12 m6">
                         <div class="input-field">
                             <select id="word-level" required>
@@ -729,90 +690,6 @@
         <div class="modal-footer">
             <a href="#!" class="modal-close btn-small">取消</a>
             <a href="#!" class="btn" id="btn-save-word">保存</a>
-        </div>
-    </div>
-    
-    <!-- 添加/编辑级别模态框 -->
-    <div id="level-modal" class="modal">
-        <div class="modal-content">
-            <h4 class="modal-title">添加新级别</h4>
-            <form id="level-form">
-                <input type="hidden" id="level-id" value="">
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <input id="level-name" type="text" required>
-                            <label for="level-name">级别名称</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <textarea id="level-description" class="materialize-textarea"></textarea>
-                            <label for="level-description">级别描述</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <input id="level-order" type="number" min="1" value="1" required>
-                            <label for="level-order">排序顺序</label>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <a href="#!" class="modal-close btn-small">取消</a>
-            <a href="#!" class="btn" id="btn-save-level">保存</a>
-        </div>
-    </div>
-    
-    <!-- 添加/编辑章节模态框 -->
-    <div id="chapter-modal" class="modal">
-        <div class="modal-content">
-            <h4 class="modal-title">添加新章节</h4>
-            <form id="chapter-form">
-                <input type="hidden" id="chapter-id" value="">
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <input id="chapter-name" type="text" required>
-                            <label for="chapter-name">章节名称</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <textarea id="chapter-description" class="materialize-textarea"></textarea>
-                            <label for="chapter-description">章节描述</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <select id="chapter-level-select" required>
-                                <option value="" disabled selected>选择级别</option>
-                            </select>
-                            <label>所属级别</label>
-                        </div>
-                    </div>
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <input id="chapter-order" type="number" min="1" value="1" required>
-                            <label for="chapter-order">排序顺序</label>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <a href="#!" class="modal-close btn-small">取消</a>
-            <a href="#!" class="btn" id="btn-save-chapter">保存</a>
         </div>
     </div>
     
