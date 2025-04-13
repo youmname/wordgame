@@ -55,9 +55,15 @@ const WordLevelSystem = {
         
         // 监听返回事件
         WordUtils.EventSystem.on('game:back', () => {
-            const dataSource = document.querySelector('input[name="data-source"]:checked').value;
+            const dataSource = document.querySelector('input[name="data-source"]:checked');
+            if (!dataSource) {
+                console.error('未找到选中的数据源');
+                return;
+            }
+
+            const sourceValue = dataSource.value;
             // 如果是关卡模式，返回关卡选择界面
-            if (dataSource === 'chapter' || dataSource === 'upload') {
+            if (sourceValue === 'chapter' || sourceValue === 'upload') {
                 this.openLevelScreen();
             }
         });
