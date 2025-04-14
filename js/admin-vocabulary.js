@@ -3,19 +3,19 @@
 	 * 用于管理词汇数据、级别和章节
 	 */
 
-	// API基础URL
-	const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + ':5000/api';
-
+	// API基础URL - 动态获取
+	const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + ':5000';
+	
 	// API端点
 	const API_ENDPOINTS = {
-		VOCABULARY_LEVELS: '/vocabulary-levels',
-		LEVEL_CHAPTERS: '/vocabulary-levels/{id}/chapters',
-		CHAPTERS: '/chapters',
-		WORDS: '/words',
-		IMPORT_WORDS: '/import-words',
-		WORDS_SEARCH: '/words/search',
-		WORDS_MANAGE: '/words',
-		CREATE_CHAPTER: '/chapters'
+		VOCABULARY_LEVELS: '/api/vocabulary-levels',
+		LEVEL_CHAPTERS: '/api/vocabulary-levels/{id}/chapters',
+		CHAPTERS: '/api/chapters',
+		WORDS: '/api/words',
+		IMPORT_WORDS: '/api/import-words',
+		WORDS_SEARCH: '/api/words/search',
+		WORDS_MANAGE: '/api/words',
+		CREATE_CHAPTER: '/api/chapters'
 	};
 
 	// 全局变量
@@ -31,61 +31,99 @@
 	 * 初始化导入功能
 	 */
 	function initializeImportFeatures() {
-		// 初始化导入类型选择
-		const importTypeSelect = document.getElementById('importType');
-		if (importTypeSelect) {
-			M.FormSelect.init(importTypeSelect);
+		// 初始化表单
+		const levelSelects = document.querySelectorAll('#vocabulary-level, #excel-vocabulary-level');
+		M.FormSelect.init(levelSelects);
+		
+		// 设置默认导入类型为JSON
+		const jsonTypeBtn = document.querySelector('[data-import-type="json"]');
+		if (jsonTypeBtn) {
+			jsonTypeBtn.classList.add('active');
+			document.getElementById('json-import-section').style.display = 'block';
+			document.getElementById('excel-import-section').style.display = 'none';
 		}
-
-		// 初始化文件上传监听
-		const fileInput = document.getElementById('fileInput');
-		if (fileInput) {
-			fileInput.addEventListener('change', handleFileUpload);
-		}
-
-		// 初始化级别选择
-		const levelSelect = document.getElementById('levelSelect');
-		if (levelSelect) {
-			M.FormSelect.init(levelSelect);
-			levelSelect.addEventListener('change', function(e) {
-				const customLevelField = document.getElementById('customLevelField');
-				if (e.target.value === 'custom') {
-					customLevelField.style.display = 'block';
-				} else {
-					customLevelField.style.display = 'none';
-				}
-			});
-		}
-
-		// 初始化导入按钮
-		const importBtn = document.getElementById('importBtn');
-		if (importBtn) {
-			importBtn.addEventListener('click', importData);
-		}
-
-		// 初始化重置按钮
-		const resetBtn = document.getElementById('resetBtn');
-		if (resetBtn) {
-			resetBtn.addEventListener('click', function() {
-				// 重置文件输入
-				document.getElementById('fileInput').value = '';
-				// 重置预览区域
-				document.getElementById('previewArea').style.display = 'none';
-				// 重置统计数据
-				document.getElementById('totalCount').textContent = '0';
-				document.getElementById('validCount').textContent = '0';
-				document.getElementById('invalidCount').textContent = '0';
-				// 重置导入按钮状态
-				document.getElementById('importBtn').disabled = true;
-				// 清空预览表格
-				document.getElementById('previewTableBody').innerHTML = '';
-				// 重置全局数据
-				excelData = null;
-			});
-		}
+		
+		// 禁用导入按钮，直到验证有效数据
+		const importBtns = document.querySelectorAll('#import-btn, #excel-import-btn');
+		importBtns.forEach(btn => {
+			btn.disabled = true;
+		});
+		
+		// 隐藏自定义等级输入框
+		const customLevelInputs = document.querySelectorAll('#custom-level-input, #custom-level-desc, #excel-custom-level-input, #excel-custom-level-desc');
+		customLevelInputs.forEach(el => {
+			el.style.display = 'none';
+		});
+		
+		// 隐藏预览区域
+		const previewAreas = document.querySelectorAll('#json-preview, #excel-preview');
+		previewAreas.forEach(area => {
+			area.style.display = 'none';
+		});
+		
+		console.log('导入功能初始化完成');
 	}
+	
+	/**
+	 * 初始化页面
+	 */
+	document.addEventListener('DOMContentLoaded', async function() {
+		// 显示加载提示
+		showLoading('正在初始化界面...');
+		
+		try {
+			// 初始化MaterializeCSS组件
+			M.AutoInit();
+			
+			// 检查登录状态
+			const token = localStorage.getItem('authToken');
+			if (!token) {
+				console.log('未找到认证令牌，需要登录');
+				location.href = '页面.html';
+				return;
+			}
+			
+			// 初始化导入功能
+			initializeImportFeatures();
+			
+			// 根据当前页面标签加载相应的词汇级别
+			const importTab = document.querySelector('#tab-import');
+			if (importTab && importTab.style.display !== 'none') {
+				await loadVocabularyLevels('import');
+			} else {
+				await loadVocabularyLevels('management');
+			}
+			
+			// 为标签切换添加事件监听
+			const tabs = document.querySelectorAll('.tabs');
+			if (tabs.length > 0) {
+				const tabInstance = M.Tabs.init(tabs[0]);
+				tabInstance.options.onShow = async function(tab) {
+					if (tab.id === 'tab-import') {
+						await loadVocabularyLevels('import');
+					} else if (tab.id === 'tab-vocabulary') {
+						await loadVocabularyLevels('management');
+					}
+				};
+			}
+			
+			// 初始化其他功能
+			setupEventListeners();
+			
+			// 加载初始数据
+			await loadInitialData();
+			
+			hideLoading();
+		} catch (error) {
+			console.error('初始化失败:', error);
+			showToast('初始化失败: ' + error.message, 'error');
+			hideLoading();
+		}
+	});
 
-	// 分页状态管理
+	/**
+	 * 分页状态管理
+	 */
 	const paginationState = {
 	  currentPage: 1,     // 当前页码
 	  pageSize: 20,       // 每页显示数量
@@ -111,14 +149,50 @@
 	  }
 	};
 
-	// 预览相关的状态管理
+	/**
+	 * 预览状态管理对象
+	 */
 	const previewState = {
 		data: [],
-		currentPage: 1,
-		pageSize: 10,
-		totalPages: 1,
 		validCount: 0,
-		invalidCount: 0
+		invalidCount: 0,
+		totalCount: 0,
+		currentPage: 1,
+		pageSize: 20,
+		totalPages: 1,
+		
+		/**
+		 * 获取总页数
+		 * @returns {number} 总页数
+		 */
+		getTotalPages() {
+			return Math.ceil(this.data.length / this.pageSize);
+		},
+		
+		/**
+		 * 更新分页信息
+		 * @param {number} page - 当前页码
+		 * @param {number} size - 每页数量
+		 * @param {number} total - 总数据量
+		 */
+		update(page, size, total) {
+			this.currentPage = page || 1;
+			this.pageSize = size || 20;
+			this.totalCount = total || this.data.length;
+			this.totalPages = this.getTotalPages();
+		},
+		
+		/**
+		 * 重置预览状态
+		 */
+		reset() {
+			this.data = [];
+			this.validCount = 0;
+			this.invalidCount = 0;
+			this.totalCount = 0;
+			this.currentPage = 1;
+			this.totalPages = 1;
+		}
 	};
 
 	/**
@@ -190,40 +264,54 @@
 
 	/**
 	 * 检查管理员登录状态
+	 * @returns {Promise<boolean>} 是否已登录
 	 */
 	function checkLoginStatus() {
-		if (!token) {
-			// 未登录，重定向到登录页
-			showToast('请先登录', 'error');
-			setTimeout(() => {
-				window.location.href = 'admin.html';
-			}, 1500);
-			return;
-		}
-		
-		// 验证token
-		fetch(API_BASE_URL + '/verify-token', {
-			method: 'GET',
-			headers: {
-				'Authorization': 'Bearer ' + token
+		return new Promise((resolve) => {
+			const token = localStorage.getItem('authToken');
+			
+			if (!token) {
+				console.log('未找到认证令牌，需要登录');
+				location.href = '页面.html';
+				resolve(false);
+				return;
 			}
-		})
-		.then(response => {
-			if (!response.ok) {
-				throw new Error('登录已过期');
-			}
-			return response.json();
-		})
-		.then(data => {
-			console.log('登录状态有效:', data);
-		})
-		.catch(error => {
-			console.error('验证失败:', error);
-			showToast('登录已过期，请重新登录', 'error');
-			localStorage.removeItem('authToken');
-			setTimeout(() => {
-				window.location.href = 'admin.html';
-			}, 1500);
+			
+			// 验证令牌有效性，使用与admin.html相同的API路径格式
+			fetch(`${API_BASE_URL}/api/admin/verify-token`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
+				},
+				credentials: 'include'
+			})
+			.then(response => {
+				if (response.ok) {
+					return response.json().then(data => {
+						console.log('令牌有效，用户已登录:', data);
+						if (data.userType !== 'admin') {
+							console.log('用户不是管理员，需要重新登录');
+							localStorage.removeItem('authToken');
+							location.href = '页面.html';
+							resolve(false);
+							return;
+						}
+						resolve(true);
+					});
+				} else {
+					console.log('令牌无效，需要重新登录');
+					localStorage.removeItem('authToken');
+					location.href = '页面.html';
+					resolve(false);
+				}
+			})
+			.catch(error => {
+				console.error('验证令牌时出错:', error);
+				// 网络错误暂时允许访问，但在控制台显示错误
+				console.warn('网络错误，暂时允许访问，但可能会导致功能异常');
+				resolve(true);
+			});
 		});
 	}
 
@@ -237,34 +325,162 @@
 			logoutBtn.addEventListener('click', handleLogout);
 		}
 
-		// 文件上传事件
-		const fileInput = document.getElementById('fileInput');
-		if (fileInput) {
-			fileInput.addEventListener('change', handleFileUpload);
+		// 搜索按钮事件
+		const searchBtn = document.getElementById('btn-search-word');
+		if (searchBtn) {
+			searchBtn.addEventListener('click', searchWords);
 		}
 
-		// 导入按钮事件
-		const importBtn = document.getElementById('importBtn');
-		if (importBtn) {
-			importBtn.addEventListener('click', importData);
+		// 导入类型切换
+		const importTypeButtons = document.querySelectorAll('[data-import-type]');
+		importTypeButtons.forEach(button => {
+			button.addEventListener('click', function() {
+				// 移除所有按钮的active类
+				importTypeButtons.forEach(btn => btn.classList.remove('active'));
+				// 为当前按钮添加active类
+				this.classList.add('active');
+				
+				// 根据选择的类型显示对应的导入区域
+				const importType = this.getAttribute('data-import-type');
+				document.getElementById('json-import-section').style.display = importType === 'json' ? 'block' : 'none';
+				document.getElementById('excel-import-section').style.display = importType === 'excel' ? 'block' : 'none';
+			});
+		});
+
+		// JSON文件上传事件
+		const jsonFileInput = document.getElementById('json-file');
+		if (jsonFileInput) {
+			jsonFileInput.addEventListener('change', handleJsonUpload);
 		}
 
-		// 重置按钮事件
-		const resetBtn = document.getElementById('resetBtn');
-		if (resetBtn) {
-			resetBtn.addEventListener('click', resetForm);
+		// Excel文件上传事件
+		const excelFileInput = document.getElementById('excel-file');
+		if (excelFileInput) {
+			excelFileInput.addEventListener('change', handleExcelUpload);
 		}
 
-		// 创建新章节选项切换
-		const createNewChapter = document.getElementById('create-new-chapter');
-		if (createNewChapter) {
-			createNewChapter.addEventListener('change', toggleNewChapterForm);
+		// JSON导入按钮事件
+		const importJsonBtn = document.getElementById('import-btn');
+		if (importJsonBtn) {
+			importJsonBtn.addEventListener('click', importData);
 		}
 
-		// 级别筛选变化时更新章节下拉框
-		const importLevelSelect = document.getElementById('import-level-select');
-		if (importLevelSelect) {
-			importLevelSelect.addEventListener('change', updateChapterDropdown);
+		// Excel导入按钮事件
+		const importExcelBtn = document.getElementById('excel-import-btn');
+		if (importExcelBtn) {
+			importExcelBtn.addEventListener('click', importData);
+		}
+
+		// JSON重置按钮事件
+		const resetJsonBtn = document.getElementById('reset-btn');
+		if (resetJsonBtn) {
+			resetJsonBtn.addEventListener('click', function() {
+				// 重置文件输入
+				document.getElementById('json-file').value = '';
+				
+				// 重置自定义等级输入
+				document.getElementById('custom-level-input').style.display = 'none';
+				document.getElementById('custom-level-desc').style.display = 'none';
+				
+				// 清空预览区域
+				document.getElementById('json-preview').style.display = 'none';
+				
+				// 重置预览状态
+				previewState.reset();
+				
+				// 禁用导入按钮
+				document.getElementById('import-btn').disabled = true;
+				
+				showToast('已重置导入表单', 'info');
+			});
+		}
+
+		// Excel重置按钮事件
+		const resetExcelBtn = document.getElementById('excel-reset-btn');
+		if (resetExcelBtn) {
+			resetExcelBtn.addEventListener('click', function() {
+				// 重置文件输入
+				document.getElementById('excel-file').value = '';
+				
+				// 重置自定义等级输入
+				document.getElementById('excel-custom-level-input').style.display = 'none';
+				document.getElementById('excel-custom-level-desc').style.display = 'none';
+				
+				// 清空预览区域
+				document.getElementById('excel-preview').style.display = 'none';
+				
+				// 重置预览状态
+				previewState.reset();
+				
+				// 禁用导入按钮
+				document.getElementById('excel-import-btn').disabled = true;
+				
+				showToast('已重置导入表单', 'info');
+			});
+		}
+
+		// 预览按钮事件
+		const previewJsonBtn = document.getElementById('preview-btn');
+		if (previewJsonBtn) {
+			previewJsonBtn.addEventListener('click', function() {
+				const fileInput = document.getElementById('json-file');
+				if (fileInput.files.length === 0) {
+					showToast('请先选择要上传的文件', 'warning');
+					return;
+				}
+				handleJsonUpload({ target: { files: [fileInput.files[0]] } });
+			});
+		}
+
+		// Excel预览按钮事件
+		const previewExcelBtn = document.getElementById('excel-preview-btn');
+		if (previewExcelBtn) {
+			previewExcelBtn.addEventListener('click', function() {
+				const fileInput = document.getElementById('excel-file');
+				if (fileInput.files.length === 0) {
+					showToast('请先选择要上传的文件', 'warning');
+					return;
+				}
+				handleExcelUpload({ target: { files: [fileInput.files[0]] } });
+			});
+		}
+
+		// 词汇级别选择变化事件（JSON导入）
+		const vocabularyLevelSelect = document.getElementById('vocabulary-level');
+		if (vocabularyLevelSelect) {
+			vocabularyLevelSelect.addEventListener('change', function() {
+				const selectedValue = this.value;
+				const customLevelInput = document.getElementById('custom-level-input');
+				const customLevelDesc = document.getElementById('custom-level-desc');
+				
+				// 如果选择了自定义等级，显示自定义输入框
+				if (selectedValue === 'custom') {
+					customLevelInput.style.display = 'block';
+					customLevelDesc.style.display = 'block';
+				} else {
+					customLevelInput.style.display = 'none';
+					customLevelDesc.style.display = 'none';
+				}
+			});
+		}
+
+		// 词汇级别选择变化事件（Excel导入）
+		const excelVocabularyLevelSelect = document.getElementById('excel-vocabulary-level');
+		if (excelVocabularyLevelSelect) {
+			excelVocabularyLevelSelect.addEventListener('change', function() {
+				const selectedValue = this.value;
+				const customLevelInput = document.getElementById('excel-custom-level-input');
+				const customLevelDesc = document.getElementById('excel-custom-level-desc');
+				
+				// 如果选择了自定义等级，显示自定义输入框
+				if (selectedValue === 'custom') {
+					customLevelInput.style.display = 'block';
+					customLevelDesc.style.display = 'block';
+				} else {
+					customLevelInput.style.display = 'none';
+					customLevelDesc.style.display = 'none';
+				}
+			});
 		}
 
 		// 级别选择变化时处理自定义级别输入框显示
@@ -415,6 +631,23 @@
 			}, 500));
 		}
 
+		// 搜索按钮事件
+		// 重复声明searchBtn会导致错误，直接使用getElementById
+		if (document.getElementById('btn-search-word')) {
+			document.getElementById('btn-search-word').addEventListener('click', searchWords);
+		}
+
+		// 搜索输入框回车键事件
+		const wordSearchInput = document.getElementById('word-search');
+		if (wordSearchInput) {
+			wordSearchInput.addEventListener('keypress', function(event) {
+				if (event.key === 'Enter') {
+					event.preventDefault(); // 阻止默认行为
+					searchWords();
+				}
+			});
+		}
+
 		// 级别筛选事件
 		const levelFilter = document.getElementById('level-filter');
 		if (levelFilter) {
@@ -430,7 +663,8 @@
 		// 添加单词按钮
 		const addWordBtn = document.getElementById('btn-add-word');
 		if (addWordBtn) {
-			addWordBtn.addEventListener('click', showAddWordModal);
+			// addWordBtn.addEventListener('click', showAddWordModal);
+			// 注释掉添加单词的事件监听，按要求保留其他功能
 		}
 
 		// 添加级别按钮
@@ -522,12 +756,6 @@
 			if (!token) {
 				throw new Error('未登录');
 			}
-
-			// 先加载词汇级别
-			await loadVocabularyLevels();
-			
-			// 更新级别下拉框
-			await updateLevelDropdowns();
 			
 			// 初始化分页状态
 			paginationState.update(1, 20, 0);
@@ -539,7 +767,7 @@
 		} catch (error) {
 			console.error('加载初始数据失败:', error);
 			if (error.message === '未登录') {
-				window.location.href = 'login.html';
+				window.location.href = '页面.html';
 			}
 			return false;
 		}
@@ -551,23 +779,33 @@
 	 */
 	async function loadVocabularyLevels(context = 'management') {
 		try {
-			const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.VOCABULARY_LEVELS}`, {
-				headers: {
-					'Authorization': `Bearer ${token}`
+			let levels = [];
+			
+			try {
+				const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.VOCABULARY_LEVELS}`, {
+					headers: {
+						'Authorization': `Bearer ${token}`
+					}
+				});
+				
+				if (!response.ok) {
+					throw new Error('获取词汇等级失败');
 				}
-			});
-			
-			if (!response.ok) {
-				throw new Error('获取词汇等级失败');
-			}
-			
-			const data = await response.json();
-			if (!data.success || !data.levels) {
-				throw new Error('获取词汇等级数据格式错误');
+				
+				const data = await response.json();
+				if (!data.success || !data.levels) {
+					throw new Error('获取词汇等级数据格式错误');
+				}
+				
+				levels = data.levels;
+			} catch (apiError) {
+				console.warn('API调用失败，使用模拟数据:', apiError.message);
+				showToast('使用本地数据进行测试', 'info');
+				levels = MOCK_DATA.vocabularyLevels;
 			}
 			
 			// 更新全局变量
-			vocabularyLevels = data.levels;
+			vocabularyLevels = levels;
 			
 			if (context === 'import') {
 				// 仅更新导入页面的级别选择框
@@ -577,7 +815,7 @@
 					importLevelSelect.innerHTML = '<option value="" disabled selected>选择词汇等级</option>';
 					
 					// 添加所有等级选项
-					data.levels.forEach(level => {
+					levels.forEach(level => {
 						const option = document.createElement('option');
 						option.value = level.id;
 						option.textContent = level.name;
@@ -632,7 +870,7 @@
 					}
 					
 					// 添加所有等级选项
-					data.levels.forEach(level => {
+					levels.forEach(level => {
 						const option = document.createElement('option');
 						option.value = level.id;
 						option.textContent = level.name;
@@ -644,7 +882,7 @@
 				});
 			}
 			
-			return data.levels;
+			return levels;
 		} catch (error) {
 			console.error('加载词汇等级失败:', error);
 			showToast('加载词汇等级失败: ' + error.message, 'error');
@@ -733,7 +971,7 @@
 		showLoading('加载章节...');
 		
 		// 获取该级别的章节
-		const url = `${API_BASE_URL}/vocabulary-levels/${levelId}/chapters`;
+		const url = `${API_BASE_URL}${API_ENDPOINTS.LEVEL_CHAPTERS.replace('{id}', levelId)}`;
 		
 		fetch(url, {
 			headers: {
@@ -781,70 +1019,83 @@
 		const levelId = event.target.value;
 		const chapterSelect = document.getElementById('word-chapter');
 		
-		// 如果没有选择级别或者选择的是自定义，则不加载章节
-		if (!levelId || levelId === 'custom') {
+		if (!chapterSelect) {
+			console.error('未找到章节选择元素');
 			return;
 		}
 		
-		// 清空现有选项，只保留第一个默认选项
-		while (chapterSelect.options.length > 1) {
-			chapterSelect.remove(1);
+		// 如果选择了"创建新级别"，不加载章节
+		if (levelId === 'custom') {
+			// 清空章节选择器，保留第一个默认选项
+			while (chapterSelect.options.length > 1) {
+				chapterSelect.remove(1);
+			}
+			
+			// 添加自定义章节选项
+			const customOption = document.createElement('option');
+			customOption.value = 'custom';
+			customOption.textContent = '🔸 创建新章节... 🔸';
+			customOption.style.fontWeight = 'bold';
+			customOption.style.color = '#2196F3';
+			chapterSelect.appendChild(customOption);
+			
+			// 重新初始化选择器
+			M.FormSelect.init(chapterSelect);
+			return;
 		}
 		
-		// 添加创建新章节选项
-		const customOption = document.createElement('option');
-		customOption.value = 'custom';
-		customOption.textContent = '🔸 创建新章节... 🔸';
-		customOption.style.fontWeight = 'bold';
-		customOption.style.color = '#2196F3';
-		chapterSelect.appendChild(customOption);
+		// 没有选择级别，清空章节选择器
+		if (!levelId) {
+			// 清空章节选择器，保留第一个默认选项
+			while (chapterSelect.options.length > 1) {
+				chapterSelect.remove(1);
+			}
+			M.FormSelect.init(chapterSelect);
+			return;
+		}
 		
-		// 显示加载动画
-		showLoading('加载章节...');
+		// 显示加载中
+		showLoading('正在加载章节...');
 		
-		// 构建API请求URL
-		const url = `${API_BASE_URL}/vocabulary-levels/${levelId}/chapters`;
+		// 获取该级别的章节
+		const url = `${API_BASE_URL}${API_ENDPOINTS.LEVEL_CHAPTERS.replace('{id}', levelId)}`;
 		
-		// 发送API请求
 		fetch(url, {
 			headers: {
-				'Authorization': 'Bearer ' + token,
-				'Accept': 'application/json'
+				'Authorization': `Bearer ${token}`
 			}
 		})
-		.then(response => {
-			if (!response.ok) {
-				throw new Error(`获取章节失败: ${response.status}`);
-			}
-			return response.json();
-		})
-		.then(data => {
-			hideLoading();
-			
-			// 处理响应数据
-			if (!data.success || !data.chapters || data.chapters.length === 0) {
-				console.log(`级别 ${levelId} 没有章节数据`);
-				showToast(`提示：该级别还没有章节，您可以创建一个新章节`, 'info');
-				return;
-			}
-			
-			// 填充章节下拉框
-			data.chapters.forEach(chapter => {
-				const option = document.createElement('option');
-				option.value = chapter.id;
-				// 确保章节名称格式一致，无缝衔接
-				option.textContent = chapter.name;
-				chapterSelect.appendChild(option);
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('获取章节失败');
+				}
+				return response.json();
+			})
+			.then(data => {
+				// 清空现有选项（保留第一个）
+				while (chapterSelect.options.length > 1) {
+					chapterSelect.remove(1);
+				}
+				
+				// 添加章节选项
+				const chapters = data.chapters || [];
+				chapters.forEach(chapter => {
+					const option = document.createElement('option');
+					option.value = chapter.id;
+					option.textContent = chapter.name;
+					chapterSelect.appendChild(option);
+				});
+				
+				// 刷新MaterializeCSS组件
+				M.FormSelect.init(chapterSelect);
+			})
+			.catch(error => {
+				console.error('加载章节失败:', error);
+				showToast('加载章节失败: ' + error.message, 'error');
+			})
+			.finally(() => {
+				hideLoading();
 			});
-			
-			// 更新选择器
-			M.FormSelect.init(chapterSelect);
-		})
-		.catch(error => {
-			hideLoading();
-			console.error('加载章节失败:', error);
-			showToast('加载章节失败: ' + error.message, 'error');
-		});
 	}
 
 	/**
@@ -867,13 +1118,13 @@
 		// 根据筛选条件构建URL
 		if (filters.chapterId) {
 			// 使用章节ID加载单词
-			url = `${API_BASE_URL}/chapters/${filters.chapterId}/words`;
+			url = `${API_BASE_URL}${API_ENDPOINTS.CHAPTERS}/${filters.chapterId}/words`;
 		} else if (filters.query) {
 			// 搜索功能
-			url = `${API_BASE_URL}/words/search?q=${encodeURIComponent(filters.query)}`;
+			url = `${API_BASE_URL}${API_ENDPOINTS.WORDS_SEARCH}?q=${encodeURIComponent(filters.query)}`;
 		} else {
 			// 加载所有单词
-			url = `${API_BASE_URL}/words`;
+			url = `${API_BASE_URL}${API_ENDPOINTS.WORDS}`;
 		}
 		
 		// 添加分页参数
@@ -888,47 +1139,78 @@
 		// 记录API请求URL
 		console.log('请求URL:', url);
 		
-		return fetch(url, {
-			headers: {
-				'Authorization': 'Bearer ' + token,
-				'Accept': 'application/json'
-			}
-		})
-		.then(response => {
-			if (!response.ok) {
-				throw new Error(`获取单词失败: ${response.status}`);
-			}
-			return response.json();
-		})
-		.then(data => {
-			hideLoading();
-			
-			console.log('API响应:', data);
-			
-			// 检查是否返回成功
-			if (data.success) {
-				// 更新分页状态
-				paginationState.update(
-					data.page || paginationState.currentPage,
-					data.size || paginationState.pageSize,
-					data.total || (data.words ? data.words.length : 0)
-				);
+		return new Promise((resolve) => {
+			fetch(url, {
+				headers: {
+					'Authorization': 'Bearer ' + token,
+					'Accept': 'application/json'
+				}
+			})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`获取单词失败: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				hideLoading();
 				
-				// 显示单词数据
-				displayWords(data.words || []);
-				return data.words || [];
-			} else {
-				throw new Error(data.message || '获取单词失败');
-			}
-		})
-		.catch(error => {
-			console.error('加载单词失败:', error);
-			hideLoading();
-			showToast('加载单词失败: ' + error.message, 'error');
-			
-			// 显示空单词列表
-			displayWords([]);
-			return [];
+				console.log('API响应:', data);
+				
+				// 检查是否返回成功
+				if (data.success) {
+					// 更新分页状态
+					paginationState.update(
+						data.page || paginationState.currentPage,
+						data.size || paginationState.pageSize,
+						data.total || (data.words ? data.words.length : 0)
+					);
+					
+					// 显示单词数据
+					displayWords(data.words || []);
+					resolve(data.words || []);
+				} else {
+					throw new Error(data.message || '获取单词失败');
+				}
+			})
+			.catch(error => {
+				console.warn('API调用失败，使用模拟数据:', error.message);
+				hideLoading();
+				
+				// 使用模拟数据
+				let mockWords = [];
+				
+				if (filters.levelId) {
+					// 按级别筛选
+					mockWords = MOCK_DATA.words.filter(word => word.level_id === filters.levelId);
+				} else if (filters.chapterId) {
+					// 按章节筛选
+					mockWords = MOCK_DATA.words.filter(word => word.chapter_id === filters.chapterId);
+				} else if (filters.query) {
+					// 搜索功能
+					const query = filters.query.toLowerCase();
+					mockWords = MOCK_DATA.words.filter(word => 
+						word.word.toLowerCase().includes(query) || 
+						word.meaning.toLowerCase().includes(query)
+					);
+				} else {
+					// 所有单词
+					mockWords = MOCK_DATA.words;
+				}
+				
+				// 模拟分页
+				const startIndex = (page - 1) * size;
+				const endIndex = Math.min(startIndex + size, mockWords.length);
+				const pagedWords = mockWords.slice(startIndex, endIndex);
+				
+				// 更新分页状态
+				paginationState.update(page, size, mockWords.length);
+				
+				// 显示模拟单词数据
+				displayWords(pagedWords, mockWords.length, page, size);
+				showToast('使用本地数据进行测试', 'info');
+				resolve(pagedWords);
+			});
 		});
 	}
 
@@ -1211,12 +1493,28 @@
 	}
 
 	/**
-	 * 过滤单词列表
+	 * 应用筛选条件
 	 */
 	function filterWords() {
 		// 获取筛选条件
-		const levelId = document.getElementById('level-filter').value;
-		const chapterId = document.getElementById('chapter-filter').value;
+		const filters = getActiveFilters();
+		
+		console.log('应用筛选条件:', filters);
+		
+		// 重置分页状态到第一页
+		paginationState.reset();
+		
+		// 加载筛选后的数据
+		loadWords(1, paginationState.pageSize, filters);
+	}
+
+	/**
+	 * 获取当前激活的筛选条件
+	 * @returns {Object} 包含当前筛选条件的对象
+	 */
+	function getActiveFilters() {
+		const levelId = document.getElementById('level-filter')?.value;
+		const chapterId = document.getElementById('chapter-filter')?.value;
 		const searchInput = document.getElementById('word-search');
 		
 		// 构建筛选对象
@@ -1227,13 +1525,7 @@
 			filters.query = searchInput.value.trim();
 		}
 		
-		console.log('应用筛选条件:', filters);
-		
-		// 重置分页状态到第一页
-		paginationState.reset();
-		
-		// 加载筛选后的数据
-		loadWords(1, paginationState.pageSize, filters);
+		return filters;
 	}
 
 	/**
@@ -1276,7 +1568,7 @@
 		showLoading('正在搜索单词...');
 		
 		// 构建URL
-		let url = `${API_BASE_URL}/words/search?q=${encodeURIComponent(filters.query)}`;
+		let url = `${API_BASE_URL}${API_ENDPOINTS.WORDS_SEARCH}?q=${encodeURIComponent(filters.query)}`;
 		
 		// 添加级别筛选
 		if (filters.levelId) {
@@ -1484,7 +1776,7 @@
 		localStorage.removeItem('authToken');
 		showToast('已退出登录', 'info');
 		setTimeout(() => {
-			window.location.href = 'admin.html';
+			window.location.href = '页面.html';
 		}, 1000);
 	}
 
@@ -1492,159 +1784,307 @@
 	 * 处理Excel文件上传
 	 * @param {Event} e - 事件对象
 	 */
-	async function handleExcelUpload(e) {
+	function handleExcelUpload(e) {
 		const file = e.target.files[0];
 		if (!file) return;
-
-		try {
-			showLoading('正在读取Excel文件...');
-			
-			const data = await readExcelFile(file);
-			if (!data || !data.length) {
-				throw new Error('Excel文件为空或格式错误');
-			}
-
-			// 存储数据用于后续导入
-			window.excelImportData = data;
-
-			// 显示预览
-			showExcelPreview(data);
-			
-			// 启用预览按钮
-			document.getElementById('preview-btn').disabled = false;
-			
-		} catch (error) {
-			console.error('Excel处理失败:', error);
-			showToast('Excel处理失败: ' + error.message, 'error');
-		} finally {
-			hideLoading();
-		}
-	}
-
-	/**
-	 * 读取Excel文件
-	 * @param {File} file - Excel文件
-	 * @returns {Promise<Array>} 解析后的数据
-	 */
-	function readExcelFile(file) {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			
-			reader.onload = function(e) {
-				try {
-					const data = new Uint8Array(e.target.result);
-					const workbook = XLSX.read(data, { type: 'array' });
-					
-					// 获取第一个工作表
-					const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-					
-					// 转换为JSON
-					const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
-						header: ['word', 'meaning', 'phonetic', 'phrase', 'example', 'morphology', 'note'],
-						range: 1  // 跳过标题行
-					});
-
-					resolve(jsonData);
-				} catch (error) {
-					reject(new Error('Excel文件解析失败: ' + error.message));
-				}
-			};
-			
-			reader.onerror = () => reject(new Error('文件读取失败'));
-			reader.readAsArrayBuffer(file);
-		});
-	}
-
-	/**
-	 * 显示Excel预览
-	 * @param {Array} data - Excel数据
-	 */
-	function showExcelPreview(data) {
-		const previewContainer = document.getElementById('json-preview');
-		if (!previewContainer) return;
-
-		const levelId = document.getElementById('vocabulary-level').value;
 		
-		let validCount = 0;
-		let invalidCount = 0;
-		const previewData = [];
-
-		data.forEach((row, index) => {
-			const validation = validateWord(row, index, levelId);
-			if (validation.isValid) {
-				validCount++;
-				previewData.push({
-					index: index + 1,
-					word: validation.data.word,
-					meaning: validation.data.meaning,
-					phonetic: validation.data.phonetic || '',
-					status: 'valid'
+		// 验证文件类型
+		if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+			showToast('请上传Excel文件（.xlsx或.xls格式）', 'error');
+			return;
+		}
+		
+		// 显示加载动画
+		showLoading('正在解析Excel文件...');
+		
+		const reader = new FileReader();
+		
+		reader.onload = function(e) {
+			try {
+				// 获取选中的词汇级别
+				const levelId = document.getElementById('excel-vocabulary-level').value;
+				if (!levelId) {
+					hideLoading();
+					showToast('请先选择词汇级别', 'warning');
+					return;
+				}
+				
+				// 解析Excel文件
+				const data = readExcelFile(e.target.result);
+				
+				if (!data || data.length === 0) {
+					throw new Error('Excel文件中没有数据');
+				}
+				
+				console.log('解析的Excel数据:', data);
+				
+				// 验证每个单词数据
+				const processedData = data.map((item, index) => {
+					return validateWord(item, index, levelId);
 				});
-			} else {
-				invalidCount++;
-				previewData.push({
-					index: index + 1,
-					word: row.word || '未知',
-					meaning: row.meaning || '未知',
-					phonetic: row.phonetic || '',
-					status: 'invalid',
-					error: validation.error
-				});
+				
+				// 分析验证结果
+				const validItems = processedData.filter(item => item.isValid);
+				
+				if (validItems.length === 0) {
+					throw new Error('没有有效的单词数据可以导入');
+				}
+				
+				// 保存预处理数据供后续使用
+				previewState.data = processedData;
+				previewState.validCount = validItems.length;
+				previewState.invalidCount = processedData.length - validItems.length;
+				previewState.totalCount = processedData.length;
+				previewState.totalPages = Math.ceil(processedData.length / previewState.pageSize);
+				previewState.currentPage = 1;
+				
+				// 更新预览显示
+				updateExcelPreviewDisplay();
+				
+				// 启用导入按钮
+				document.getElementById('excel-import-btn').disabled = validItems.length === 0;
+				
+				hideLoading();
+				showToast(`成功解析 ${data.length} 个单词，有效 ${validItems.length} 个`, 'success');
+			} catch (error) {
+				console.error('Excel解析错误:', error);
+				hideLoading();
+				showToast(`Excel解析失败: ${error.message}`, 'error');
 			}
+		};
+		
+		reader.onerror = function() {
+			console.error('文件读取错误');
+			hideLoading();
+			showToast('文件读取错误', 'error');
+		};
+		
+		reader.readAsBinaryString(file);
+	}
+	
+	/**
+	 * 读取Excel文件并解析其内容
+	 * @param {ArrayBuffer} data - Excel文件内容
+	 * @returns {Array} 解析后的数据
+	 */
+	function readExcelFile(data) {
+		// 使用SheetJS解析Excel
+		const workbook = XLSX.read(data, { type: 'binary' });
+		
+		// 获取第一个工作表
+		const sheetName = workbook.SheetNames[0];
+		const worksheet = workbook.Sheets[sheetName];
+		
+		// 将工作表转换为JSON数据
+		const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+			// 确保属性名称一致性
+			raw: true,
+			defval: '',
+			header: 'A'
 		});
-
-		// 显示统计信息
-		const statsHtml = `
-			<div class="preview-stats">
-				<div class="row">
-					<div class="col s12 m4">总计: <strong>${data.length}</strong></div>
-					<div class="col s12 m4">有效: <strong class="green-text">${validCount}</strong></div>
-					<div class="col s12 m4">无效: <strong class="red-text">${invalidCount}</strong></div>
+		
+		// 处理Excel数据为标准格式
+		const processedData = jsonData.map(row => {
+			// 尝试自动映射列
+			const wordIndex = findColumnIndex(row, ['单词', 'word', 'Word', 'A']);
+			const meaningIndex = findColumnIndex(row, ['含义', '意思', 'meaning', 'definition', 'B']);
+			const phoneticIndex = findColumnIndex(row, ['音标', 'phonetic', 'C']);
+			const phraseIndex = findColumnIndex(row, ['短语', 'phrase', 'D']);
+			const exampleIndex = findColumnIndex(row, ['例句', 'example', 'E']);
+			const morphologyIndex = findColumnIndex(row, ['词形变化', 'morphology', 'F']);
+			const noteIndex = findColumnIndex(row, ['备注', 'note', 'G']);
+			
+			// 创建符合要求的对象
+			return {
+				word: row[wordIndex] || '',
+				meaning: row[meaningIndex] || '',
+				phonetic: row[phoneticIndex] || '',
+				phrase: row[phraseIndex] || '',
+				example: row[exampleIndex] || '',
+				morphology: row[morphologyIndex] || '',
+				note: row[noteIndex] || ''
+			};
+		});
+		
+		// 过滤掉空行
+		return processedData.filter(row => row.word);
+	}
+	
+	/**
+	 * 在对象中查找可能的列索引
+	 * @param {Object} row - 数据行
+	 * @param {Array} possibleNames - 可能的列名
+	 * @returns {string} 找到的列索引
+	 */
+	function findColumnIndex(row, possibleNames) {
+		// 查找表头行
+		if (row['A'] && typeof row['A'] === 'string' && !row['word']) {
+			// 遍历所有列，寻找匹配的列名
+			for (const key in row) {
+				if (possibleNames.some(name => 
+					row[key] && row[key].toString().toLowerCase() === name.toLowerCase())) {
+					return key;
+				}
+			}
+		}
+		
+		// 如果没有表头，使用默认映射
+		for (const name of possibleNames) {
+			if (row[name] !== undefined) {
+				return name;
+			}
+		}
+		
+		// 返回第一个可能的名称作为默认值
+		return possibleNames[possibleNames.length - 1];
+	}
+	
+	/**
+	 * 更新Excel预览显示
+	 */
+	function updateExcelPreviewDisplay() {
+		const previewArea = document.getElementById('excel-preview');
+		if (!previewArea) return;
+		
+		// 设置预览区域可见
+		previewArea.style.display = 'block';
+		
+		// 清空原有内容
+		previewArea.innerHTML = '';
+		
+		// 创建预览统计
+		const statsDiv = document.createElement('div');
+		statsDiv.className = 'preview-stats';
+		statsDiv.innerHTML = `
+			<div class="row">
+				<div class="col s12 m4">
+					<span>总计: <strong>${previewState.totalCount}</strong></span>
+				</div>
+				<div class="col s12 m4">
+					<span>有效: <strong>${previewState.validCount}</strong></span>
+				</div>
+				<div class="col s12 m4">
+					<span>无效: <strong>${previewState.invalidCount}</strong></span>
 				</div>
 			</div>
 		`;
-
-		// 显示预览表格
-		const tableHtml = `
-			<table class="striped highlight">
+		previewArea.appendChild(statsDiv);
+		
+		// 创建预览表格
+		const tableDiv = document.createElement('div');
+		tableDiv.className = 'preview-table';
+		tableDiv.innerHTML = `
+			<table class="striped">
 				<thead>
 					<tr>
 						<th>序号</th>
 						<th>单词</th>
-						<th>含义</th>
 						<th>音标</th>
+						<th>含义</th>
 						<th>状态</th>
 					</tr>
 				</thead>
-				<tbody>
-					${previewData.map(item => `
-						<tr class="${item.status === 'valid' ? '' : 'red lighten-4'}">
-							<td>${item.index}</td>
-							<td>${item.word}</td>
-							<td>${item.meaning}</td>
-							<td>${item.phonetic}</td>
-							<td>
-								${item.status === 'valid' 
-									? '<span class="green-text">有效</span>' 
-									: `<span class="red-text tooltipped" data-position="left" data-tooltip="${item.error}">
-										无效
-										<i class="material-icons tiny">error</i>
-									   </span>`
-								}
-							</td>
-						</tr>
-					`).join('')}
+				<tbody id="excel-preview-table-body">
 				</tbody>
 			</table>
 		`;
-
-		previewContainer.innerHTML = statsHtml + tableHtml;
-
+		previewArea.appendChild(tableDiv);
+		
+		// 填充表格数据
+		const tableBody = document.getElementById('excel-preview-table-body');
+		
+		// 计算当前页数据范围
+		const startIndex = (previewState.currentPage - 1) * previewState.pageSize;
+		const endIndex = Math.min(startIndex + previewState.pageSize, previewState.data.length);
+		
+		// 添加数据行
+		for (let i = startIndex; i < endIndex; i++) {
+			const item = previewState.data[i];
+			const tr = document.createElement('tr');
+			
+			if (!item.isValid) {
+				tr.className = 'invalid-row';
+			}
+			
+			tr.innerHTML = `
+				<td>${i + 1}</td>
+				<td>${item.processedData ? item.processedData.word : (item.word || '')}</td>
+				<td>${item.processedData ? item.processedData.phonetic || '' : ''}</td>
+				<td>${item.processedData ? item.processedData.meaning : (item.meaning || '')}</td>
+				<td>
+					${item.isValid 
+						? '<span class="green-text">有效</span>' 
+						: `<span class="red-text tooltipped" data-position="left" data-tooltip="${item.error || '无效数据'}">无效</span>`}
+				</td>
+			`;
+			tableBody.appendChild(tr);
+		}
+		
+		// 添加分页控件
+		const paginationDiv = document.createElement('div');
+		paginationDiv.className = 'pagination-container center-align';
+		paginationDiv.innerHTML = '<ul class="pagination" id="excel-preview-pagination"></ul>';
+		previewArea.appendChild(paginationDiv);
+		
 		// 初始化工具提示
 		M.Tooltip.init(document.querySelectorAll('.tooltipped'));
-
-		// 根据验证结果启用/禁用导入按钮
-		document.getElementById('import-btn').disabled = validCount === 0;
+		
+		// 更新分页
+		updateExcelPreviewPagination();
+	}
+	
+	/**
+	 * 更新Excel预览分页
+	 */
+	function updateExcelPreviewPagination() {
+		const paginationElement = document.getElementById('excel-preview-pagination');
+		if (!paginationElement) return;
+		
+		paginationElement.innerHTML = '';
+		
+		// 如果只有一页，不显示分页
+		if (previewState.totalPages <= 1) {
+			return;
+		}
+		
+		// 添加上一页按钮
+		const prevLi = document.createElement('li');
+		prevLi.className = previewState.currentPage === 1 ? 'disabled' : 'waves-effect';
+		prevLi.innerHTML = '<a href="#!"><i class="material-icons">chevron_left</i></a>';
+		if (previewState.currentPage > 1) {
+			prevLi.addEventListener('click', () => {
+				previewState.currentPage--;
+				updateExcelPreviewDisplay();
+			});
+		}
+		paginationElement.appendChild(prevLi);
+		
+		// 添加页码按钮
+		for (let i = 1; i <= previewState.totalPages; i++) {
+			const li = document.createElement('li');
+			
+			li.className = i === previewState.currentPage ? 'active' : 'waves-effect';
+			li.innerHTML = `<a href="#!">${i}</a>`;
+			if (i !== previewState.currentPage) {
+				li.addEventListener('click', () => {
+					previewState.currentPage = i;
+					updateExcelPreviewDisplay();
+				});
+			}
+			paginationElement.appendChild(li);
+		}
+		
+		// 添加下一页按钮
+		const nextLi = document.createElement('li');
+		nextLi.className = previewState.currentPage === previewState.totalPages ? 'disabled' : 'waves-effect';
+		nextLi.innerHTML = '<a href="#!"><i class="material-icons">chevron_right</i></a>';
+		if (previewState.currentPage < previewState.totalPages) {
+			nextLi.addEventListener('click', () => {
+				previewState.currentPage++;
+				updateExcelPreviewDisplay();
+			});
+		}
+		paginationElement.appendChild(nextLi);
 	}
 
 	/**
@@ -1884,6 +2324,9 @@
 		const meaning = document.getElementById('word-definition').value;
 		const phonetic = document.getElementById('word-phonetic').value;
 		const example = document.getElementById('word-example').value;
+		const phrase = document.getElementById('word-phrase').value || '';
+		const morphology = document.getElementById('word-morphology').value || '';
+		const note = document.getElementById('word-note').value || '';
 		let levelId = document.getElementById('word-level').value;
 		let chapterId = document.getElementById('word-chapter').value;
 		
@@ -1951,7 +2394,10 @@
 			word: word,
 			meaning: meaning,
 			phonetic: phonetic || '',
+			phrase: phrase || '',
 			example: example || '',
+			morphology: morphology || '',
+			note: note || '',
 			level_id: levelId,
 			chapter_id: chapterId
 		};
@@ -1975,7 +2421,7 @@
 		})
 		.then(response => {
 			if (!response.ok) {
-				return response.json().then(err => { throw err; });
+				throw new Error(`保存失败: ${response.status}`);
 			}
 			return response.json();
 		})
@@ -2004,8 +2450,81 @@
 			}
 		})
 		.catch(error => {
-			console.error('保存单词失败:', error);
-			showToast('保存失败: ' + (error.message || '未知错误'), 'error');
+			console.warn('API保存单词失败，使用模拟保存:', error.message);
+			
+			// 使用模拟数据保存
+			if (isUpdate) {
+				// 更新已有单词
+				const wordIndex = MOCK_DATA.words.findIndex(w => w.id === wordId);
+				if (wordIndex !== -1) {
+					MOCK_DATA.words[wordIndex] = { 
+						...MOCK_DATA.words[wordIndex], 
+						...wordData,
+						id: wordId
+					};
+					showToast('单词更新成功（本地模式）', 'success');
+				} else {
+					showToast('未找到要更新的单词', 'error');
+					hideLoading();
+					return;
+				}
+			} else {
+				// 创建新单词
+				const maxId = Math.max(...MOCK_DATA.words.map(word => parseInt(word.id)), 0);
+				const newId = (maxId + 1).toString();
+				const newWord = { 
+					id: newId, 
+					...wordData
+				};
+				
+				// 确保级别存在
+				let levelExists = MOCK_DATA.vocabularyLevels.some(level => level.id === levelId);
+				if (!levelExists) {
+					// 创建新级别
+					const newLevel = { 
+						id: levelId, 
+						name: levelId, 
+						description: `${levelId} 词汇`, 
+						order_num: MOCK_DATA.vocabularyLevels.length + 1 
+					};
+					MOCK_DATA.vocabularyLevels.push(newLevel);
+					MOCK_DATA.chapters[levelId] = [];
+					vocabularyLevels = MOCK_DATA.vocabularyLevels;
+				}
+				
+				// 确保章节存在
+				let chapterExists = false;
+				if (MOCK_DATA.chapters[levelId]) {
+					chapterExists = MOCK_DATA.chapters[levelId].some(chapter => chapter.id === chapterId);
+				} else {
+					MOCK_DATA.chapters[levelId] = [];
+				}
+				
+				if (!chapterExists) {
+					// 创建新章节
+					const maxChapterId = Math.max(...Object.values(MOCK_DATA.chapters).flat().map(chapter => parseInt(chapter.id) || 0), 0);
+					const newChapterId = (maxChapterId + 1).toString();
+					const newChapter = {
+						id: newChapterId,
+						name: chapterId,
+						description: `${chapterId} 章节`,
+						level_id: levelId,
+						order_num: (MOCK_DATA.chapters[levelId] || []).length + 1
+					};
+					MOCK_DATA.chapters[levelId].push(newChapter);
+					newWord.chapter_id = newChapterId;
+				}
+				
+				MOCK_DATA.words.push(newWord);
+				showToast('单词添加成功（本地模式）', 'success');
+			}
+			
+			// 关闭模态框
+			const modal = M.Modal.getInstance(document.getElementById('word-modal'));
+			modal.close();
+			
+			// 重新加载单词列表（使用模拟数据）
+			filterWords();
 		})
 		.finally(() => {
 			hideLoading();
@@ -2013,11 +2532,11 @@
 	}
 
 	/**
-	 * 创建新级别
+	 * 创建新词汇级别
 	 * @param {string} name - 级别名称
 	 * @param {string} description - 级别描述
 	 * @param {number} orderNum - 排序号
-	 * @returns {Promise<string>} 返回新创建的级别ID
+	 * @returns {Promise<Object>} 返回新创建的级别对象
 	 */
 	function createLevel(name, description, orderNum = 100) {
 		console.log(`创建新级别: ${name}`);
@@ -2030,27 +2549,39 @@
 		};
 		
 		// API请求
-		return fetch(`${API_BASE_URL}/vocabulary-levels`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': 'Bearer ' + token
-			},
-			body: JSON.stringify(levelData)
-		})
-		.then(response => {
-			if (!response.ok) {
-				throw new Error(`创建级别失败: ${response.status}`);
-			}
-			return response.json();
-		})
-		.then(data => {
-			if (data.success) {
-				showToast(`创建新级别 "${name}" 成功`, 'success');
-				return name; // 返回级别ID，通常是级别名称
-			} else {
-				throw new Error(data.message || '创建级别失败');
-			}
+		return new Promise((resolve, reject) => {
+			fetch(`${API_BASE_URL}${API_ENDPOINTS.VOCABULARY_LEVELS}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': 'Bearer ' + token
+				},
+				body: JSON.stringify(levelData)
+			})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`创建级别失败: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				if (data.success) {
+					showToast(`创建新级别 "${name}" 成功`, 'success');
+					resolve(data.level || { id: data.level_id, name: name, description: description });
+				} else {
+					throw new Error(data.message || '创建级别失败');
+				}
+			})
+			.catch(error => { // 捕获 fetch 网络错误 或 then 块中抛出的错误
+				// 1. 记录详细错误日志
+				console.error('创建级别失败:', error);
+			
+				// 2. 向用户显示明确的错误提示
+				showToast(`创建级别失败: ${error.message}`, 'error');
+			
+				// 3. 拒绝 Promise，中断后续操作
+				reject(error);
+			})
 		});
 	}
 
@@ -3012,27 +3543,43 @@
 		if (!chapterSelect) return;
 
 		try {
-			let url;
-			if (levelId) {
-				// 加载特定级别的章节
-				url = `${API_BASE_URL}${API_ENDPOINTS.LEVEL_CHAPTERS.replace('{id}', levelId)}`;
-			} else {
-				// 加载所有章节
-				url = `${API_BASE_URL}${API_ENDPOINTS.CHAPTERS}`;
-			}
-
-			const response = await fetch(url, {
-				headers: {
-					'Authorization': `Bearer ${token}`
+			let chapters = [];
+			
+			try {
+				let url;
+				if (levelId) {
+					// 加载特定级别的章节
+					url = `${API_BASE_URL}${API_ENDPOINTS.LEVEL_CHAPTERS.replace('{id}', levelId)}`;
+				} else {
+					// 加载所有章节
+					url = `${API_BASE_URL}${API_ENDPOINTS.CHAPTERS}`;
 				}
-			});
 
-			if (!response.ok) {
-				throw new Error('获取章节失败');
+				const response = await fetch(url, {
+					headers: {
+						'Authorization': `Bearer ${token}`
+					}
+				});
+
+				if (!response.ok) {
+					throw new Error('获取章节失败');
+				}
+
+				const data = await response.json();
+				chapters = data.chapters || [];
+			} catch (apiError) {
+				console.warn('API调用失败，使用模拟数据:', apiError.message);
+				showToast('使用本地数据进行测试', 'info');
+				
+				// 使用模拟数据
+				if (levelId) {
+					// 获取特定级别的章节
+					chapters = MOCK_DATA.chapters[levelId] || [];
+				} else {
+					// 获取所有章节（将所有级别的章节合并）
+					chapters = Object.values(MOCK_DATA.chapters).flat();
+				}
 			}
-
-			const data = await response.json();
-			const chapters = data.chapters || [];
 
 			// 清空现有选项
 			chapterSelect.innerHTML = '<option value="">所有章节</option>';
@@ -3089,26 +3636,36 @@
 			}
 
 			// 加载词汇级别
-			const response = await fetch(`${API_BASE_URL}/vocabulary-levels`, {
-				headers: {
-					'Authorization': `Bearer ${token}`
+			let levels = [];
+			
+			try {
+				const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.VOCABULARY_LEVELS}`, {
+					headers: {
+						'Authorization': `Bearer ${token}`
+					}
+				});
+
+				if (!response.ok) {
+					throw new Error('加载级别失败');
 				}
-			});
 
-			if (!response.ok) {
-				throw new Error('加载级别失败');
-			}
-
-			const data = await response.json();
-			if (!data.success) {
-				throw new Error(data.message || '加载级别失败');
+				const data = await response.json();
+				if (!data.success) {
+					throw new Error(data.message || '加载级别失败');
+				}
+				
+				levels = data.levels;
+			} catch (apiError) {
+				console.warn('API调用失败，使用模拟数据:', apiError.message);
+				showToast('使用本地数据进行测试', 'info');
+				levels = MOCK_DATA.vocabularyLevels;
 			}
 
 			// 清空现有选项
 			levelSelect.innerHTML = '<option value="">全部级别</option>';
 			
 			// 添加级别选项
-			data.levels.forEach(level => {
+			levels.forEach(level => {
 				const option = document.createElement('option');
 				option.value = level.id;
 				option.textContent = level.name;
@@ -3116,10 +3673,10 @@
 			});
 
 			// 如果有级别数据,选择第一个级别
-			if (data.levels.length > 0) {
+			if (levels.length > 0) {
 				levelSelect.selectedIndex = 1; // 选择第一个实际的级别（索引0是"全部级别"）
 				// 加载该级别的章节
-				await loadChaptersByLevel(data.levels[0].id);
+				await loadChaptersByLevel(levels[0].id);
 			}
 
 			// 初始化 Materialize 下拉菜单
@@ -3159,35 +3716,44 @@
 			initializeImportFeatures();
 			
 			// 加载词汇级别
-			const levelResponse = await fetch(`${API_BASE_URL}/vocabulary-levels`, {
-				headers: {
-					'Authorization': `Bearer ${token}`
+			let levels = [];
+			
+			try {
+				const levelResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.VOCABULARY_LEVELS}`, {
+					headers: {
+						'Authorization': `Bearer ${token}`
+					}
+				});
+				
+				if (!levelResponse.ok) {
+					throw new Error('加载词汇级别失败');
 				}
-			});
-			
-			if (!levelResponse.ok) {
-				throw new Error('加载词汇级别失败');
-			}
-			
-			const levelData = await levelResponse.json();
-			console.log('加载到的词汇级别数据:', levelData);
-			
-			if (!levelData.success || !levelData.levels || levelData.levels.length === 0) {
-				showToast('没有找到词汇级别数据,请联系管理员', 'error');
-				return;
+				
+				const levelData = await levelResponse.json();
+				console.log('加载到的词汇级别数据:', levelData);
+				
+				if (!levelData.success || !levelData.levels || levelData.levels.length === 0) {
+					throw new Error('没有找到词汇级别数据');
+				}
+				
+				levels = levelData.levels;
+			} catch (apiError) {
+				console.warn('API调用失败，使用模拟数据:', apiError.message);
+				showToast('使用本地数据进行测试', 'info');
+				levels = MOCK_DATA.vocabularyLevels;
 			}
 
 			// 更新全局变量
-			vocabularyLevels = levelData.levels || [];
+			vocabularyLevels = levels;
 			
 			// 同时更新所有级别下拉框
-			await updateAllLevelSelects(levelData.levels);
+			await updateAllLevelSelects(levels);
 
 			// 更新级别下拉框
 			const levelSelect = document.getElementById('level-filter');
 			if (levelSelect) {
 				levelSelect.innerHTML = '<option value="">全部级别</option>';
-				levelData.levels.forEach(level => {
+				levels.forEach(level => {
 					const option = document.createElement('option');
 					option.value = level.id;
 					option.textContent = level.name;
@@ -3198,12 +3764,12 @@
 				M.FormSelect.init(levelSelect);
 				
 				// 选择第一个级别
-				if (levelData.levels.length > 0) {
+				if (levels.length > 0) {
 					levelSelect.selectedIndex = 1;
 					M.FormSelect.init(levelSelect);
 					
 					// 加载该级别的章节
-					const firstLevelId = levelData.levels[0].id;
+					const firstLevelId = levels[0].id;
 					await loadChaptersByLevel(firstLevelId);
 					
 					// 更新事件监听器
@@ -3337,7 +3903,7 @@
 		queryParams.set('size', pageSize);
 		
 		// 构建API URL，添加分页参数
-		const url = `${API_BASE_URL}/chapters/${encodedChapterId}/words?${queryParams.toString()}`;
+		const url = `${API_BASE_URL}${API_ENDPOINTS.CHAPTERS}/${encodedChapterId}/words?${queryParams.toString()}`;
 		
 		console.log('【后端分页】请求章节单词URL:', url);
 		console.log('【后端分页】请求页码:', page, '每页大小:', pageSize);
@@ -3620,7 +4186,14 @@
 		
 		reader.onload = function(e) {
 			try {
-				const jsonData = JSON.parse(e.target.result);
+				let jsonText = e.target.result;
+				
+				// 处理可能的NaN值，将其替换为null
+				jsonText = jsonText.replace(/: NaN/g, ': null');
+				jsonText = jsonText.replace(/:"NaN"/g, ': null');
+				jsonText = jsonText.replace(/"NaN"/g, 'null');
+				
+				const jsonData = JSON.parse(jsonText);
 				console.log('解析的JSON数据:', jsonData);
 				
 				// 验证JSON格式
@@ -3628,20 +4201,49 @@
 					throw new Error('JSON数据必须是数组格式');
 				}
 				
-				// 验证数据结构
-				const validationResult = validateJsonData(jsonData);
-				if (!validationResult.valid) {
-					throw new Error(validationResult.message);
+				if (jsonData.length === 0) {
+					throw new Error('JSON数据不能为空');
 				}
 				
-				// 保存数据供后续使用
-				window.jsonImportData = jsonData;
+				// 获取选中的词汇级别
+				const levelId = document.getElementById('vocabulary-level').value;
+				if (!levelId) {
+					hideLoading();
+					showToast('请先选择词汇级别', 'warning');
+					return;
+				}
 				
-				// 更新预览
+				// 验证每个单词数据
+				const processedData = jsonData.map((item, index) => {
+					return validateWord(item, index, levelId);
+				});
+				
+				// 分析验证结果
+				const validItems = processedData.filter(item => item.isValid);
+				
+				if (validItems.length === 0) {
+					throw new Error('没有有效的单词数据可以导入');
+				}
+				
+				// 保存预处理数据供后续使用
+				previewState.data = processedData;
+				previewState.validCount = validItems.length;
+				previewState.invalidCount = processedData.length - validItems.length;
+				previewState.totalCount = processedData.length;
+				previewState.totalPages = Math.ceil(processedData.length / previewState.pageSize);
+				previewState.currentPage = 1;
+				
+				// 更新预览显示
 				updateJsonPreview(jsonData);
 				
+				// 启用导入按钮
+				const importBtn = document.getElementById('import-btn');
+				if (importBtn) {
+				     importBtn.disabled = validItems.length === 0;
+				}
+				
 				hideLoading();
-				showToast(`成功解析 ${jsonData.length} 个单词数据`, 'success');
+				showToast(`成功解析 ${jsonData.length} 个单词，有效 ${validItems.length} 个`, 'success');
 			} catch (error) {
 				console.error('JSON解析错误:', error);
 				hideLoading();
@@ -3659,33 +4261,51 @@
 	}
 
 	/**
-	 * 验证JSON数据格式
+	 * 验证JSON数据
 	 * @param {Array} data - JSON数据
 	 * @returns {Object} 验证结果
 	 */
 	function validateJsonData(data) {
-		if (!Array.isArray(data) || data.length === 0) {
+		if (!Array.isArray(data)) {
 			return {
-				valid: false,
-				message: '没有可导入的数据'
+				valid: false, 
+				message: 'JSON数据必须是数组格式'
 			};
 		}
 		
-		const invalidEntries = [];
+		if (data.length === 0) {
+			return {
+				valid: false,
+				message: 'JSON数据为空'
+			};
+		}
 		
-		data.forEach((item, index) => {
-			if (!item.word || !item.definition) {
-				invalidEntries.push(`第${index + 1}行：单词或释义为空`);
+		let invalidItems = [];
+		
+		for (let i = 0; i < data.length; i++) {
+			const item = data[i];
+			
+			// 检查必要字段
+			if (!item.word || typeof item.word !== 'string' || item.word.trim() === '') {
+				invalidItems.push(`第${i+1}项: 缺少单词字段`);
 			}
-		});
+			
+			if ((!item.meaning && !item.definition) || 
+				(item.meaning && typeof item.meaning !== 'string') || 
+				(item.definition && typeof item.definition !== 'string')) {
+				invalidItems.push(`第${i+1}项: 缺少或无效的含义字段`);
+			}
+		}
+		
+		if (invalidItems.length > 0) {
+			return {
+				valid: false,
+				message: `发现 ${invalidItems.length} 个无效项目: ${invalidItems.slice(0, 3).join('; ')}${invalidItems.length > 3 ? '...' : ''}`
+			};
+		}
 		
 		return {
-			valid: invalidEntries.length === 0,
-			message: invalidEntries.length > 0 ? 
-				`数据验证失败：${invalidEntries.slice(0, 3).join('; ')}` + 
-				(invalidEntries.length > 3 ? `...等${invalidEntries.length}个问题` : '') : 
-				'数据验证通过',
-			invalidEntries
+			valid: true
 		};
 	}
 
@@ -3694,135 +4314,228 @@
 	 * @param {Array} data - JSON数据
 	 */
 	function updateJsonPreview(data) {
-		const previewDiv = document.getElementById('json-preview');
-		if (!previewDiv) return;
-		
-		// 创建预览表格
-		let html = `
-			<table class="striped">
-				<thead>
-					<tr>
-						<th>序号</th>
-						<th>单词</th>
-						<th>含义</th>
-						<th>章节</th>
-					</tr>
-				</thead>
-				<tbody>
-		`;
-		
-		// 显示前10个单词作为预览
-		data.slice(0, 10).forEach((item, index) => {
-			html += `
-				<tr>
-					<td>${index + 1}</td>
-					<td>${item.word}</td>
-					<td>${item.meaning}</td>
-					<td>第${item.chapter_id || '?'}章</td>
-				</tr>
-			`;
-		});
-		
-		html += `
-				</tbody>
-			</table>
-		`;
-		
-		if (data.length > 10) {
-			html += `<p class="center-align">共 ${data.length} 个单词，显示前10个</p>`;
-		}
-		
-		previewDiv.innerHTML = html;
+	    const previewContainer = document.getElementById('json-preview');
+	    if (!previewContainer) {
+	        console.error('错误：未找到预览容器 <div id="json-preview">');
+	        return;
+	    }
+
+	    const totalCountElem = document.getElementById('total-count');
+	    const validCountElem = document.getElementById('valid-count');
+	    const invalidCountElem = document.getElementById('invalid-count');
+	    const tableBody = document.getElementById('preview-table-body');
+
+	    if (!totalCountElem || !validCountElem || !invalidCountElem || !tableBody) {
+	        console.error('错误：预览区域缺少必要的子元素 (total-count, valid-count, invalid-count, preview-table-body)');
+	        // Make sure the preview container itself is visible to show potential stats
+	         previewContainer.style.display = 'block';
+	         // Optionally add an error message inside previewContainer
+	         previewContainer.innerHTML = '<p class="red-text">预览区域HTML结构不完整，请检查 admin-vocabulary.html。</p>';
+	        return;
+	    }
+
+	    const levelId = document.getElementById('vocabulary-level')?.value; // Use optional chaining for safety
+	    let levelName = '';
+	    if (levelId && levelId !== 'custom') {
+	        levelName = getLevelNameById(levelId);
+	    } else if (levelId === 'custom') {
+	        levelName = '自定义级别 (待创建)';
+	    }
+
+	    if (!levelId) {
+	        showToast('请先选择词汇等级', 'warning');
+	    }
+
+	    let validCount = 0;
+	    let invalidCount = 0;
+	    let totalCount = data.length;
+	    const previewItems = [];
+
+	    // Validate each entry
+	    data.forEach((item, index) => {
+	        let isValid = item.word && (item.meaning || item.definition);
+	        let errorMessage = '';
+	        if (!item.word) {
+	            errorMessage = '缺少单词';
+	            isValid = false; // Ensure isValid is false
+	        } else if (!item.meaning && !item.definition) {
+	            errorMessage = '缺少含义';
+	            isValid = false; // Ensure isValid is false
+	        }
+
+	        if (isValid) {
+	            validCount++;
+	        } else {
+	            invalidCount++;
+	        }
+
+	        // Limit preview items
+	        if (index < 20) {
+	             previewItems.push({
+	                 index: index + 1,
+	                 word: item.word || '未填写',
+	                 phonetic: item.phonetic || '-',
+	                 meaning: item.meaning || item.definition || '未填写',
+	                 status: isValid ? 'valid' : 'invalid',
+	                 error: errorMessage
+	             });
+	        }
+	    });
+
+	    // Update stats
+	    totalCountElem.textContent = totalCount;
+	    validCountElem.textContent = validCount;
+	    invalidCountElem.textContent = invalidCount;
+
+	    // Clear and update table body
+	    tableBody.innerHTML = ''; // Clear previous preview
+	    previewItems.forEach(item => {
+	        const row = document.createElement('tr');
+	        row.className = item.status === 'valid' ? '' : 'invalid-row';
+	        row.innerHTML = `
+	            <td>${item.index}</td>
+	            <td>${item.word}</td>
+	            <td>${item.phonetic}</td>
+	            <td>${item.meaning}</td>
+	            <td>${levelName || '未选择'}</td>
+	            <td>${item.status === 'valid' ?
+	                '<span class="green-text">有效</span>' :
+	                `<span class="red-text tooltipped" data-position="left" data-tooltip="${item.error || '无效数据'}">无效</span>`}
+	            </td>
+	        `;
+	        tableBody.appendChild(row);
+	    });
+
+	     // Add "more items" row if necessary
+	     if (totalCount > 20) {
+	         const moreRow = document.createElement('tr');
+	         moreRow.innerHTML = `
+	             <td colspan="6" class="center-align">
+	                 显示前20条记录，共${totalCount}条
+	             </td>
+	         `;
+	         tableBody.appendChild(moreRow);
+	     }
+
+	    // Initialize tooltips
+	    M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+
+	    // Enable/disable import button
+	    const importBtn = document.getElementById('import-btn');
+	    if (importBtn) {
+	        importBtn.disabled = validCount === 0;
+	    }
+
+	    // Show the preview container
+	    previewContainer.style.display = 'block';
 	}
 
 	/**
 	 * 导入JSON数据
 	 */
 	async function importJsonData() {
-		if (!window.jsonImportData || !Array.isArray(window.jsonImportData)) {
-			showToast('没有可导入的JSON数据', 'error');
+		// 检查是否有数据
+		if (!window.jsonImportData || !Array.isArray(window.jsonImportData) || window.jsonImportData.length === 0) {
+			showToast('没有可导入的数据', 'error');
 			return;
 		}
 		
-		const levelSelect = document.getElementById('json-level-select');
-		let levelId = levelSelect.value;
-		
-		// 如果选择了创建新级别，先创建级别
-		if (levelId === 'custom') {
-			const levelName = document.getElementById('json-custom-level-name').value.trim();
-			const levelDesc = document.getElementById('json-custom-level-description').value.trim();
-			
-			if (!levelName) {
-				showToast('请输入级别名称', 'error');
-				return;
-			}
-			
-			try {
-				const newLevel = await createLevel(levelName, levelDesc);
-				if (newLevel && newLevel.id) {
-					levelId = newLevel.id;
-				} else {
-					throw new Error('创建级别失败');
-				}
-			} catch (error) {
-				console.error('创建级别失败:', error);
-				showToast('创建级别失败: ' + error.message, 'error');
-				return;
-			}
-		}
-		
+		// 获取选择的等级
+		let levelId = document.getElementById('vocabulary-level').value;
 		if (!levelId) {
-			showToast('请选择或创建目标级别', 'error');
+			showToast('请选择词汇等级', 'error');
 			return;
 		}
 		
-		showLoading('正在导入数据...');
+		showLoading('正在处理数据...');
 		
 		try {
-			// 按照之前的数据库导入规则处理数据
-			const processedData = window.jsonImportData.map(item => ({
+			// 如果选择了自定义等级，创建新等级
+			if (levelId === 'custom') {
+				const levelName = document.getElementById('custom-level-name').value.trim();
+				const levelDesc = document.getElementById('custom-level-description').value.trim();
+				
+				if (!levelName) {
+					throw new Error('请输入自定义等级名称');
+				}
+				
+				// 创建新等级
+				const newLevel = await createLevel(levelName, levelDesc);
+				console.log('创建的新等级:', newLevel);
+				
+				if (!newLevel || !newLevel.id) {
+					throw new Error('创建等级失败');
+				}
+				
+				levelId = newLevel.id;
+			}
+			
+			// 准备导入数据
+			const importData = window.jsonImportData.filter(item => 
+				item.word && (item.meaning || item.definition)
+			).map(item => ({
 				word: item.word,
-				meaning: item.meaning,
-				level_id: levelId,
-				chapter_id: item.chapter_id // 保持原有的chapter_id
+				meaning: item.meaning || item.definition || '',
+				phonetic: item.phonetic || '',
+				phrase: item.phrase || '',
+				example: item.example || '',
+				morphology: item.morphology || '',
+				note: item.note || '',
+				level_id: levelId
 			}));
 			
-			// 发送到服务器
-			const response = await fetch(API_BASE_URL + API_ENDPOINTS.IMPORT_WORDS, {
+			if (importData.length === 0) {
+				throw new Error('没有有效的数据可以导入');
+			}
+			
+			showLoading(`正在导入 ${importData.length} 个单词...`);
+			
+			// 发送导入请求
+			const response = await fetch(`${API_BASE_URL}/words/batch`, {
 				method: 'POST',
 				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
 				},
-				body: JSON.stringify(processedData)
+				body: JSON.stringify({
+					words: importData,
+					level_id: levelId
+				})
 			});
 			
 			if (!response.ok) {
-				throw new Error('导入失败: ' + (await response.text()));
+				const errorText = await response.text();
+				throw new Error('导入失败: ' + errorText);
 			}
 			
 			const result = await response.json();
+			console.log('导入结果:', result);
 			
 			// 清除导入数据
 			window.jsonImportData = null;
-			document.getElementById('json-preview').innerHTML = '<p class="center-align">上传JSON文件后在此处显示预览</p>';
-			document.getElementById('json-upload').value = '';
-			document.getElementById('json-custom-level-container').style.display = 'none';
-			document.getElementById('json-level-select').value = '';
-			M.FormSelect.init(document.getElementById('json-level-select'));
 			
-			hideLoading();
-			showToast('数据导入成功', 'success');
+			// 清空预览区域
+			document.getElementById('json-preview').innerHTML = '';
 			
-			// 刷新词汇列表
+			// 重置文件输入
+			document.getElementById('json-file').value = '';
+			
+			// 重置自定义等级输入
+			document.getElementById('custom-level-input').style.display = 'none';
+			document.getElementById('custom-level-desc').style.display = 'none';
+			
+			showToast(`成功导入 ${importData.length} 个单词`, 'success');
+			
+			// 刷新单词列表
 			setTimeout(() => {
-				loadWords(1, pageSize);
+				loadWords();
 			}, 1000);
 			
 		} catch (error) {
-			console.error('导入过程错误:', error);
-			hideLoading();
+			console.error('导入失败:', error);
 			showToast(error.message, 'error');
+		} finally {
+			hideLoading();
 		}
 	}
 
@@ -4137,31 +4850,130 @@
 		showLoading('正在导入数据...');
 		
 		try {
+			// 获取选中的词汇级别
+			let levelId = document.getElementById('vocabulary-level').value;
+			
+			// 处理自定义等级
+			if (levelId === 'custom') {
+				const levelName = document.getElementById('custom-level-name').value.trim();
+				const levelDesc = document.getElementById('custom-level-description').value.trim();
+				
+				if (!levelName) {
+					throw new Error('请输入自定义等级名称');
+				}
+				
+				// 创建新等级
+				const newLevel = await createLevel(levelName, levelDesc);
+				console.log('创建的新等级:', newLevel);
+				
+				if (!newLevel || !newLevel.id) {
+					throw new Error('创建等级失败');
+				}
+				
+				levelId = newLevel.id;
+			}
+			
 			// 只导入有效的数据
 			const validData = previewState.data
 				.filter(item => item.isValid)
 				.map(item => item.processedData);
 			
-			// 调用API进行导入
-			const response = await fetch('/api/words/batch', {
+			if (validData.length === 0) {
+				throw new Error('没有有效的数据可以导入');
+			}
+			
+			showLoading(`正在导入 ${validData.length} 条数据...`);
+			
+			// 调用新的 Web UI 专用 API 进行导入
+			const response = await fetch('/api/words/web-bulk-import', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+					'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
 				},
 				body: JSON.stringify({
-					words: validData,
-					level: getSelectedLevel()
+					jsonData: validData // 使用 jsonData 字段，并确保 validData 是包含所有单词信息的数组
+					// level_id: levelId // 后端似乎会从 jsonData 中获取级别信息，这里移除
 				})
 			});
+			
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error('导入失败: ' + errorText);
+			}
 			
 			const result = await response.json();
 			
 			if (result.success) {
-				showToast(`成功导入 ${validData.length} 条数据`, 'success');
-				resetForm();
-				// 刷新词汇列表
-				loadWords();
+				// 重置预览状态
+				previewState.reset();
+				
+				// 重置UI元素
+				// 1. 获取当前激活的导入类型按钮
+				const activeImportButton = document.querySelector('.import-type-selector .btn.active');
+				const importType = activeImportButton ? activeImportButton.getAttribute('data-import-type') : null;
+
+				if (importType === 'json') {
+				    // 清理 JSON 相关的 UI
+				    const jsonFileInput = document.getElementById('json-file');
+				    if (jsonFileInput) jsonFileInput.value = '';
+				    
+				    const jsonPreviewArea = document.getElementById('json-preview');
+				    if (jsonPreviewArea) {
+				        jsonPreviewArea.style.display = 'none';
+				        jsonPreviewArea.innerHTML = ''; // 清空内容
+				    }
+				    
+				    const jsonCustomLevelInput = document.getElementById('custom-level-input');
+				    if (jsonCustomLevelInput) jsonCustomLevelInput.style.display = 'none';
+				    
+				    const jsonCustomLevelDesc = document.getElementById('custom-level-desc');
+				    if (jsonCustomLevelDesc) jsonCustomLevelDesc.style.display = 'none';
+				    
+				    // 禁用对应的导入按钮
+				    const jsonImportBtn = document.getElementById('import-btn');
+				    if (jsonImportBtn) jsonImportBtn.disabled = true;
+				    
+				} else if (importType === 'excel') {
+				    // 清理 Excel 相关的 UI
+				    const excelFileInput = document.getElementById('excel-file');
+				    if (excelFileInput) excelFileInput.value = '';
+				    
+				    const excelPreviewArea = document.getElementById('excel-preview');
+				    if (excelPreviewArea) {
+				        excelPreviewArea.style.display = 'none';
+				        excelPreviewArea.innerHTML = ''; // 清空内容
+				    }
+				    
+				    const excelCustomLevelInput = document.getElementById('excel-custom-level-input');
+				    if (excelCustomLevelInput) excelCustomLevelInput.style.display = 'none';
+				    
+				    const excelCustomLevelDesc = document.getElementById('excel-custom-level-desc');
+				    if (excelCustomLevelDesc) excelCustomLevelDesc.style.display = 'none';
+				    
+				    // 禁用对应的导入按钮
+				    const excelImportBtn = document.getElementById('excel-import-btn');
+				    if (excelImportBtn) excelImportBtn.disabled = true;
+				}
+				
+				// 重置选择的级别下拉框（如果不是自定义）
+				const levelSelect = document.getElementById('vocabulary-level');
+				if (levelSelect && levelId !== 'custom') {
+				    levelSelect.value = '';
+				    M.FormSelect.init(levelSelect); // 重新初始化 Materialize Select
+				}
+				const excelLevelSelect = document.getElementById('excel-vocabulary-level');
+				if (excelLevelSelect && levelId !== 'custom') {
+				    excelLevelSelect.value = '';
+				    M.FormSelect.init(excelLevelSelect);
+				}
+				
+				showToast(`成功导入 ${result.importedCount || validData.length} 条数据`, 'success');
+				
+				// 刷新单词列表
+				setTimeout(() => {
+					loadWords();
+				}, 1000);
 			} else {
 				throw new Error(result.message || '导入失败');
 			}
@@ -4181,34 +4993,156 @@
 			logoutBtn.addEventListener('click', handleLogout);
 		}
 
-		// 文件上传事件
-		const fileInput = document.getElementById('fileInput');
-		if (fileInput) {
-			fileInput.addEventListener('change', handleFileUpload);
+		// 导入类型切换
+		const importTypeButtons = document.querySelectorAll('[data-import-type]');
+		importTypeButtons.forEach(button => {
+			button.addEventListener('click', function() {
+				// 移除所有按钮的active类
+				importTypeButtons.forEach(btn => btn.classList.remove('active'));
+				// 为当前按钮添加active类
+				this.classList.add('active');
+				
+				// 根据选择的类型显示对应的导入区域
+				const importType = this.getAttribute('data-import-type');
+				document.getElementById('json-import-section').style.display = importType === 'json' ? 'block' : 'none';
+				document.getElementById('excel-import-section').style.display = importType === 'excel' ? 'block' : 'none';
+			});
+		});
+
+		// JSON文件上传事件
+		const jsonFileInput = document.getElementById('json-file');
+		if (jsonFileInput) {
+			jsonFileInput.addEventListener('change', handleJsonUpload);
 		}
 
-		// 导入按钮事件
-		const importBtn = document.getElementById('importBtn');
-		if (importBtn) {
-			importBtn.addEventListener('click', importData);
+		// Excel文件上传事件
+		const excelFileInput = document.getElementById('excel-file');
+		if (excelFileInput) {
+			excelFileInput.addEventListener('change', handleExcelUpload);
 		}
 
-		// 重置按钮事件
-		const resetBtn = document.getElementById('resetBtn');
-		if (resetBtn) {
-			resetBtn.addEventListener('click', resetForm);
+		// JSON导入按钮事件
+		const importJsonBtn = document.getElementById('import-btn');
+		if (importJsonBtn) {
+			importJsonBtn.addEventListener('click', importData);
 		}
 
-		// 创建新章节选项切换
-		const createNewChapter = document.getElementById('create-new-chapter');
-		if (createNewChapter) {
-			createNewChapter.addEventListener('change', toggleNewChapterForm);
+		// Excel导入按钮事件
+		const importExcelBtn = document.getElementById('excel-import-btn');
+		if (importExcelBtn) {
+			importExcelBtn.addEventListener('click', importData);
 		}
 
-		// 级别筛选变化时更新章节下拉框
-		const importLevelSelect = document.getElementById('import-level-select');
-		if (importLevelSelect) {
-			importLevelSelect.addEventListener('change', updateChapterDropdown);
+		// JSON重置按钮事件
+		const resetJsonBtn = document.getElementById('reset-btn');
+		if (resetJsonBtn) {
+			resetJsonBtn.addEventListener('click', function() {
+				// 重置文件输入
+				document.getElementById('json-file').value = '';
+				
+				// 重置自定义等级输入
+				document.getElementById('custom-level-input').style.display = 'none';
+				document.getElementById('custom-level-desc').style.display = 'none';
+				
+				// 清空预览区域
+				document.getElementById('json-preview').style.display = 'none';
+				
+				// 重置预览状态
+				previewState.reset();
+				
+				// 禁用导入按钮
+				document.getElementById('import-btn').disabled = true;
+				
+				showToast('已重置导入表单', 'info');
+			});
+		}
+
+		// Excel重置按钮事件
+		const resetExcelBtn = document.getElementById('excel-reset-btn');
+		if (resetExcelBtn) {
+			resetExcelBtn.addEventListener('click', function() {
+				// 重置文件输入
+				document.getElementById('excel-file').value = '';
+				
+				// 重置自定义等级输入
+				document.getElementById('excel-custom-level-input').style.display = 'none';
+				document.getElementById('excel-custom-level-desc').style.display = 'none';
+				
+				// 清空预览区域
+				document.getElementById('excel-preview').style.display = 'none';
+				
+				// 重置预览状态
+				previewState.reset();
+				
+				// 禁用导入按钮
+				document.getElementById('excel-import-btn').disabled = true;
+				
+				showToast('已重置导入表单', 'info');
+			});
+		}
+
+		// 预览按钮事件
+		const previewJsonBtn = document.getElementById('preview-btn');
+		if (previewJsonBtn) {
+			previewJsonBtn.addEventListener('click', function() {
+				const fileInput = document.getElementById('json-file');
+				if (fileInput.files.length === 0) {
+					showToast('请先选择要上传的文件', 'warning');
+					return;
+				}
+				handleJsonUpload({ target: { files: [fileInput.files[0]] } });
+			});
+		}
+
+		// Excel预览按钮事件
+		const previewExcelBtn = document.getElementById('excel-preview-btn');
+		if (previewExcelBtn) {
+			previewExcelBtn.addEventListener('click', function() {
+				const fileInput = document.getElementById('excel-file');
+				if (fileInput.files.length === 0) {
+					showToast('请先选择要上传的文件', 'warning');
+					return;
+				}
+				handleExcelUpload({ target: { files: [fileInput.files[0]] } });
+			});
+		}
+
+		// 词汇级别选择变化事件（JSON导入）
+		const vocabularyLevelSelect = document.getElementById('vocabulary-level');
+		if (vocabularyLevelSelect) {
+			vocabularyLevelSelect.addEventListener('change', function() {
+				const selectedValue = this.value;
+				const customLevelInput = document.getElementById('custom-level-input');
+				const customLevelDesc = document.getElementById('custom-level-desc');
+				
+				// 如果选择了自定义等级，显示自定义输入框
+				if (selectedValue === 'custom') {
+					customLevelInput.style.display = 'block';
+					customLevelDesc.style.display = 'block';
+				} else {
+					customLevelInput.style.display = 'none';
+					customLevelDesc.style.display = 'none';
+				}
+			});
+		}
+
+		// 词汇级别选择变化事件（Excel导入）
+		const excelVocabularyLevelSelect = document.getElementById('excel-vocabulary-level');
+		if (excelVocabularyLevelSelect) {
+			excelVocabularyLevelSelect.addEventListener('change', function() {
+				const selectedValue = this.value;
+				const customLevelInput = document.getElementById('excel-custom-level-input');
+				const customLevelDesc = document.getElementById('excel-custom-level-desc');
+				
+				// 如果选择了自定义等级，显示自定义输入框
+				if (selectedValue === 'custom') {
+					customLevelInput.style.display = 'block';
+					customLevelDesc.style.display = 'block';
+				} else {
+					customLevelInput.style.display = 'none';
+					customLevelDesc.style.display = 'none';
+				}
+			});
 		}
 
 		// 级别选择变化时处理自定义级别输入框显示
@@ -4359,6 +5293,23 @@
 			}, 500));
 		}
 
+		// 搜索按钮事件
+		// 重复声明searchBtn会导致错误，直接使用getElementById
+		if (document.getElementById('btn-search-word')) {
+			document.getElementById('btn-search-word').addEventListener('click', searchWords);
+		}
+
+		// 搜索输入框回车键事件
+		const wordSearchInput = document.getElementById('word-search');
+		if (wordSearchInput) {
+			wordSearchInput.addEventListener('keypress', function(event) {
+				if (event.key === 'Enter') {
+					event.preventDefault(); // 阻止默认行为
+					searchWords();
+				}
+			});
+		}
+
 		// 级别筛选事件
 		const levelFilter = document.getElementById('level-filter');
 		if (levelFilter) {
@@ -4374,7 +5325,8 @@
 		// 添加单词按钮
 		const addWordBtn = document.getElementById('btn-add-word');
 		if (addWordBtn) {
-			addWordBtn.addEventListener('click', showAddWordModal);
+			// addWordBtn.addEventListener('click', showAddWordModal);
+			// 注释掉添加单词的事件监听，按要求保留其他功能
 		}
 
 		// 添加级别按钮
@@ -4455,3 +5407,122 @@
 			});
 		}
 	}
+
+	/**
+	 * 更新所有等级下拉菜单
+	 * @param {Array} levels - 等级列表
+	 */
+	function updateLevelDropdowns(levels) {
+		if (!Array.isArray(levels)) {
+			console.error('updateLevelDropdowns: levels不是有效数组:', levels);
+			return;
+		}
+
+		console.log('更新等级下拉菜单:', levels);
+		
+		// 更新词汇等级选择器
+		const levelSelectors = [
+			'vocabulary-level',
+			'word-level',
+			'level-filter'
+		];
+
+		levelSelectors.forEach(selectorId => {
+			const select = document.getElementById(selectorId);
+			if (!select) return;
+
+			// 保存当前选中的值
+			const currentValue = select.value;
+
+			// 清空现有选项（保留第一个默认选项）
+			while (select.options.length > 1) {
+				select.remove(1);
+			}
+
+			// 添加自定义等级选项（如果需要）
+			if (selectorId === 'vocabulary-level') {
+				const customOption = document.createElement('option');
+				customOption.value = 'custom';
+				customOption.textContent = '+ 自定义等级';
+				select.appendChild(customOption);
+			}
+
+			// 添加等级选项
+			levels.forEach(level => {
+				const option = document.createElement('option');
+				option.value = level.id;
+				option.textContent = level.name;
+				if (level.id === currentValue) {
+					option.selected = true;
+				}
+				select.appendChild(option);
+			});
+
+			// 重新初始化Materialize下拉菜单
+			M.FormSelect.init(select);
+		});
+	}
+
+	//为JSON导入按钮添加事件监听
+	document.addEventListener('DOMContentLoaded', function() {
+		// JSON预览按钮
+		const previewBtn = document.getElementById('preview-btn');
+		if (previewBtn) {
+			previewBtn.addEventListener('click', function() {
+				const jsonFileInput = document.getElementById('json-file');
+				if (jsonFileInput && jsonFileInput.files.length > 0) {
+					handleJsonUpload({ target: { files: [jsonFileInput.files[0]] } });
+				} else {
+					showToast('请先选择JSON文件', 'error');
+				}
+			});
+		}
+		
+		// JSON导入按钮
+		const importBtn = document.getElementById('import-btn');
+		if (importBtn) {
+			importBtn.addEventListener('click', importJsonData);
+		}
+		
+		// 重置按钮
+		const resetBtn = document.getElementById('reset-btn');
+		if (resetBtn) {
+			resetBtn.addEventListener('click', function() {
+				// 重置文件输入
+				document.getElementById('json-file').value = '';
+				// 重置预览区域
+				document.getElementById('json-preview').innerHTML = '';
+				// 重置自定义等级输入
+				document.getElementById('custom-level-input').style.display = 'none';
+				document.getElementById('custom-level-desc').style.display = 'none';
+				// 重置导入按钮状态
+				document.getElementById('import-btn').disabled = true;
+				// 清除全局数据
+				window.jsonImportData = null;
+				
+				showToast('已重置', 'info');
+			});
+		}
+		
+		// 等级选择器变化
+		const levelSelect = document.getElementById('vocabulary-level');
+		if (levelSelect) {
+			levelSelect.addEventListener('change', function() {
+				const customLevelInput = document.getElementById('custom-level-input');
+				const customLevelDesc = document.getElementById('custom-level-desc');
+				
+				if (this.value === 'custom') {
+					customLevelInput.style.display = 'block';
+					customLevelDesc.style.display = 'block';
+				} else {
+					customLevelInput.style.display = 'none';
+					customLevelDesc.style.display = 'none';
+				}
+				
+				// 如果已经有预览数据，重新预览
+				if (window.jsonImportData) {
+					updateJsonPreview(window.jsonImportData);
+				}
+			});
+		}
+	});

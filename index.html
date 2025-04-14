@@ -687,6 +687,48 @@ believe    相信"></textarea>
                     }
                 });
             });
+            
+            // 添加开始游戏按钮点击事件
+            const startBtn = document.getElementById('start-btn');
+            if (startBtn) {
+                startBtn.addEventListener('click', function() {
+                    console.log("开始游戏按钮被点击");
+                    
+                    // 获取当前数据源
+                    const dataSource = document.getElementById('selected-source').value || 'chapter';
+                    console.log("当前数据源:", dataSource);
+                    
+                    // 只有"按章节获取"才打开关卡选择界面
+                    if (dataSource === 'chapter') {
+                        console.log("打开关卡选择界面");
+                        
+                        // 隐藏开始界面
+                        document.getElementById('start-screen').style.display = 'none';
+                        // 隐藏游戏界面
+                        document.getElementById('game-screen').style.display = 'none';
+                        // 显示关卡选择界面
+                        document.getElementById('level-screen').style.display = 'block';
+                        
+                        // 如果存在WordLevelSystem对象，调用它的方法
+                        if (window.WordLevelSystem) {
+                            // 刷新关卡页面和分页指示器
+                            WordLevelSystem.renderLevelPage();
+                            WordLevelSystem.updatePageIndicator();
+                            
+                            console.log("关卡选择界面已显示");
+                        } else {
+                            console.error("找不到WordLevelSystem对象");
+                        }
+                    } else {
+                        // 其他数据源直接开始游戏
+                        if (window.WordGame) {
+                            WordGame.startGame();
+                        } else {
+                            console.error("找不到WordGame对象");
+                        }
+                    }
+                });
+            }
         });
 
         // 添加退出登录功能

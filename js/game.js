@@ -531,6 +531,69 @@ const WordGame = {
     },
     
     /**
+     * 开始指定章节的关卡
+     * @param {string} chapterId - 章节ID
+     * @returns {Promise<boolean>} 是否成功开始关卡
+     */
+    async startLevel(chapterId) {
+        console.log("开始指定章节的关卡:", chapterId);
+        
+        try {
+            // 强制显示游戏信息和控制按钮
+            const outerInfo = document.querySelector('.outer-info');
+            const outerControls = document.querySelector('.outer-controls');
+            
+            if (outerInfo) {
+                outerInfo.style.cssText = 'display:flex !important; opacity:1 !important; visibility:visible !important';
+            }
+            if (outerControls) {
+                outerControls.style.cssText = 'display:flex !important; opacity:1 !important; visibility:visible !important';
+            }
+            
+            // 显示加载提示
+            WordUtils.LoadingManager.show('正在加载关卡数据...');
+            
+            // 加载章节单词
+            const wordPairs = await this.loadChapterWordsById(chapterId);
+            
+            // 检查是否成功获取了单词对
+            if (!wordPairs || wordPairs.length === 0) {
+                WordUtils.ErrorManager.showToast('无法加载该章节单词，请选择其他章节');
+                WordUtils.LoadingManager.hide();
+                return false;
+            }
+            
+            // 保存单词对到游戏状态
+            this.wordPairs = wordPairs;
+            
+            // 获取难度设置
+            const difficulty = document.getElementById('difficulty').value || 'normal';
+            
+            // 设置游戏难度
+            this.setDifficulty(difficulty);
+            
+            // 切换到游戏界面
+            WordUI.switchScreen('game-screen');
+            
+            // 获取游戏板大小
+            const boardSizeElement = document.getElementById('board-size');
+            const boardSize = boardSizeElement && boardSizeElement.value ? 
+                            parseInt(boardSizeElement.value) : 8;
+            
+            // 初始化游戏状态
+            this.initGameState(boardSize);
+            
+            WordUtils.LoadingManager.hide();
+            return true;
+        } catch (error) {
+            console.error("开始关卡失败:", error);
+            WordUtils.ErrorManager.showToast('开始关卡失败，请稍后再试');
+            WordUtils.LoadingManager.hide();
+            return false;
+        }
+    },
+    
+    /**
      * 初始化键盘快捷键
      */
     initKeyboardShortcuts() {

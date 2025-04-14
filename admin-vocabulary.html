@@ -609,7 +609,8 @@
                         <div class="col s12">
                             <ul class="tabs">
                                 <li class="tab col s3"><a href="#tab-vocabulary" class="active">词汇管理</a></li>
-                                <li class="tab col s3"><a href="#tab-import">数据导入</a></li>
+                                <!-- [移除] 数据导入选项卡链接 -->
+                                <!-- <li class="tab col s3"><a href="#tab-import">数据导入</a></li> -->
                             </ul>
                         </div>
                     </div>
@@ -625,9 +626,12 @@
                                     <button class="btn-small" id="btn-search-word" style="margin-right: 10px;">
                                         <i class="material-icons">search</i>搜索
                                     </button>
+                                    <!-- [移除] 添加单词按钮 -->
+                                    <!-- 
                                     <button class="btn-small" id="btn-add-word">
                                         <i class="material-icons">add</i>添加单词
                                     </button>
+                                    -->
                                 </div>
                             </div>
                         </div>
@@ -679,11 +683,11 @@
                         </div>
                     </div>
                     
-                    <!-- 数据导入选项卡 -->
+                    <!-- [移除] 数据导入选项卡 -->
+                    <!-- 
                     <div id="tab-import" class="tab-content" style="display:none;">
                         <div class="row">
                             <div class="col s12">
-                                <!-- 导入类型选择器 -->
                                 <div class="import-type-selector">
                                     <div class="btn-group">
                                         <button class="waves-effect waves-light btn active" data-import-type="json">
@@ -695,194 +699,17 @@
                                     </div>
                                 </div>
                                 
-                                <!-- JSON导入部分 -->
                                 <div id="json-import-section">
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <!-- 词汇等级选择 -->
-                                        <div class="col s12 m6">
-                                            <div class="input-field" style="margin-bottom: 0;">
-                                                <select id="vocabulary-level">
-                                                    <option value="" disabled selected>选择词汇等级</option>
-                                                    <option value="custom">+ 自定义等级</option>
-                                                </select>
-                                                <label>词汇等级</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- 自定义等级输入 -->
-                                        <div class="col s12 m6" id="custom-level-input" style="display: none;">
-                                            <div class="input-field" style="margin-bottom: 0;">
-                                                <input type="text" id="custom-level-name">
-                                                <label for="custom-level-name">自定义等级名称</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 自定义等级描述 -->
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <div class="col s12" id="custom-level-desc" style="display: none;">
-                                            <div class="input-field">
-                                                <textarea id="custom-level-description" class="materialize-textarea"></textarea>
-                                                <label for="custom-level-description">等级描述</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 文件上传 -->
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <div class="col s12">
-                                            <div class="file-field input-field">
-                                                <div class="btn">
-                                                    <span>选择文件</span>
-                                                    <input type="file" id="json-file" accept=".json">
-                                                </div>
-                                                <div class="file-path-wrapper">
-                                                    <input class="file-path validate" type="text" placeholder="选择JSON文件">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 操作按钮 -->
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <div class="col s12">
-                                            <button class="btn waves-effect waves-light" id="preview-btn" style="margin-right: 10px;">
-                                                <i class="material-icons left">preview</i>预览
-                                            </button>
-                                            <button class="btn waves-effect waves-light red" id="reset-btn" style="margin-right: 10px;">
-                                                <i class="material-icons left">refresh</i>重置
-                                            </button>
-                                            <button class="btn waves-effect waves-light green" id="import-btn" disabled>
-                                                <i class="material-icons left">file_upload</i>导入
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- 预览区域 -->
-                                    <div class="row">
-                                        <div class="col s12">
-                                            <div id="json-preview">
-                                                <!-- 预览统计信息 -->
-                                                <div class="preview-stats" style="display: none;">
-                                                    <div class="row">
-                                                        <div class="col s12 m4">
-                                                            <span>总计: <strong id="total-count">0</strong></span>
-                                                        </div>
-                                                        <div class="col s12 m4">
-                                                            <span>有效: <strong id="valid-count">0</strong></span>
-                                                        </div>
-                                                        <div class="col s12 m4">
-                                                            <span>无效: <strong id="invalid-count">0</strong></span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- 预览表格 -->
-                                                <div class="preview-table">
-                                                    <table class="striped">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>序号</th>
-                                                                <th>单词</th>
-                                                                <th>释义</th>
-                                                                <th>状态</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody id="preview-table-body">
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-
-                                                <!-- 分页控件 -->
-                                                <div class="pagination-container center-align">
-                                                    <ul class="pagination">
-                                                        <li class="disabled"><a href="#!"><i class="material-icons">chevron_left</i></a></li>
-                                                        <li class="active"><a href="#!">1</a></li>
-                                                        <li class="waves-effect"><a href="#!">2</a></li>
-                                                        <li class="waves-effect"><a href="#!">3</a></li>
-                                                        <li class="waves-effect"><a href="#!"><i class="material-icons">chevron_right</i></a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    // ... (所有 JSON 导入的 HTML 元素) ...
                                 </div>
 
-                                <!-- Excel导入部分 -->
                                 <div id="excel-import-section" style="display: none;">
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <!-- 词汇等级选择 -->
-                                        <div class="col s12 m6">
-                                            <div class="input-field" style="margin-bottom: 0;">
-                                                <select id="excel-vocabulary-level">
-                                                    <option value="" disabled selected>选择词汇等级</option>
-                                                    <option value="custom">+ 自定义等级</option>
-                                                </select>
-                                                <label>词汇等级</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- 自定义等级输入 -->
-                                        <div class="col s12 m6" id="excel-custom-level-input" style="display: none;">
-                                            <div class="input-field" style="margin-bottom: 0;">
-                                                <input type="text" id="excel-custom-level-name">
-                                                <label for="excel-custom-level-name">自定义等级名称</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 自定义等级描述 -->
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <div class="col s12" id="excel-custom-level-desc" style="display: none;">
-                                            <div class="input-field">
-                                                <textarea id="excel-custom-level-description" class="materialize-textarea"></textarea>
-                                                <label for="excel-custom-level-description">等级描述</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 文件上传 -->
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <div class="col s12">
-                                            <div class="file-field input-field">
-                                                <div class="btn">
-                                                    <span>选择文件</span>
-                                                    <input type="file" id="excel-file" accept=".xlsx,.xls">
-                                                </div>
-                                                <div class="file-path-wrapper">
-                                                    <input class="file-path validate" type="text" placeholder="选择Excel文件">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 操作按钮 -->
-                                    <div class="row" style="margin-bottom: 30px;">
-                                        <div class="col s12">
-                                            <button class="btn waves-effect waves-light" id="excel-preview-btn" style="margin-right: 10px;">
-                                                <i class="material-icons left">preview</i>预览
-                                            </button>
-                                            <button class="btn waves-effect waves-light red" id="excel-reset-btn" style="margin-right: 10px;">
-                                                <i class="material-icons left">refresh</i>重置
-                                            </button>
-                                            <button class="btn waves-effect waves-light green" id="excel-import-btn" disabled>
-                                                <i class="material-icons left">file_upload</i>导入
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- 预览区域 -->
-                                    <div class="row">
-                                        <div class="col s12">
-                                            <div id="excel-preview">
-                                                <!-- 预览内容将通过JavaScript动态添加 -->
-                                            </div>
-                                        </div>
-                                    </div>
+                                    // ... (所有 Excel 导入的 HTML 元素) ...
                                 </div>
                             </div>
                         </div>
                     </div>
+                    -->
                 </div>
             </div>
         </div>
@@ -909,120 +736,6 @@
             </div>
         </div>
         <div class="loading-text" id="loading-text">正在加载...</div>
-    </div>
-    
-    <!-- 添加/编辑单词模态框 -->
-    <div id="word-modal" class="modal">
-        <div class="modal-content">
-            <h4 class="modal-title">添加新单词</h4>
-            <form id="word-form">
-                <input type="hidden" id="word-id" value="">
-                <div class="row">
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <input id="word-word" type="text" required>
-                            <label for="word-word">单词</label>
-                        </div>
-                    </div>
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <input id="word-phonetic" type="text">
-                            <label for="word-phonetic">音标</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <textarea id="word-definition" class="materialize-textarea" required></textarea>
-                            <label for="word-definition">含义</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <textarea id="word-phrase" class="materialize-textarea"></textarea>
-                            <label for="word-phrase">常用短语</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <textarea id="word-example" class="materialize-textarea"></textarea>
-                            <label for="word-example">例句</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <input id="word-morphology" type="text">
-                            <label for="word-morphology">词形变化</label>
-                        </div>
-                    </div>
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <input id="word-note" type="text">
-                            <label for="word-note">备注</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <select id="word-level" required>
-                                <option value="" disabled selected>选择级别</option>
-                                <option value="custom">+ 创建新级别</option>
-                            </select>
-                            <label>级别</label>
-                        </div>
-                        <!-- 自定义级别输入框 -->
-                        <div id="custom-level-container" style="display: none;">
-                            <div class="input-field">
-                                <input id="custom-level-name" type="text">
-                                <label for="custom-level-name">输入新级别名称</label>
-                            </div>
-                            <div class="input-field">
-                                <textarea id="custom-level-description" class="materialize-textarea"></textarea>
-                                <label for="custom-level-description">级别描述</label>
-                            </div>
-                            <button type="button" class="btn waves-effect waves-light btn-small" id="confirm-custom-level">
-                                确认添加级别 <i class="material-icons right">check</i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col s12 m6">
-                        <div class="input-field">
-                            <select id="word-chapter" required>
-                                <option value="" disabled selected>选择章节</option>
-                                <option value="custom">+ 创建新章节</option>
-                            </select>
-                            <label>章节</label>
-                        </div>
-                        <!-- 自定义章节输入框 -->
-                        <div id="custom-chapter-container" style="display: none;">
-                            <div class="input-field">
-                                <input id="custom-chapter-name" type="text">
-                                <label for="custom-chapter-name">输入新章节名称</label>
-                            </div>
-                            <div class="input-field">
-                                <textarea id="custom-chapter-description" class="materialize-textarea"></textarea>
-                                <label for="custom-chapter-description">章节描述</label>
-                            </div>
-                            <button type="button" class="btn waves-effect waves-light btn-small" id="confirm-custom-chapter">
-                                确认添加章节 <i class="material-icons right">check</i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <a href="#!" class="modal-close btn-small">取消</a>
-            <a href="#!" class="btn" id="btn-save-word">保存</a>
-        </div>
     </div>
     
     <!-- 确认删除模态框 -->

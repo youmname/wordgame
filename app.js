@@ -10,7 +10,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 // 导入清理管理器
-const CleanupManager = require('./cleanup-manager');
+// const CleanupManager = require('./cleanup-manager');
 
 // JWT密钥配置 - 建议使用环境变量存储，这里使用示例密钥
 const JWT_SECRET = 'vocabulary_game_secret_key_2024!@#$%';  // 实际部署时请修改为更复杂的密钥
@@ -65,8 +65,8 @@ app.use((req, res, next) => {
 app.use(cors(corsOptions));// 启用跨域请求
 // 配置中间件
 //app.use(cors());  
-app.use(bodyParser.json());  // 解析JSON请求体
-app.use(bodyParser.urlencoded({ extended: true }));  // 解析URL编码的请求体
+app.use(bodyParser.json({ limit: '50mb' }));  // 解析JSON请求体
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));  // 解析URL编码的请求体
 
 // 添加OPTIONS请求处理
 app.options('*', cors(corsOptions));
@@ -76,37 +76,38 @@ const dbPath = 'D:\\vocabulary-project\\database\\vocabulary.db';
 console.log(`连接数据库：${dbPath}`);
 
 // 创建清理管理器实例
-const cleanupManager = new CleanupManager(dbPath);
+// const cleanupManager = new CleanupManager(dbPath);
 
-// 设置定时清理（每天凌晨2点执行）
-const scheduleCleanup = () => {
-    const now = new Date();
-    const targetTime = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1, // 明天
-        2, // 2点
-        0, // 0分
-        0  // 0秒
-    );
+// // 设置定时清理（每天凌晨2点执行）
+// const scheduleCleanup = () => {
+//     const now = new Date();
+//     const targetTime = new Date(
+//         now.getFullYear(),
+//         now.getMonth(),
+//         now.getDate() + 1, // 明天
+//         2, // 2点
+//         0, // 0分
+//         0  // 0秒
+//     );
     
-    const timeUntilTarget = targetTime - now;
+//     const timeUntilTarget = targetTime - now;
     
-    setTimeout(async () => {
-        try {
-            await cleanupManager.runCleanup();
-        } catch (error) {
-            console.error('定时清理失败:', error);
-        }
+//     setTimeout(async () => {
+//         try {
+//             // await cleanupManager.runCleanup(); // This line uses the commented out manager
+//             console.log('Cleanup task skipped as manager is commented out.');
+//         } catch (error) {
+//             console.error('定时清理失败:', error);
+//         }
         
-        // 设置下一次清理
-        scheduleCleanup();
-    }, timeUntilTarget);
-};
+//         // 设置下一次清理
+//         // scheduleCleanup(); // Don't reschedule if commented out
+//     }, timeUntilTarget);
+// };
 
-// 启动定时清理
-cleanupManager.initLog();
-scheduleCleanup();
+// // 启动定时清理
+// // cleanupManager.initLog(); // Uses commented out manager
+// // scheduleCleanup(); // Calls commented out function
 
 // 创建数据库连接
 const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
@@ -125,7 +126,7 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CR
     initializeDatabase();
     
     // 启动定时清理任务
-    scheduleCleanup();
+    // scheduleCleanup();
 });
 
 // 数据库初始化函数
@@ -2309,4 +2310,62 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('未处理的Promise拒绝:', reason);
     // 在生产环境中，这里可以添加报警通知等机制
+});
+
+// 创建新词汇级别 (需要管理员权限)
+app.post('/api/vocabulary-levels', verifyAdminToken, (req, res) => {
+    const { name, description, order_num } = req.body;
+
+    // 1. 验证必要字段
+    if (!name) {
+        return res.status(400).json({ success: false, message: '级别名称不能为空' });
+    }
+
+    // 2. 确定排序序号
+    const determineOrderNum = (callback) => {
+        if (order_num !== undefined && !isNaN(parseInt(order_num))) {
+            // 如果提供了有效的 order_num，直接使用
+            callback(parseInt(order_num));
+        } else {
+            // 否则，查询当前最大排序号并加 1
+            db.get('SELECT MAX(order_num) as max_order FROM Categories', [], (err, result) => {
+                if (err) {
+                    console.error('查询最大排序号失败:', err);
+                    callback(1); // 查询失败或无数据时默认为 1
+                } else {
+                    callback((result.max_order || 0) + 1);
+                }
+            });
+        }
+    };
+
+    // 3. 执行插入操作
+    determineOrderNum((finalOrderNum) => {
+        const sql = 'INSERT INTO Categories (name, description, order_num) VALUES (?, ?, ?)';
+        db.run(sql, [name, description || '', finalOrderNum], function(err) { // 使用 function 获取 this.lastID
+            if (err) {
+                console.error('创建词汇级别失败:', err);
+                // 检查是否是唯一性约束错误 (例如，名称重复)
+                if (err.message && err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ success: false, message: '级别名称已存在' }); // 409 Conflict
+                }
+                return res.status(500).json({ success: false, message: '数据库错误，无法创建级别' });
+            }
+
+            // 插入成功
+            const newLevelId = this.lastID;
+            console.log(`词汇级别创建成功: ID=${newLevelId}, Name=${name}`);
+            res.status(201).json({ // 201 Created
+                success: true,
+                message: '词汇级别创建成功',
+                level_id: newLevelId,
+                level: {
+                    id: newLevelId,
+                    name: name,
+                    description: description || '',
+                    order_num: finalOrderNum
+                }
+            });
+        });
+    });
 });

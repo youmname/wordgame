@@ -409,94 +409,58 @@ const WordDataLoader = {
     },
 
     /**
-     * 从API更新章节选择器
-     * @returns {Promise<boolean>} 加载成功与否
+     * 使用API数据更新章节选择器
+     * @returns {Promise<boolean>} 是否成功更新
      */
     async updateChapterSelectWithApiData() {
-        console.log("[updateChapterSelectWithApiData] 开始获取API章节数据");
+        console.log("[updateChapterSelectWithApiData] 开始获取章节数据");
         
-        // 显示加载动画
+        const selectElement = document.getElementById('chapter-select');
+        if (!selectElement) {
+            console.error("[updateChapterSelectWithApiData] 找不到章节选择器元素");
+            return false;
+        }
+        
+        // 显示加载中动画
         WordUtils.LoadingManager.show('正在加载章节数据...');
         
         try {
-            const apiUrl = WordConfig.API.BASE_URL + WordConfig.API.CHAPTERS_ENDPOINT;
-            console.log("[updateChapterSelectWithApiData] API请求URL:", apiUrl);
-            
-            const response = await fetch(apiUrl, {
+            // 从API获取章节数据
+            console.log("从API获取章节数据...");
+            const response = await fetch(`${WordConfig.API.BASE_URL}${WordConfig.API.CHAPTERS_ENDPOINT}`, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : ''
+                    'Content-Type': 'application/json'
                 },
-                credentials: 'include'
+                timeout: 8000 // 增加超时时间
             });
-
-            console.log("[updateChapterSelectWithApiData] API响应状态:", response.status);
-
+            
             if (!response.ok) {
-                throw new Error(`HTTP请求失败! 状态: ${response.status}, 消息: ${response.statusText}`);
+                throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
             }
-
+            
             const data = await response.json();
-            console.log("[updateChapterSelectWithApiData] 收到章节数据:", data);
-            console.log("[Chrome调试] 数据类型:", typeof data, "数据是否为数组:", Array.isArray(data));
-            if (data && data.success) {
-                console.log("[Chrome调试] 数据success字段:", data.success, "chapters字段:", data.chapters, "chapters是否为数组:", Array.isArray(data.chapters));
-                if (data.chapters) {
-                    console.log("[Chrome调试] chapters长度:", data.chapters.length);
-                }
-            }
-
-            // 验证API返回的数据格式
+            console.log("[updateChapterSelectWithApiData] API返回数据:", data);
+            
             let chapters = [];
-            // 更健壮的数据提取
-            if (data) {
-                if (data.success === true && data.chapters && Array.isArray(data.chapters)) {
-                    chapters = data.chapters;
-                    console.log("[Chrome调试] 从data.chapters获取到", chapters.length, "个章节");
-                } else if (Array.isArray(data)) {
-                    chapters = data;
-                    console.log("[Chrome调试] 从data数组直接获取到", chapters.length, "个章节");
-                } else if (data.data && Array.isArray(data.data)) {
-                    chapters = data.data;
-                    console.log("[Chrome调试] 从data.data获取到", chapters.length, "个章节");
-                } else {
-                    // 尝试JSON解析数据(处理可能的双重解析问题)
-                    try {
-                        if (typeof data === 'string') {
-                            const parsedData = JSON.parse(data);
-                            if (parsedData.success && Array.isArray(parsedData.chapters)) {
-                                chapters = parsedData.chapters;
-                                console.log("[Chrome调试] 从字符串解析获取到", chapters.length, "个章节");
-                            }
-                        }
-                    } catch (e) {
-                        console.error("[Chrome调试] 尝试解析字符串失败:", e);
-                    }
-                    
-                    if (chapters.length === 0) {
-                        console.error("[updateChapterSelectWithApiData] API返回的数据格式无效:", data);
-                        console.log("[Chrome调试] 无法提取章节数据，将使用空数组");
-                    }
-                }
+            if (Array.isArray(data)) {
+                chapters = data;
+            } else if (data && data.data && Array.isArray(data.data)) {
+                chapters = data.data;
+            } else if (data && data.chapters && Array.isArray(data.chapters)) {
+                chapters = data.chapters;
+            } else {
+                console.error("API返回的数据格式不正确:", data);
+                throw new Error("API数据格式错误");
             }
-
-            console.log(`[updateChapterSelectWithApiData] 提取到${chapters.length}个章节`);
-
-            const selectElement = document.getElementById('chapter-select');
-            if (!selectElement) {
-                console.warn('[updateChapterSelectWithApiData] 未找到章节选择器元素');
-                WordUtils.LoadingManager.hide();
-                return false;
-            }
-
+            
             // 清空现有选项
             selectElement.innerHTML = '';
-
-            // 添加从API获取的新选项
+            
+            // 如果没有章节数据，添加一个提示选项
             if (chapters.length === 0) {
                 const option = document.createElement('option');
-                option.value = "";
+                option.value = '';
                 option.textContent = "暂无可用章节";
                 option.disabled = true;
                 selectElement.appendChild(option);
@@ -528,6 +492,20 @@ const WordDataLoader = {
             
             // 通知事件系统章节已更新
             WordUtils.EventSystem.trigger('chapters:updated', Object.keys(this.excelData));
+            
+            // 如果关卡系统已初始化，更新关卡页面
+            if (window.WordLevelSystem) {
+                console.log("[updateChapterSelectWithApiData] 尝试更新关卡页面...");
+                try {
+                    // 生成关卡并渲染关卡页面
+                    WordLevelSystem.generateLevelsFromChapters();
+                    WordLevelSystem.renderLevelPage();
+                    WordLevelSystem.updatePageIndicator();
+                    console.log("[updateChapterSelectWithApiData] 关卡页面已更新");
+                } catch (error) {
+                    console.error("[updateChapterSelectWithApiData] 更新关卡页面失败:", error);
+                }
+            }
             
             WordUtils.LoadingManager.hide();
             return chapters.length > 0;
