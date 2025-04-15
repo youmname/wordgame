@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词连连看 - 主大厅</title>
+    
+    <!-- 引入外部CSS文件 -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/themes.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/shouye.css">
+    <link rel="stylesheet" href="css/heatmap-calendar.css"> 
+    
+
+    <!-- 引入字体图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- 引入GSAP动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+    
+    <!-- 预加载音效资源 -->
+    <link rel="preload" href="assets/sounds/click.mp3" as="audio">
+    <link rel="preload" href="assets/sounds/success.mp3" as="audio">
+    <link rel="preload" href="assets/sounds/fail.mp3" as="audio">
+    <link rel="preload" href="assets/sounds/level_complete.mp3" as="audio">
+    <link rel="preload" href="assets/sounds/badge_unlock.mp3" as="audio">
+    
+    <!-- 全局函数定义 -->
+    <script>
+        // 临时定义这些函数，确保页面加载时不会报错
+        function toggleTheme(theme) {
+            // 内联脚本仅作为临时解决方案，实际功能由theme.js模块提供
+            console.log('切换主题:', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // 更新按钮状态
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.theme-btn.${theme}`).classList.add('active');
+        }
+        
+        function showCustomWordbank() {
+            console.log('显示自定义词库');
+            alert('自定义词库功能正在开发中...');
+        }
+        
+        function startTodayChallenge() {
+            console.log('开始今日挑战');
+            alert('今日挑战功能正在开发中...');
+        }
+        
+        function showSettings() {
+            console.log('显示设置');
+            alert('设置功能正在开发中...');
+        }
+    </script>
+</head>
+<body>
+    <div class="main-wrapper">
+        <!-- 左侧导航区 固定宽度 -->
+        <nav class="side-nav">
+            <div class="workspace-header">
+                <h1>单词连连看</h1>
+                <div class="theme-switch">
+                    <button class="theme-btn feminine active" onclick="toggleTheme('feminine')">🌸</button>
+                    <button class="theme-btn masculine" onclick="toggleTheme('masculine')">🌀</button>
+                </div>
+            </div>
+            <div class="vertical-nav">
+                <div class="nav-section">
+                    <h3>学习空间</h3>
+                    <button class="nav-btn active" data-action="openWordLibrary">📚 我的词库</button>
+                    <button class="nav-btn" data-action="showCalendar">🗓️ 学习日历</button>
+                    <button class="nav-btn" data-action="showBadges">🏆 成就墙</button>
+                </div>
+                <div class="nav-section">
+                    <h3>挑战模式</h3>
+                    <button class="nav-btn" data-action="startFastMode">⚡ 极速模式</button>
+                    <button class="nav-btn" data-action="startPuzzleMode">🧩 拼图模式</button>
+                    <button class="nav-btn" data-action="startSurvivalMode">🎮 生存模式</button>
+                </div>
+            </div>
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <img src="assets/images/default-avatar.png" alt="用户头像" id="user-avatar">
+                    <div class="level-badge">Lv.12</div>
+                </div>
+                <div class="user-info">
+                    <h2 id="user-name">👑 学习达人</h2>
+                    <div class="user-stats">
+                        <div class="time-bubble">⏰ <span id="user-minutes">1200</span>分钟</div>
+                        <div class="score-bubble">✨ <span id="user-score">1280</span>积分</div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 中央内容区 自适应宽度 -->
+        <main class="content-area">
+            <div class="grid-header">
+                <h2>📖 单词学习矩阵</h2>
+                <div class="view-controls">
+                    <button class="view-btn active" data-view="grid">宫格视图</button>
+                    <button class="view-btn" data-view="list">列表视图</button>
+                    <button class="view-btn" data-view="timeline">时间线</button>
+                </div>
+            </div>
+            
+            <div class="features-grid">
+                <div class="func-card" data-type="primary" onclick="startChapter(3)">
+                    🚀 开始闯关  
+                    <div class="sticker">Level 3</div>
+                    <img src="assets/decorations/paper-clip.png" class="deco-clip">
+                </div>
+                
+                <div class="func-card" data-type="secondary" onclick="startRandomChallenge()">
+                    🎲 随机挑战  
+                    <div class="sticker">Hot!</div>
+                </div>
+                
+                <div class="func-card" data-type="secondary" onclick="showCustomWordbank()">
+                    📚 我的词库  
+                    <img src="assets/decorations/paper-clip-blue.png" class="deco-clip">
+                </div>
+                
+                <div class="func-card" data-type="secondary" onclick="startTodayChallenge()">
+                    🌟 今日推荐
+                    <div class="sparkle-effect"></div>
+                </div>
+            </div>
+
+            <div class="category-section">
+                <div class="category-title">
+                    <img src="assets/decorations/highlight.png" class="highlight">
+                    <h3>词汇分类</h3>
+                </div>
+                <div class="category-buttons">
+                    <button class="category-btn active" data-category="所有" data-level-id="1">所有词汇</button>
+                    <button class="category-btn" data-category="考研" data-level-id="2">考研词汇</button>
+                    <button class="category-btn" data-category="高考" data-level-id="3">高考词汇</button>
+                    <button class="category-btn" data-category="雅思" data-level-id="4">雅思词汇</button>
+                    <button class="category-btn" data-category="初中" data-level-id="5">初中词汇</button>
+                    <button class="category-btn" data-category="六级" data-level-id="6">六级词汇</button>
+                </div>
+            </div>
+            
+            <div class="stats-container">
+                <div class="data-module">
+                    <div class="data-label">连续学习</div>
+                    <div class="data-value">7天 <span class="fire">🔥</span></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="streak-progress"></div>
+                    </div>
+                    <div class="badge-tip">再坚持3天可获得"学习达人"勋章</div>
+                </div>
+                
+                <div class="data-module">
+                    <div class="data-label">已掌握单词</div>
+                    <div class="data-value">364 <span class="mastery-count">/ 1000</span></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="mastery-progress"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧面板区 固定宽度 -->
+        <aside class="right-panel">
+            <div class="achievement-panel">
+            <div class="panel-section">
+                <h4>🏆 成就徽章</h4>
+                <div class="badge-wall">
+                  <!-- 已解锁徽章 -->
+                  <div class="badge unlocked" title="首次挑战">🥉</div>
+                  <div class="badge unlocked" title="连续学习3天">⏱️</div>
+                  <div class="badge unlocked" title="掌握100个单词">📚</div>
+                  <div class="badge unlocked" title="速度之星">⚡</div>
+                  <div class="badge unlocked" title="完美记忆">🧠</div>
+                  
+                  <!-- 新增徽章 -->
+                  <div class="badge unlocked" title="单词猎人">🎯</div>
+                  <div class="badge unlocked" title="早起学习者">🌅</div>
+                  <div class="badge unlocked" title="夜间学习者">🌙</div>
+                  <div class="badge unlocked" title="周末学霸">📊</div>
+                  <div class="badge unlocked" title="词汇大师初级">🎓</div>
+                  
+                  <!-- 部分解锁徽章 -->
+                  <div class="badge unlocked" title="连胜10场">🏆</div>
+                  <div class="badge unlocked" title="全勤一周">📅</div>
+                  
+                  <!-- 未解锁徽章 -->
+                  <div class="badge locked" title="全勤一月(未解锁)">🔒</div>
+                  <div class="badge locked" title="词汇大师中级(未解锁)">🔒</div>
+                  <div class="badge locked" title="词汇大师高级(未解锁)">🔒</div>
+                  <div class="badge locked" title="极速模式大师(未解锁)">🔒</div>
+                  <div class="badge locked" title="拼图模式大师(未解锁)">🔒</div>
+                  <div class="badge locked" title="生存模式大师(未解锁)">🔒</div>
+                  <div class="badge locked" title="学习传奇(未解锁)">🔒</div>
+                  <div class="badge locked" title="终极成就(未解锁)">🔒</div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h4>📅 学习日历</h4>
+                <div class="calendar-container" id="calendar-container" style="overflow: visible !important; min-height: 350px !important; position: relative !important; max-height: none !important; display: block !important;">
+                    <!-- 日历将由HeatmapCalendar组件动态生成 -->
+                    <div id="calendar-debug" style="display: none; color: red; font-size: 10px;"></div>
+                </div>
+            </div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- 移动端菜单开关 -->
+    <div class="mobile-nav-toggle">
+        <i class="fas fa-bars"></i>
+    </div>
+    
+    <!-- 右侧面板切换按钮 -->
+    <div class="panel-toggle">
+        <i class="fas fa-medal"></i>
+    </div>
+    
+    <!-- 设置菜单 -->
+    <div class="settings-button" onclick="showSettings()">
+        <i class="fas fa-cog"></i>
+    </div>
+    
+    <script type="module" src="js/shouye.js"></script>
+</body>
+</html>

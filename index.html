@@ -135,10 +135,10 @@
         /* 级别选择样式 */
         .level-categories {
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 改为4列 */
-            gap: 10px; /* 减少间隙 */
-            margin: 10px 0 20px 0; /* 调整边距 */
-            max-width: 90%; /* 增加容器宽度占比 */
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 10px 0 20px 0;
+            max-width: 90%;
             justify-content: center;
             align-items: center;
         }
@@ -151,11 +151,12 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
-            min-height: 90px; /* 确保所有卡片高度一致 */
+            min-height: 90px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            color: initial;
         }
         
         .level-category:hover {
@@ -173,6 +174,7 @@
         .category-icon {
             font-size: 2rem;
             margin-bottom: 5px;
+            display: block;
         }
         
         .category-name {
@@ -182,7 +184,7 @@
         
         /* 修改标题样式 */
         #level-category-selector h4 {
-            color: var(--secondary-color);
+            color: #f39c12;
             margin: 15px 0;
             font-size: 1.5rem;
             text-align: center;
@@ -333,48 +335,28 @@ believe    相信"></textarea>
                 </div>
 
                 <!-- 新的级别选择界面 -->
-                <div id="level-category-selector" style="display: none;">
+                <div id="level-category-selector" style="display: block;">
                     <h4>选择学习级别</h4>
                     <div class="level-categories">
-                        <div class="level-category" data-category="kaoyan">
+                        <div class="level-category active" data-category="考研" data-level-id=  "1">
                             <div class="category-icon">📚</div>
-                            <div class="category-name">考研英语</div>
+                            <div class="category-name">考研</div>
                         </div>
-                        <div class="level-category" data-category="gaokao">
+                        <div class="level-category" data-category="高考" data-level-id="2">
                             <div class="category-icon">🎓</div>
-                            <div class="category-name">高考英语</div>
+                            <div class="category-name">高考</div>
                         </div>
-                        <div class="level-category" data-category="cet4">
-                            <div class="category-icon">🏆</div>
-                            <div class="category-name">大学四级</div>
-                        </div>
-                        <div class="level-category" data-category="cet6">
-                            <div class="category-icon">🏅</div>
-                            <div class="category-name">大学六级</div>
-                        </div>
-                        <div class="level-category" data-category="tem8">
-                            <div class="category-icon">👑</div>
-                            <div class="category-name">专业八级</div>
-                        </div>
-                        <div class="level-category" data-category="tem4">
-                            <div class="category-icon">🎯</div>
-                            <div class="category-name">专业四级</div>
-                        </div>
-                        <div class="level-category" data-category="ielts">
+                        <div class="level-category" data-category="雅思" data-level-id="3">
                             <div class="category-icon">🌍</div>
-                            <div class="category-name">雅思考试</div>
+                            <div class="category-name">雅思</div>
                         </div>
-                        <div class="level-category" data-category="toefl">
-                            <div class="category-icon">🌎</div>
-                            <div class="category-name">托福考试</div>
-                        </div>
-                        <div class="level-category" data-category="junior">
+                        <div class="level-category" data-category="初中" data-level-id="4">
                             <div class="category-icon">🧩</div>
-                            <div class="category-name">初中英语</div>
+                            <div class="category-name">初中</div>
                         </div>
-                        <div class="level-category" data-category="primary">
-                            <div class="category-icon">🎪</div>
-                            <div class="category-name">小学英语</div>
+                        <div class="level-category" data-category="六级" data-level-id="5">
+                            <div class="category-icon">🏅</div>
+                            <div class="category-name">六级</div>
                         </div>
                     </div>
                 </div>
@@ -551,7 +533,6 @@ believe    相信"></textarea>
     <!-- 页面底部备案信息 -->
     <div class="beian-bar">
         <a href="https://beian.mps.gov.cn/#/query/webSearch?code=33010502012234" target="_blank" style="display: inline-block; text-decoration: none; height: 25px; line-height: 20px; color: #939393;">
-            <img src="assets/images/备案图标.png" style="float: left; height: 20px; margin-right: 5px; margin-top: 8px;">
             <span style="float: left; height: 36px; line-height: 36px; margin: 0 5px 0 0;">浙公网安备33010502012234号</span>
         </a>
     </div>
@@ -581,13 +562,17 @@ believe    相信"></textarea>
             
             // 已登录且是普通用户，可以留在此页面
             
-            // 设置初始视图模式为紧凑视图
-            document.body.classList.add('compact-view');
+            // 设置初始视图模式
+            document.body.classList.add('expanded-view');
             
-            // 检查是否显示级别选择器
-            if (document.getElementById('level-category-selector').style.display === 'block') {
-                document.body.classList.remove('compact-view');
-                document.body.classList.add('expanded-view');
+            // 确保"按级别获取"按钮默认选中
+            const chapterButton = document.querySelector('.source-btn[data-source="chapter"]');
+            if (chapterButton) {
+                chapterButton.classList.add('active');
+                document.getElementById('selected-source').value = 'chapter';
+                
+                // 显示级别选择器
+                document.getElementById('level-category-selector').style.display = 'block';
             }
             
             // 确保初始布局正确
@@ -618,9 +603,14 @@ believe    相信"></textarea>
                     document.getElementById('chapter-selector').style.display = 'none';
                     document.getElementById('level-category-selector').style.display = 'none';
                     
-                    // 默认使用紧凑视图
-                    document.body.classList.remove('expanded-view');
-                    document.body.classList.add('compact-view');
+                    // 设置视图模式
+                    if (sourceValue === 'chapter') {
+                        document.body.classList.add('expanded-view');
+                        document.body.classList.remove('compact-view');
+                    } else {
+                        document.body.classList.remove('expanded-view');
+                        document.body.classList.add('compact-view');
+                    }
                     
                     // 显示对应的选项区域
                     if (sourceValue === 'upload') {
@@ -631,9 +621,6 @@ believe    相信"></textarea>
                         document.getElementById('custom-input').style.display = 'block';
                     } else if (sourceValue === 'chapter') {
                         document.getElementById('level-category-selector').style.display = 'block';
-                        // 切换到展开视图
-                        document.body.classList.remove('compact-view');
-                        document.body.classList.add('expanded-view');
                         // 滚动到顶部
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
@@ -644,46 +631,28 @@ believe    相信"></textarea>
             const levelCategories = document.querySelectorAll('.level-category');
             levelCategories.forEach(category => {
                 category.addEventListener('click', function() {
+                    // 忽略被隐藏的级别
+                    if (this.style.display === 'none') return;
+                    
                     // 清除所有活跃状态
                     levelCategories.forEach(c => c.classList.remove('active'));
                     
                     // 设置当前点击的类别为活跃状态
                     this.classList.add('active');
                     
-                    // 获取类别值 - 暂时都使用考研数据
-                    const categoryValue = "kaoyan"; // 固定使用考研数据，以后会根据API进行更新
+                    // 获取类别值
+                    const categoryValue = this.getAttribute('data-category');
+                    const levelId = this.getAttribute('data-level-id');
                     
-                    // 根据级别设置章节选择器的值
-                    const chapterSelect = document.getElementById('chapter-select');
-                    
-                    // 查找是否已有对应的选项
-                    let optionExists = false;
-                    for (let i = 0; i < chapterSelect.options.length; i++) {
-                        if (chapterSelect.options[i].value === categoryValue) {
-                            chapterSelect.selectedIndex = i;
-                            optionExists = true;
-                            break;
-                        }
-                    }
-                    
-                    // 如果没有对应选项，添加一个新选项
-                    if (!optionExists) {
-                        const option = document.createElement('option');
-                        option.value = categoryValue;
-                        option.textContent = "考研英语"; // 固定显示考研英语
-                        chapterSelect.appendChild(option);
-                        chapterSelect.selectedIndex = chapterSelect.options.length - 1;
-                    }
-                    
-                    // 触发change事件，确保数据获取逻辑正常工作
-                    const event = new Event('change');
-                    chapterSelect.dispatchEvent(event);
-                    
-                    // 确保在展开模式下滚动正常
-                    if (document.body.classList.contains('expanded-view')) {
-                        // 滚动到适当位置，显示所选级别
-                        const selectedCard = this;
-                        selectedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 如果有levelId，使用该ID
+                    if (levelId) {
+                        // 触发级别选择事件
+                        const event = new CustomEvent('level-selected', {
+                            detail: { levelId, category: categoryValue }
+                        });
+                        document.dispatchEvent(event);
+                    } else {
+                        console.warn('级别卡片没有data-level-id属性:', this);
                     }
                 });
             });

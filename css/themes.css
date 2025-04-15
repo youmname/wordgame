@@ -1,523 +1,223 @@
-/* themes.css - 主题样式文件 */
+/**
+ * 主题样式文件
+ * 定义所有主题相关的CSS变量和样式
+ */
 
+/* 默认主题变量（柔和主题） */
 :root {
-    /* 默认主题 */
-    --primary-color: #4a6baf;
-    --secondary-color: #f39c12;
-    --accent-color: #e74c3c;
-    --success-color: #2ecc71;
-    --bg-color: #ecf0f1;
-    --card-word-color: #3498db;
-    --card-def-color: #9b59b6;
-    --text-color: #ffffff;
-    --dark-text-color: #333333;
-    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    
-    /* 考研激励主题 */
-    --kaoyan-motivate-primary: #8e44ad;
-    --kaoyan-motivate-secondary: #f1c40f;
-    --kaoyan-motivate-accent: #e74c3c;
-    --kaoyan-motivate-success: #2ecc71;
-    --kaoyan-motivate-bg: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-    --kaoyan-motivate-card-word: #3498db;
-    --kaoyan-motivate-card-def: #9b59b6;
-    --kaoyan-motivate-text: #333333;
-    --kaoyan-motivate-font: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-    
-    /* 考研专注主题 */
-    --kaoyan-calm-primary: #2c3e50;
-    --kaoyan-calm-secondary: #16a085;
-    --kaoyan-calm-accent: #d35400;
-    --kaoyan-calm-success: #27ae60;
-    --kaoyan-calm-bg: linear-gradient(135deg, #dfe9f3, #ffffff);
-    --kaoyan-calm-card-word: #3498db;
-    --kaoyan-calm-card-def: #dfc5eb;
-    --kaoyan-calm-text: #2c3e50;
-    --kaoyan-calm-font: 'Noto Sans SC', 'SimHei', sans-serif;
-    
-    /* 考研夜间模式 */
-    --kaoyan-night-primary: #34495e;
-    --kaoyan-night-secondary: #f39c12;
-    --kaoyan-night-accent: #c0392b;
-    --kaoyan-night-success: #27ae60;
-    --kaoyan-night-bg: linear-gradient(135deg, #2c3e50, #1a1a2e);
-    --kaoyan-night-card-word: #3498db;
-    --kaoyan-night-card-def: #9b59b6;
-    --kaoyan-night-text: #ecf0f1;
-    --kaoyan-night-font: 'Source Han Sans CN', 'SimHei', monospace;
-    
-    /* 森林主题 */
-    --forest-primary: #2ecc71;
-    --forest-secondary: #f1c40f;
-    --forest-accent: #e67e22;
-    --forest-success: #27ae60;
-    --forest-bg: linear-gradient(135deg, #dbf0e0, #a8e6cf);
-    --forest-card-word: #1e8449;
-    --forest-card-def: #27ae60;
-    --forest-text: #2c3e50;
-    --forest-font: 'Verdana', 'Microsoft YaHei', sans-serif;
-    
-    /* 海洋主题 */
-    --ocean-primary: #3498db;
-    --ocean-secondary: #1abc9c;
-    --ocean-accent: #e74c3c;
-    --ocean-success: #2ecc71;
-    --ocean-bg: linear-gradient(135deg, #d4f1f9, #75cbe7);
-    --ocean-card-word: #2980b9;
-    --ocean-card-def: #16a085;
-    --ocean-text: #2c3e50;
-    --ocean-font: 'Trebuchet MS', 'PingFang SC', sans-serif;
-    
-    /* 太空主题 */
-    --space-primary: #9b59b6;
-    --space-secondary: #3498db;
-    --space-accent: #e74c3c;
-    --space-success: #2ecc71;
-    --space-bg: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    --space-card-word: #8e44ad;
-    --space-card-def: #2980b9;
-    --space-text: #ecf0f1;
-    --space-font: 'Courier New', 'SimSun', monospace;
-    
-    /*.极简主题 */
-    --minimalist-primary: #34495e;
-    --minimalist-secondary: #7f8c8d;
-    --minimalist-accent: #c0392b;
-    --minimalist-success: #27ae60;
-    --minimalist-bg: #ecf0f1;
-    --minimalist-card-word: #2c3e50;
-    --minimalist-card-def: #7f8c8d;
-    --minimalist-text: #2c3e50;
-    --minimalist-font: 'Arial', 'Helvetica', sans-serif;
-    
-    /* 复古主题 */
-    --vintage-primary: #d35400;
-    --vintage-secondary: #f39c12;
-    --vintage-accent: #c0392b;
-    --vintage-success: #27ae60;
-    --vintage-bg: #f5eee0;
-    --vintage-card-word: #d35400;
-    --vintage-card-def: #7f5417;
-    --vintage-text: #7f5417;
-    --vintage-font: 'Georgia', 'Times New Roman', 'SimSun', serif;
-}
-
-/* 默认主题 */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #3a3d40, #181a1c);
-    color: #fff;
-}
-
-/* 考研激励主题 */
-body.theme-kaoyan-motivate {
-    background: var(--kaoyan-motivate-bg);
-    color: var(--kaoyan-motivate-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><text x="20" y="45" font-family="Arial" font-size="12" opacity="0.1" transform="rotate(45 100 100)">永不言弃</text><text x="20" y="75" font-family="Arial" font-size="12" opacity="0.1" transform="rotate(45 100 100)">考研加油</text><text x="20" y="105" font-family="Arial" font-size="12" opacity="0.1" transform="rotate(45 100 100)">坚持就是胜利</text><text x="20" y="135" font-family="Arial" font-size="12" opacity="0.1" transform="rotate(45 100 100)">梦想终会实现</text></svg>');
-}
-
-body.theme-kaoyan-motivate .container {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(142, 68, 173, 0.2);
-}
-
-body.theme-kaoyan-motivate h2,
-body.theme-kaoyan-motivate h3 {
-    color: var(--kaoyan-motivate-text);
-}
-
-body.theme-kaoyan-motivate .card.word-card {
-    background: var(--kaoyan-motivate-card-word);
-    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
-}
-
-body.theme-kaoyan-motivate .card.definition-card {
-    background: var(--kaoyan-motivate-card-def);
-    box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
-}
-
-body.theme-kaoyan-motivate .btn {
-    background: var(--kaoyan-motivate-primary);
-    color: white;
-}
-
-body.theme-kaoyan-motivate .btn:hover {
-    background: #9b59b6;
-}
-
-body.theme-kaoyan-motivate .btn-secondary {
-    background: var(--kaoyan-motivate-secondary);
-    color: #333;
-}
-
-body.theme-kaoyan-motivate .btn-secondary:hover {
-    background: #f4d03f;
-}
-
-body.theme-kaoyan-motivate h1 {
-    color: var(--kaoyan-motivate-primary);
-}
-
-body.theme-kaoyan-motivate .info-box h3 {
-    color: var(--kaoyan-motivate-text);
-}
-
-body.theme-kaoyan-motivate select {
-    color: var(--kaoyan-motivate-text);
-    background: rgba(142, 68, 173, 0.2);
-}
-
-body.theme-kaoyan-motivate .source-options label {
-    color: var(--kaoyan-motivate-text);
-}
-
-/* 考研专注主题 */
-body.theme-kaoyan-calm {
-    background: var(--kaoyan-calm-bg);
-    color: var(--kaoyan-calm-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><text x="30" y="40" font-family="Arial" font-size="10" opacity="0.05" transform="rotate(45 100 100)">专注</text><text x="90" y="100" font-family="Arial" font-size="10" opacity="0.05" transform="rotate(45 100 100)">沉静</text><text x="40" y="160" font-family="Arial" font-size="10" opacity="0.05" transform="rotate(45 100 100)">有序</text></svg>');
-}
-
-body.theme-kaoyan-calm .container {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(22, 160, 133, 0.1);
-}
-
-body.theme-kaoyan-calm .card.word-card {
-    background: var(--kaoyan-calm-card-word);
-}
-
-body.theme-kaoyan-calm .card.definition-card {
-    background: var(--kaoyan-calm-card-def);
-}
-
-body.theme-kaoyan-calm .btn {
-    background: var(--kaoyan-calm-primary);
-    color: white;
-}
-
-body.theme-kaoyan-calm .btn-secondary {
-    background: var(--kaoyan-calm-secondary);
-    color: white;
-}
-
-body.theme-kaoyan-calm h1, 
-body.theme-kaoyan-calm h2, 
-body.theme-kaoyan-calm h3 {
-    color: var(--kaoyan-calm-primary);
-}
-
-body.theme-kaoyan-calm select {
-    color: var(--kaoyan-calm-text);
-    background: rgba(22, 160, 133, 0.2);
-}
-
-body.theme-kaoyan-calm .source-options label {
-    color: var(--kaoyan-calm-text);
-}
-
-/* 考研夜间模式 */
-body.theme-kaoyan-night {
-    background: var(--kaoyan-night-bg);
-    color: var(--kaoyan-night-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><text x="10" y="30" font-family="Arial" font-size="10" fill="white" opacity="0.07" transform="rotate(45 100 100)">夜以继日</text><text x="50" y="70" font-family="Arial" font-size="10" fill="white" opacity="0.07" transform="rotate(45 100 100)">坚持不懈</text><text x="90" y="110" font-family="Arial" font-size="10" fill="white" opacity="0.07" transform="rotate(45 100 100)">争取上岸</text></svg>');
-}
-
-body.theme-kaoyan-night .container {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(52, 152, 219, 0.2);
-}
-
-body.theme-kaoyan-night .card.word-card {
-    background: var(--kaoyan-night-card-word);
-}
-
-body.theme-kaoyan-night .card.definition-card {
-    background: var(--kaoyan-night-card-def);
-}
-
-body.theme-kaoyan-night .btn {
-    background: var(--kaoyan-night-primary);
-    color: #ecf0f1;
-}
-
-body.theme-kaoyan-night .btn-secondary {
-    background: var(--kaoyan-night-secondary);
-    color: #2c3e50;
-}
-
-body.theme-kaoyan-night h1 {
-    color: var(--kaoyan-night-secondary);
-}
-
-body.theme-kaoyan-night h2,
-body.theme-kaoyan-night h3 {
-    color: var(--kaoyan-night-text);
-}
-
-/* 森林主题 */
-body.theme-forest {
-    background: var(--forest-bg);
-    color: var(--forest-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M30,70 L20,50 L30,50 L20,30 L30,30 L25,10 L35,30 L45,30 L40,50 L50,50 L40,70 Z" fill="%232ecc71" opacity="0.05" /><path d="M70,70 L60,50 L70,50 L60,30 L70,30 L65,10 L75,30 L85,30 L80,50 L90,50 L80,70 Z" fill="%2327ae60" opacity="0.05" /></svg>');
-}
-
-body.theme-forest .container {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(46, 204, 113, 0.2);
-}
-
-body.theme-forest h2,
-body.theme-forest h3 {
-    color: var(--forest-text);
-}
-
-body.theme-forest .card.word-card {
-    background: var(--forest-card-word);
-}
-
-body.theme-forest .card.definition-card {
-    background: var(--forest-card-def);
-}
-
-body.theme-forest .btn {
-    background: var(--forest-primary);
-    color: white;
-}
-
-body.theme-forest .btn-secondary {
-    background: var(--forest-secondary);
-    color: #2c3e50;
-}
-
-body.theme-forest h1 {
-    color: var(--forest-primary);
-}
-
-body.theme-forest .info-box h3 {
-    color: var(--forest-text);
-}
-
-body.theme-forest select {
-    color: var(--forest-text);
-    background: rgba(46, 204, 113, 0.2);
-}
-
-body.theme-forest .source-options label {
-    color: var(--forest-text);
-}
-
-/* 海洋主题 */
-body.theme-ocean {
-    background: var(--ocean-bg);
-    color: var(--ocean-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><path d="M0,180 Q50,150 100,180 Q150,210 200,180 L200,200 L0,200 Z" fill="%231abc9c" opacity="0.1" /><path d="M0,160 Q50,130 100,160 Q150,190 200,160 L200,165 L0,165 Z" fill="%233498db" opacity="0.1" /></svg>');
-}
-
-body.theme-ocean .container {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(52, 152, 219, 0.3);
-}
-
-body.theme-ocean h2,
-body.theme-ocean h3 {
-    color: var(--ocean-text);
-}
-
-body.theme-ocean .card.word-card {
-    background: var(--ocean-card-word);
-}
-
-body.theme-ocean .card.definition-card {
-    background: var(--ocean-card-def);
-}
-
-body.theme-ocean .btn {
-    background: var(--ocean-primary);
-    color: white;
-}
-
-body.theme-ocean .btn-secondary {
-    background: var(--ocean-secondary);
-    color: white;
-}
-
-body.theme-ocean h1 {
-    color: var(--ocean-primary);
-}
-
-body.theme-ocean .info-box h3 {
-    color: var(--ocean-text);
-}
-
-body.theme-ocean select {
-    color: var(--ocean-text);
-    background: rgba(52, 152, 219, 0.2);
-}
-
-body.theme-ocean .source-options label {
-    color: var(--ocean-text);
-}
-
-/* 太空主题 */
-body.theme-space {
-    background: var(--space-bg);
-    color: var(--space-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><circle cx="10" cy="10" r="1" fill="white" opacity="0.5" /><circle cx="30" cy="15" r="0.8" fill="white" opacity="0.5" /><circle cx="50" cy="5" r="1.2" fill="white" opacity="0.5" /><circle cx="70" cy="25" r="0.6" fill="white" opacity="0.5" /><circle cx="90" cy="10" r="1" fill="white" opacity="0.5" /><circle cx="120" cy="15" r="0.8" fill="white" opacity="0.5" /><circle cx="150" cy="5" r="1.2" fill="white" opacity="0.5" /><circle cx="180" cy="25" r="0.6" fill="white" opacity="0.5" /><circle cx="15" cy="40" r="1" fill="white" opacity="0.5" /><circle cx="35" cy="60" r="0.8" fill="white" opacity="0.5" /><circle cx="55" cy="80" r="1.2" fill="white" opacity="0.5" /><circle cx="75" cy="100" r="0.6" fill="white" opacity="0.5" /><circle cx="95" cy="120" r="1" fill="white" opacity="0.5" /><circle cx="125" cy="140" r="0.8" fill="white" opacity="0.5" /><circle cx="155" cy="160" r="1.2" fill="white" opacity="0.5" /><circle cx="185" cy="180" r="0.6" fill="white" opacity="0.5" /></svg>');
-}
-
-body.theme-space .container {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(155, 89, 182, 0.2);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-body.theme-space .card.word-card {
-    background: var(--space-card-word);
-}
-
-body.theme-space .card.definition-card {
-    background: var(--space-card-def);
-}
-
-body.theme-space .btn {
-    background: var(--space-primary);
-    color: white;
-}
-
-body.theme-space .btn-secondary {
-    background: var(--space-secondary);
-    color: white;
-}
-
-body.theme-space h1 {
-    color: var(--space-secondary);
-}
-
-body.theme-space h2,
-body.theme-space h3 {
-    color: var(--space-text);
-}
-
-/* 极简主题 */
-body.theme-minimalist {
-    background: var(--minimalist-bg);
-    color: var(--minimalist-text);
-}
-
-body.theme-minimalist .container {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(189, 195, 199, 0.5);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-}
-
-body.theme-minimalist h2,
-body.theme-minimalist h3 {
-    color: var(--minimalist-text);
-}
-
-body.theme-minimalist .card.word-card {
-    background: var(--minimalist-card-word);
-    color: white;
-}
-
-body.theme-minimalist .card.definition-card {
-    background: var(--minimalist-card-def);
-    color: white;
-}
-
-body.theme-minimalist .btn {
-    background: var(--minimalist-primary);
-    color: white;
-}
-
-body.theme-minimalist .btn-secondary {
-    background: var(--minimalist-secondary);
-    color: white;
-}
-
-body.theme-minimalist h1 {
-    color: var(--minimalist-primary);
-}
-
-body.theme-minimalist .info-box h3 {
-    color: var(--minimalist-text);
-}
-
-body.theme-minimalist select {
-    color: var(--minimalist-text);
-    background: rgba(127, 140, 141, 0.2);
-}
-
-body.theme-minimalist .source-options label {
-    color: var(--minimalist-text);
-}
-
-/* 复古主题 */
-body.theme-vintage {
-    background: var(--vintage-bg);
-    color: var(--vintage-text);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 L0,100 Z" fill="none" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /><path d="M25,0 L25,100" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /><path d="M50,0 L50,100" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /><path d="M75,0 L75,100" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /><path d="M0,25 L100,25" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /><path d="M0,50 L100,50" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /><path d="M0,75 L100,75" stroke="%23d35400" stroke-width="0.5" opacity="0.05" /></svg>');
-}
-
-body.theme-vintage .container {
-    background: rgba(245, 238, 224, 0.9);
-    border: 2px solid rgba(211, 84, 0, 0.2);
-    box-shadow: 0 5px 15px rgba(160, 82, 45, 0.1);
-}
-
-body.theme-vintage h2,
-body.theme-vintage h3 {
-    color: var(--vintage-text);
-}
-
-body.theme-vintage .card.word-card {
-    background: var(--vintage-card-word);
-    color: white;
-}
-
-body.theme-vintage .card.definition-card {
-    background: var(--vintage-card-def);
-    color: white;
-    border: 1px solid rgba(127, 84, 23, 0.1);
-}
-
-body.theme-vintage .btn {
-    background: var(--vintage-primary);
-    color: white;
-}
-
-body.theme-vintage .btn-secondary {
-    background: var(--vintage-secondary);
-    color: #333;
-}
-
-body.theme-vintage h1 {
-    color: var(--vintage-primary);
-    font-family: 'Georgia', serif;
-}
-
-body.theme-vintage .info-box h3 {
-    color: var(--vintage-text);
-}
-
-body.theme-vintage select {
-    color: var(--vintage-text);
-    background: rgba(211, 84, 0, 0.1);
-}
-
-body.theme-vintage .source-options label {
-    color: var(--vintage-text);
-}
-
-/* 自定义背景 */
-body.theme-custom {
-    background-size: cover !important;
-    background-position: center center !important;
-}
-
-body.theme-custom .container {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+  /* 颜色系统 */
+  --primary-color: #E91E63;
+  --primary-light: #F48FB1;
+  --primary-dark: #C2185B;
+  
+  --secondary-color: #673AB7;
+  --secondary-light: #9575CD;
+  --secondary-dark: #512DA8;
+  
+  --accent-color: #FF9800;
+  
+  /* 背景颜色 */
+  --bg-main: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #F5F5F5;
+  --bg-panel: #FFFFFF;
+  
+  /* 文本颜色 */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-light: #FFFFFF;
+  --text-link: #E91E63;
+  
+  /* 边框颜色 */
+  --border-color: #E0E0E0;
+  --divider-color: #EEEEEE;
+  
+  /* 按钮颜色 */
+  --btn-bg: #F5F5F5;
+  --btn-text: #333333;
+  --btn-hover: #E0E0E0;
+  
+  /* 状态颜色 */
+  --success-color: #4CAF50;
+  --info-color: #2196F3;
+  --warning-color: #FF9800;
+  --error-color: #F44336;
+  
+  /* 阴影 */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.175), 0 3px 6px rgba(0,0,0,0.1);
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  
+  /* 动画时间 */
+  --transition-fast: 0.2s;
+  --transition-normal: 0.3s;
+  --transition-slow: 0.5s;
+  
+  /* 热力图颜色 */
+  --calendar-level-0: #F5F5F5;
+  --calendar-level-1: #FFE5EB;
+  --calendar-level-2: #FACCDC;
+  --calendar-level-3: #F8B0C8;
+  --calendar-level-4: #F591AF;
+  --calendar-level-5: #F06D94;
+}
+
+/* 刚硬主题 */
+[data-theme="masculine"] {
+  /* 颜色系统 */
+  --primary-color: #3F51B5;
+  --primary-light: #7986CB;
+  --primary-dark: #303F9F;
+  
+  --secondary-color: #00BCD4;
+  --secondary-light: #4DD0E1;
+  --secondary-dark: #0097A7;
+  
+  --accent-color: #FF5722;
+  
+  /* 背景颜色 */
+  --bg-main: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #EEEEEE;
+  --bg-panel: #FFFFFF;
+  
+  /* 文本颜色 */
+  --text-primary: #212121;
+  --text-secondary: #424242;
+  --text-muted: #757575;
+  --text-light: #FFFFFF;
+  --text-link: #3F51B5;
+  
+  /* 边框颜色 */
+  --border-color: #DDDDDD;
+  --divider-color: #EAEAEA;
+  
+  /* 按钮颜色 */
+  --btn-bg: #EAEAEA;
+  --btn-text: #212121;
+  --btn-hover: #D5D5D5;
+  
+  /* 热力图颜色 */
+  --calendar-level-0: #F5F5F5;
+  --calendar-level-1: #E3F2FD;
+  --calendar-level-2: #BBDEFB;
+  --calendar-level-3: #90CAF9;
+  --calendar-level-4: #64B5F6;
+  --calendar-level-5: #42A5F5;
+}
+
+/* 暗色主题 */
+[data-theme="dark"] {
+  /* 颜色系统 */
+  --primary-color: #BB86FC;
+  --primary-light: #D7B6FD;
+  --primary-dark: #9A66EC;
+  
+  --secondary-color: #03DAC6;
+  --secondary-light: #70EFDE;
+  --secondary-dark: #00B2A9;
+  
+  --accent-color: #FF7597;
+  
+  /* 背景颜色 */
+  --bg-main: #121212;
+  --bg-card: #1E1E1E;
+  --bg-sidebar: #252525;
+  --bg-panel: #2C2C2C;
+  
+  /* 文本颜色 */
+  --text-primary: #E0E0E0;
+  --text-secondary: #BBBBBB;
+  --text-muted: #8A8A8A;
+  --text-light: #FFFFFF;
+  --text-link: #BB86FC;
+  
+  /* 边框颜色 */
+  --border-color: #333333;
+  --divider-color: #3A3A3A;
+  
+  /* 按钮颜色 */
+  --btn-bg: #333333;
+  --btn-text: #E0E0E0;
+  --btn-hover: #444444;
+  
+  /* 状态颜色 */
+  --success-color: #81C784;
+  --info-color: #64B5F6;
+  --warning-color: #FFB74D;
+  --error-color: #E57373;
+  
+  /* 阴影 - 暗色模式下更微妙 */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+  
+  /* 热力图颜色 */
+  --calendar-level-0: #1E1E1E;
+  --calendar-level-1: #39306B;
+  --calendar-level-2: #4F4182;
+  --calendar-level-3: #6A549B;
+  --calendar-level-4: #8366B5;
+  --calendar-level-5: #9A7ACC;
+}
+
+/* 主题过渡 */
+.theme-transition * {
+  transition: background-color var(--transition-normal), 
+              color var(--transition-normal), 
+              border-color var(--transition-normal),
+              box-shadow var(--transition-normal);
+}
+
+/* 主题切换按钮样式 */
+.theme-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.theme-btn[data-theme="feminine"] {
+  background-color: #E91E63;
+  color: white;
+}
+
+.theme-btn[data-theme="masculine"] {
+  background-color: #3F51B5;
+  color: white;
+}
+
+.theme-btn[data-theme="dark"] {
+  background-color: #121212;
+  color: white;
+}
+
+/* 当前活动主题 */
+.theme-btn.current::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-color);
+}
+
+/* 点击效果 */
+.theme-btn.active {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
 }

@@ -1,0 +1,329 @@
+/**
+ * 能力雷达图组件样式
+ */
+
+.skill-radar-container {
+  position: relative;
+  width: 100%;
+  padding: 20px;
+  background-color: var(--card-bg, #FFFFFF);
+  border-radius: var(--border-radius, 12px);
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--shadow-soft, rgba(0, 0, 0, 0.05));
+  margin: 16px 0;
+  border: 1px solid var(--border-color, #FFE5EE);
+}
+
+.skill-radar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.skill-radar-title {
+  font-family: 'HanyiXiaomaiTi', 'Microsoft YaHei', cursive;
+  font-size: 18px;
+  color: var(--text, #4A4A4A);
+  margin: 0;
+}
+
+.skill-radar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.skill-radar-btn {
+  background: transparent;
+  border: none;
+  padding: 5px 8px;
+  color: var(--text, #4A4A4A);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.skill-radar-btn:hover {
+  background-color: var(--secondary, #FCE7EF);
+}
+
+.skill-radar-chart {
+  width: 100%;
+  height: 300px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.skill-radar-canvas {
+  width: 100%;
+  height: 100%;
+  max-width: 450px;
+  max-height: 450px;
+}
+
+/* 雷达图维度说明 */
+.skill-dimension-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.dimension-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: var(--bg-cream, #FFFAF5);
+  border-radius: 30px;
+  font-size: 13px;
+  color: var(--text, #4A4A4A);
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.dimension-item:hover {
+  transform: translateY(-2px);
+}
+
+.dimension-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dimension-value {
+  font-weight: 600;
+  margin-left: 4px;
+  color: var(--accent, #FF80AB);
+}
+
+/* 能力维度详情弹窗 */
+.dimension-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.dimension-detail-modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dimension-detail-content {
+  width: 90%;
+  max-width: 400px;
+  background-color: var(--card-bg, #FFFFFF);
+  border-radius: var(--border-radius, 12px);
+  padding: 24px;
+  position: relative;
+  transform: translateY(20px);
+  transition: transform 0.3s;
+}
+
+.dimension-detail-modal.show .dimension-detail-content {
+  transform: translateY(0);
+}
+
+.dimension-detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: var(--text-secondary, #8A8A8A);
+  cursor: pointer;
+}
+
+.dimension-detail-title {
+  margin-top: 0;
+  font-size: 22px;
+  color: var(--text, #4A4A4A);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, #FFE5EE);
+}
+
+.dimension-rating {
+  display: flex;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.dimension-score {
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--accent, #FF80AB);
+  margin-right: 12px;
+}
+
+.rating-bar {
+  flex: 1;
+  height: 8px;
+  background-color: var(--secondary, #FCE7EF);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rating-fill {
+  height: 100%;
+  background-color: var(--accent, #FF80AB);
+  border-radius: 4px;
+  transition: width 0.5s;
+}
+
+.dimension-detail-description {
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--text, #4A4A4A);
+  line-height: 1.5;
+}
+
+.dimension-improvement {
+  background-color: var(--bg-cream, #FFFAF5);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.improvement-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text, #4A4A4A);
+  margin-bottom: 8px;
+}
+
+.improvement-tips {
+  font-size: 13px;
+  color: var(--text, #4A4A4A);
+  margin-bottom: 12px;
+}
+
+.improvement-tip-item {
+  margin-bottom: 6px;
+  padding-left: 18px;
+  position: relative;
+}
+
+.improvement-tip-item::before {
+  content: "•";
+  position: absolute;
+  left: 6px;
+  color: var(--accent, #FF80AB);
+}
+
+.improvement-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.improvement-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.improvement-btn:hover {
+  transform: translateY(-2px);
+}
+
+.improvement-btn.primary {
+  background-color: var(--primary, #FFB3C1);
+  color: white;
+}
+
+.improvement-btn.secondary {
+  background-color: transparent;
+  border: 1px solid var(--primary, #FFB3C1);
+  color: var(--primary, #FFB3C1);
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulsing {
+  animation: pulse 1s infinite;
+}
+
+/* 能力级别标签 */
+.skill-level-indicator {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #4A4A4A);
+  padding: 6px 12px;
+  background-color: var(--secondary, #FCE7EF);
+  border-radius: 30px;
+  display: inline-block;
+}
+
+.skill-level-beginner {
+  background-color: #FFE0E0;
+  color: #FF6B6B;
+}
+
+.skill-level-intermediate {
+  background-color: #FFE8C8;
+  color: #FF9F43;
+}
+
+.skill-level-advanced {
+  background-color: #D7F5E8;
+  color: #26AD71;
+}
+
+.skill-level-expert {
+  background-color: #C9E0F9;
+  color: #2E77E5;
+}
+
+.skill-level-master {
+  background-color: #E5D9FF;
+  color: #6F42C1;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .skill-radar-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .skill-radar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .skill-dimension-list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .dimension-item {
+    justify-content: space-between;
+  }
+} 

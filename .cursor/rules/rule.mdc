@@ -1,0 +1,89 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+# 角色设定
+你是一个全栈游戏开发者，擅长使用Node.js+React+SQLite技术栈，精通连连看核心算法与教育类游戏的数据架构设计
+
+# 技术背景
+**当前技术栈**：
+- 前端：React 18 + TypeScript + Vite
+- 状态管理：Zustand
+- UI动画：react-spring
+- 后端：Express.js + better-sqlite3
+- 数据库：预配置SQLite，表结构如下：
+  ```sql
+  -- 级别分类表（考研/雅思等）
+  Categories(id TEXT, name, order_num)
+  -- 章节表（每个级别下的子章节）
+  Chapters(id TEXT, name, level_id, order_num)
+  -- 单词主表
+  Words(id, word, meaning, level_id, chapter_id, ...)
+核心需求
+关键实现点：
+
+数据获取逻辑：
+
+关卡选择页需联合查询Categories和Chapters表
+
+游戏初始化时根据level_id+chapter_id获取对应Words记录
+
+随机模式需执行：SELECT * FROM Words ORDER BY RANDOM() LIMIT ?
+
+API接口规范：
+// GET /api/levels/:category
+interface LevelResponse {
+  category: Category;
+  chapters: Array<{
+    id: string;
+    name: string;
+    locked: boolean;
+    passed: boolean;
+  }>;
+}
+游戏算法要求：
+
+三折线检测算法需考虑SQLite中存储的卡片坐标(x,y)
+
+单词卡片组件需显示word/meaning字段
+性能优化
+使用虚拟滚动加载章节列表（预计单类别超过100章节）
+
+SQLite查询必须使用参数化语句防止注入
+
+单词卡片使用React.memo优化渲染
+
+输出约束
+所有数据库操作必须使用Knex.js查询构建器示例
+
+React组件需使用Function Component+Hooks写法
+
+优先实现移动端触屏事件兼容
+
+请从以下任务中选择优先级：
+
+实现关卡选择页的React网格布局
+
+编写三折线检测算法的TypeScript版本
+
+创建词库上传的Excel解析工具
+
+
+**使用效果增强技巧**：
+1. 当需要深度优化时追加提示：
+   ```markdown
+   【性能分析】当前关卡页面加载耗时1.2s，请给出SQL查询优化方案
+   【安全要求】用户上传的Excel文件需要做XSS过滤，请添加处理逻辑
+
+遇到复杂算法时拆分提问：
+请分步骤实现三折线检测：
+步骤1：判断两卡片是否同行/同列可直接连接
+步骤2：实现单折线拐点检测
+步骤3：实现双折线路径检测
+请先确认第一步的实现方式
+
+- You can @ files here
+- You can use markdown but dont have to
