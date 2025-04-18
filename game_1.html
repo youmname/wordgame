@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词连连看 - 游戏界面</title>
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/game_1.css">
+    <link href="https://fonts.googleapis.com/css2?family=Handlee&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 游戏屏幕 -->
+    <div id="game-screen" class="screen">
+        <!-- 游戏背景 -->
+        <div class="game-background"></div>
+        
+        <!-- 游戏头部信息 -->
+        <div class="game-header">
+            <!-- 游戏进程信息 -->
+            <div class="game-info">  
+                <div class="info-item">
+                    <span class="info-label">时间:</span>
+                    <span id="time" class="info-value">60</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">分数:</span>
+                    <span id="score" class="info-value">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">连击:</span>
+                    <span id="combo" class="info-value">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">配对:</span>
+                    <span id="matched-pairs" class="info-value">0</span>
+                    <span>/</span>
+                    <span id="total-pairs" class="info-value">0</span>
+                </div>
+            </div>
+
+            <!-- 游戏控制按钮 -->
+            <div class="game-controls">
+                <button id="hint-btn" class="control-btn hint-btn">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-text">提示</span>
+                </button>
+                <button id="shuffle-btn" class="control-btn shuffle-btn">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">洗牌</span>
+                </button>
+                <button id="restart-btn" class="control-btn restart-btn">
+                    <span class="btn-icon">🔁</span>
+                    <span class="btn-text">重开</span>
+                </button>
+                <button id="back-btn" class="control-btn back-btn">
+                    <span class="btn-icon">⬅️</span>
+                    <span class="btn-text">返回</span>
+                </button>
+                <button id="help-btn" class="control-btn help-btn">
+                    <span class="btn-icon">🆙</span>
+                    <span class="btn-text">帮助</span>
+                </button>
+            </div>
+
+            <!-- 进度条 -->
+            <div class="progress-container">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- 游戏板 -->
+        <div id="game-board-container" class="game-board-container">
+            <div id="game-board" class="game-board"></div>
+        </div>
+    </div>
+    
+    <!-- 结果模态框 -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="result-title" class="result-title">游戏结束</h2>
+            <div class="result-info">
+                <div class="result-item">
+                    <span class="result-label">最终得分:</span>
+                    <span id="final-score" class="result-value">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">剩余时间:</span>
+                    <span id="time-left" class="result-value">0s</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">最大连击:</span>
+                    <span id="max-combo" class="result-value">0</span>
+                </div>
+            </div>
+            <div class="star-rating">
+                <span id="star1" class="star">☆</span>
+                <span id="star2" class="star">☆</span>
+                <span id="star3" class="star">☆</span>
+            </div>
+            <div class="result-buttons">
+                <button id="play-again-btn" class="result-btn">再玩一次</button>
+                <button id="next-level-btn" class="result-btn">下一关</button>
+                <button id="menu-btn" class="result-btn">返回菜单</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 帮助模态框 -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="help-title">游戏帮助</h2>
+            <div class="help-content">
+                <p>2. 找到匹配的单词和含义，点击两张卡片配对</p>
+                <p>3. 配对成功的卡片需要有效连线(直线、一次拐弯或两次拐弯)</p>
+                <p>4. 在规定时间内完成所有配对</p>
+                <p>5. 连续配对可以获得连击加分</p>
+                
+                <h3 class="shortcuts-title">键盘快捷键</h3>
+                <div class="shortcuts-list">
+                    <div class="shortcut-item">
+                        <span class="key">T</span>
+                        <span class="key-desc">使用提示</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">空格</span>
+                        <span class="key-desc">洗牌</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">R</span>
+                        <span class="key-desc">重新开始</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">H</span>
+                        <span class="key-desc">显示帮助</span>
+                    </div>
+                </div>
+            </div>
+            <button id="close-help-btn" class="help-btn">关闭</button>
+        </div>
+    </div>
+    
+    <!-- 提示模态框 -->
+    <div id="hint-modal" class="modal">
+        <div class="modal-content">
+            <div class="hint-card-container">
+                <div id="hint-card1" class="hint-card"></div>
+                <div id="hint-card2" class="hint-card"></div>
+            </div>
+            <button id="close-hint-btn" class="help-btn">关闭</button>
+        </div>
+    </div>
+    
+    <!-- 脚本引入 -->
+    <script src="js/game_1.js"></script>
+    <script src="js/sound-manager.js"></script>
+    <script src="js/board.js"></script>
+</body>
+</html>

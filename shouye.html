@@ -61,13 +61,6 @@
     <div class="main-wrapper">
         <!-- 左侧导航区 固定宽度 -->
         <nav class="side-nav">
-            <div class="workspace-header">
-                <h1>单词连连看</h1>
-                <div class="theme-switch">
-                    <button class="theme-btn feminine active" onclick="toggleTheme('feminine')">🌸</button>
-                    <button class="theme-btn masculine" onclick="toggleTheme('masculine')">🌀</button>
-                </div>
-            </div>
             <div class="vertical-nav">
                 <div class="nav-section">
                     <h3>学习空间</h3>
@@ -77,17 +70,22 @@
                 </div>
                 <div class="nav-section">
                     <h3>挑战模式</h3>
-                    <button class="nav-btn" data-action="startFastMode">⚡ 极速模式</button>
-                    <button class="nav-btn" data-action="startPuzzleMode">🧩 拼图模式</button>
-                    <button class="nav-btn" data-action="startSurvivalMode">🎮 生存模式</button>
+                    <button class="nav-btn" data-action="startFastMode">⚡ 连线模式</button>
+                    <button class="nav-btn" data-action="startPuzzleMode">🧩 匹配模式</button>
+                    <button class="nav-btn" data-action="startSurvivalMode">🎮 记忆模式</button>
                 </div>
             </div>
             <div class="user-profile">
+                <div class="theme-switch">
+                    <button class="theme-btn feminine active" onclick="toggleTheme('feminine')">🌸</button>
+                    <button class="theme-btn masculine" onclick="toggleTheme('masculine')">🌀</button>
+                </div>
                 <div class="user-avatar">
                     <img src="assets/images/default-avatar.png" alt="用户头像" id="user-avatar">
-                    <div class="level-badge">Lv.12</div>
+                    <!-- <div class="level-badge">Lv.12</div> -->
                 </div>
                 <div class="user-info">
+                    
                     <h2 id="user-name">👑 学习达人</h2>
                     <div class="user-stats">
                         <div class="time-bubble">⏰ <span id="user-minutes">1200</span>分钟</div>
@@ -109,7 +107,7 @@
             </div>
             
             <div class="features-grid">
-                <div class="func-card" data-type="primary" onclick="startChapter(3)">
+                <div class="func-card" data-type="primary" onclick="window.location.href='level.html'">
                     🚀 开始闯关  
                     <div class="sticker">Level 3</div>
                     <img src="assets/decorations/paper-clip.png" class="deco-clip">
@@ -120,8 +118,8 @@
                     <div class="sticker">Hot!</div>
                 </div>
                 
-                <div class="func-card" data-type="secondary" onclick="showCustomWordbank()">
-                    📚 我的词库  
+                <div class="func-card" data-type="secondary" onclick="window.location.href='diy.html'">
+                    📚 导入单词  
                     <img src="assets/decorations/paper-clip-blue.png" class="deco-clip">
                 </div>
                 
@@ -131,7 +129,7 @@
                 </div>
             </div>
 
-            <div class="category-section">
+            <!-- <div class="category-section">
                 <div class="category-title">
                     <img src="assets/decorations/highlight.png" class="highlight">
                     <h3>词汇分类</h3>
@@ -144,7 +142,7 @@
                     <button class="category-btn" data-category="初中" data-level-id="5">初中词汇</button>
                     <button class="category-btn" data-category="六级" data-level-id="6">六级词汇</button>
                 </div>
-            </div>
+            </div> -->
             
             <div class="stats-container">
                 <div class="data-module">

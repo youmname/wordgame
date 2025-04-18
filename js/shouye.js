@@ -786,6 +786,7 @@ function startRandomChallenge() {
     
     // 延迟跳转
     setTimeout(() => {
+        
         window.location.href = 'index.html?mode=random';
     }, 800);
 }
