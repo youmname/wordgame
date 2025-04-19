@@ -123,7 +123,7 @@ body {
   padding: 40px 5%; /* 百分比padding更灵活 */
   box-sizing: border-box;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: auto; /* 保持垂直滚动 */
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1fr;
@@ -134,7 +134,24 @@ body {
     color var(--theme-change-duration),
     border-color var(--theme-change-duration),
     box-shadow var(--theme-change-duration);
+  
+  /* 暂时显示滚动条以便测试 */
+  /* 稍后可以取消注释下面的代码来隐藏滚动条 */
+  /*
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  */
+  
+  /* 确保内容可以滚动 */
+  max-height: 100vh;
 }
+
+/* 为Webkit浏览器（Chrome、Safari等）暂时注释掉隐藏滚动条的代码 */
+/*
+.content-area::-webkit-scrollbar {
+  display: none;
+}
+*/
 
 /* 右侧面板区 */
 .right-panel {
@@ -302,7 +319,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  position: sticky;
+  position: relative;
   top: 0;
   background: var(--bg-cream);
   padding: 16px 0;

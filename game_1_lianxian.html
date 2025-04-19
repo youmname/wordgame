@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>单词记忆匹配 - 游戏界面</title>
+    <title>单词连连看 - 游戏界面</title>
     <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/game_3.css">
+    <link rel="stylesheet" href="css/game_1.css">
     <link href="https://fonts.googleapis.com/css2?family=Handlee&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -110,8 +110,8 @@
         <div class="modal-content">
             <h2 class="help-title">游戏帮助</h2>
             <div class="help-content">
-                <p>1. 点击卡片查看单词或含义</p>
                 <p>2. 找到匹配的单词和含义，点击两张卡片配对</p>
+                <p>3. 配对成功的卡片需要有效连线(直线、一次拐弯或两次拐弯)</p>
                 <p>4. 在规定时间内完成所有配对</p>
                 <p>5. 连续配对可以获得连击加分</p>
                 
@@ -151,56 +151,6 @@
     </div>
     
     <!-- 脚本引入 -->
-    <!-- 参数解析脚本 -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 解析URL参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const chapterId = urlParams.get('chapter');        // 原始章节ID
-            const categoryId = urlParams.get('category');      // 级别ID
-            const categoryName = urlParams.get('categoryName');// 级别名称
-            const chapterName = urlParams.get('chapterName');  // 章节名称
-            
-            // 在控制台显示所有参数
-            console.log('================ 游戏参数 ================');
-            console.log(`级别ID: ${categoryId || '未获取'}`);
-            console.log(`级别名称: ${categoryName || '未获取'}`);
-            console.log(`章节ID: ${chapterId || '未获取'}`);
-            console.log(`章节名称: ${chapterName || '未获取'}`);
-            console.log('=========================================');
-            
-            // 在页面上显示参数（仅用于测试）
-            const gameHeader = document.querySelector('.game-header');
-            if (gameHeader) {
-                const debugInfo = document.createElement('div');
-                debugInfo.style.position = 'absolute';
-                debugInfo.style.top = '10px';
-                debugInfo.style.right = '10px';
-                debugInfo.style.background = 'rgba(0,0,0,0.7)';
-                debugInfo.style.color = 'white';
-                debugInfo.style.padding = '5px 10px';
-                debugInfo.style.borderRadius = '5px';
-                debugInfo.style.fontSize = '12px';
-                debugInfo.style.fontFamily = 'monospace';
-                debugInfo.style.zIndex = '1000';
-                debugInfo.innerHTML = `
-                    <div style="margin-bottom:3px;font-weight:bold;text-decoration:underline;">游戏参数</div>
-                    <div>级别ID: ${categoryId || '未获取'}</div>
-                    <div>级别名称: ${categoryName || '未获取'}</div>
-                    <div>章节ID: ${chapterId || '未获取'}</div>
-                    <div>章节名称: ${chapterName || '未获取'}</div>
-                `;
-                gameHeader.appendChild(debugInfo);
-            }
-            
-            // 更新页面标题（如果有章节和级别名称）
-            if (categoryName && chapterName) {
-                document.title = `${categoryName} - ${chapterName} | 单词记忆匹配`;
-            }
-        });
-    </script>
-    
-    <!-- 基础工具和配置 -->
     <script src="js/utils.js"></script>
     <script src="js/config.js"></script>
     
@@ -209,8 +159,8 @@
     
     <!-- 音效管理器 -->
     <script src="js/sound-manager.js"></script>
-    
-    <!-- 游戏主逻辑 -->
-    <script src="js/game_3.js"></script>
+	
+	<script src="js/board.js"></script>
+    <script src="js/game_1_lianxian.js"></script>
 </body>
 </html>

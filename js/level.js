@@ -131,6 +131,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    let gameAction = new URLSearchParams(window.location.search).get('action') || 'jiyiMode'; // 默认记忆模式
+    console.log('当前游戏模式:', gameAction);
+
     // 初始化函数
     function init() {
         // 检查WordDataLoader是否已初始化
@@ -1191,18 +1194,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 开始游戏
     function startGame(chapterId) {
-        // 查找章节对象
         const chapter = findChapterById(chapterId);
-        
         if (!chapter) {
             console.error(`找不到章节: ${chapterId}`);
             return;
         }
         
-        console.log(`开始游戏：级别=${chapter.categoryName}(${chapter.categoryId}), 章节=${chapter.title}(${chapter.originalId})`);
+        console.log(`开始游戏：章节=${chapter.title}, 模式=${gameAction}`);
         
-        // 跳转到游戏页面，传递原始章节ID和级别ID
-        window.location.href = `game_3.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&categoryName=${encodeURIComponent(chapter.categoryName)}&chapterName=${encodeURIComponent(chapter.title)}`;
+        // 根据data-action跳转
+        if (gameAction === 'lianxianMode') {
+            window.location.href = `game_1_lianxian.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}`;
+        } else if (gameAction === 'pipeiMode') {
+            window.location.href = `game_2_pipei.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}`;
+        } else if (gameAction === 'jiyiMode') {
+            window.location.href = `game_3_jiyi.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}`;
+        }
     }
 
     // 复习单词

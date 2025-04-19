@@ -779,15 +779,59 @@ function startRandomChallenge() {
         spread: 150
     });
     
-    // 更新游戏状态
+    // 更新游戏状态 - 使用与data-loader一致的变量命名
     store.updateGameState({
-        gameMode: 'random'
+        playMode: 'random'
     });
+    
+    // 设置WordDataLoader游戏类型为随机 - 不指定具体级别，让其从所有级别获取单词
+    if (window.WordDataLoader) {
+        try {
+            window.WordDataLoader.setPlayMode('random', { 
+                levelId: 'all',   // 特殊值，表示所有级别
+                wordCount: 20
+            });
+            console.log('成功设置随机挑战模式，将从所有级别随机获取单词');
+        } catch (error) {
+            console.error('设置随机挑战模式失败:', error);
+        }
+    }
+    
+    // 获取当前选中的游戏模式
+    let selectedGameMode = 'jiyiMode'; // 默认为记忆模式
+    try {
+        // 尝试从侧边栏获取当前选中的游戏模式
+        const activeBtn = document.querySelector('.nav-btn.active[data-action]');
+        if (activeBtn) {
+            selectedGameMode = activeBtn.getAttribute('data-action');
+        }
+    } catch (error) {
+        console.warn('获取当前游戏模式失败，使用默认记忆模式', error);
+    }
+    
+    console.log(`随机挑战：使用游戏模式 ${selectedGameMode}`);
     
     // 延迟跳转
     setTimeout(() => {
+        // 根据游戏模式直接跳转到对应的游戏页面，而不是级别选择页面
+        let targetUrl;
+        switch (selectedGameMode) {
+            case 'lianxianMode':
+                targetUrl = 'game_1_lianxian.html?chapter=random&mode=random';
+                break;
+            case 'pipeiMode':
+                targetUrl = 'game_2_pipei.html?chapter=random&mode=random';
+                break;
+            case 'jiyiMode':
+                targetUrl = 'game_3_jiyi.html?chapter=random&mode=random';
+                break;
+            default:
+                // 默认使用记忆模式
+                targetUrl = 'game_3_jiyi.html?chapter=random&mode=random';
+                break;
+        }
         
-        window.location.href = 'shouye.html?mode=random';
+        window.location.href = targetUrl;
     }, 800);
 }
 

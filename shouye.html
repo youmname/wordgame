@@ -25,6 +25,103 @@
     <link rel="preload" href="assets/sounds/fail.mp3" as="audio">
     <link rel="preload" href="assets/sounds/level_complete.mp3" as="audio">
     <link rel="preload" href="assets/sounds/badge_unlock.mp3" as="audio">
+    <style>
+        /* 新增样式表 */
+        #mode-selection-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            font-family: 'PingFang SC', 'Quicksand', sans-serif;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            max-width: 900px;
+            min-height: 60vh;
+            background: rgba(250, 243, 224, 0.9);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: 0 16px 40px rgba(176, 196, 222, 0.2);
+            border: 1px solid rgba(211, 183, 166, 0.2);
+        }
+        
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .mode-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 24px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                rgba(199, 232, 213, 0.1) 0%, 
+                rgba(255, 183, 197, 0.05) 100%);
+            transform: rotate(45deg);
+        }
+        
+        .mode-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(176, 196, 222, 0.3);
+        }
+        
+        .mode-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        .mode-title {
+            color: #4A4A4A;
+            font-size: 24px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .mode-desc {
+            color: #7A7A7A;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        /* 动态装饰元素 */
+        .deco-line {
+            position: absolute;
+            background: rgba(216, 166, 179, 0.3);
+            transform-origin: left;
+            animation: drawLine 1.2s ease-out;
+        }
+        
+        @keyframes drawLine {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
+        }
+    </style>
     
     <!-- 全局函数定义 -->
     <script>
@@ -70,9 +167,9 @@
                 </div>
                 <div class="nav-section">
                     <h3>挑战模式</h3>
-                    <button class="nav-btn" data-action="startFastMode">⚡ 连线模式</button>
-                    <button class="nav-btn" data-action="startPuzzleMode">🧩 匹配模式</button>
-                    <button class="nav-btn" data-action="startSurvivalMode">🎮 记忆模式</button>
+                    <button class="nav-btn" data-action="lianxianMode">⚡ 连线模式</button>
+                    <button class="nav-btn" data-action="pipeiMode">🧩 匹配模式</button>
+                    <button class="nav-btn" data-action="jiyiMode">🎮 记忆模式</button>
                 </div>
             </div>
             <div class="user-profile">
@@ -225,7 +322,244 @@
     <div class="settings-button" onclick="showSettings()">
         <i class="fas fa-cog"></i>
     </div>
+
+    <!-- 游戏模式选择模态框 - 横向排列 -->
+    <div id="mode-selection-modal">
+        <div class="modal-content">
+            <!-- 装饰线条 -->
+            <div class="deco-line" style="top:15%; left:5%; width:120px; height:2px;"></div>
+            <div class="deco-line" style="bottom:20%; right:5%; width:80px; height:2px;"></div>
+            
+            <h3 style="text-align:center; color:#4A4A4A; font-size:32px; margin-bottom:40px;">
+                ✨ 选择学习模式
+            </h3>
+    
+            <div class="mode-grid">
+                <!-- 连线模式 -->
+                <div class="mode-card" data-mode="lianxianMode">
+                    <div class="mode-icon">🌿</div>
+                    <div class="mode-title">自然连线</div>
+                    <div class="mode-desc">
+                        通过视觉联想建立单词间的记忆纽带<br>
+                        <span style="color:#D8A6B3;">推荐给视觉学习者</span>
+                    </div>
+                </div>
+    
+                <!-- 匹配模式 -->
+                <div class="mode-card" data-mode="pipeiMode">
+                    <div class="mode-icon">🍃</div>
+                    <div class="mode-title">叶片匹配</div>
+                    <div class="mode-desc">
+                        翻转叶片寻找隐藏的单词伙伴<br>
+                        <span style="color:#8E7CC3;">适合碎片时间练习</span>
+                    </div>
+                </div>
+    
+                <!-- 记忆模式 -->
+                <div class="mode-card" data-mode="jiyiMode">
+                    <div class="mode-icon">🌸</div>
+                    <div class="mode-title">记忆花园</div>
+                    <div class="mode-desc">
+                        在限定时间培育你的单词花园<br>
+                        <span style="color:#B6D7A8;">挑战记忆力极限</span>
+                    </div>
+                </div>
+            </div>
+    
+            <div style="text-align:center;">
+                <button class="ins-style-btn" 
+                        style="background:rgba(216, 166, 179, 0.1); color:#D8A6B3;">
+                    稍后选择
+                </button>
+            </div>
+        </div>
+    </div>
     
     <script type="module" src="js/shouye.js"></script>
+    <script>
+        let selectedGameMode = 'jiyiMode'; // 默认为记忆模式
+        let actionSource = ''; // 记录用户点击的来源按钮
+        
+        // 页面加载完成后初始化所有事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 游戏模式按钮点击事件（侧边栏）
+            document.querySelectorAll('.nav-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    // 移除其他按钮的active类
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // 给当前按钮添加active类
+                    this.classList.add('active');
+                    
+                    // 保存选择的游戏模式
+                    selectedGameMode = this.getAttribute('data-action');
+                    console.log('已选择游戏模式:', selectedGameMode);
+                    
+                    // 显示一个小提示
+                    const toast = document.createElement('div');
+                    toast.className = 'toast-message';
+                    toast.textContent = `已选择: ${this.textContent.trim()}`;
+                    toast.style.position = 'fixed';
+                    toast.style.bottom = '20px';
+                    toast.style.left = '50%';
+                    toast.style.transform = 'translateX(-50%)';
+                    toast.style.padding = '10px 20px';
+                    toast.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                    toast.style.color = 'white';
+                    toast.style.borderRadius = '5px';
+                    toast.style.zIndex = '9999';
+                    
+                    document.body.appendChild(toast);
+                    setTimeout(() => {
+                        toast.style.opacity = '0';
+                        toast.style.transition = 'opacity 0.5s';
+                        setTimeout(() => document.body.removeChild(toast), 500);
+                    }, 1500);
+                });
+            });
+            
+            // 显示游戏模式选择模态框
+            function showModeSelectionModal(source) {
+                actionSource = source; // 记录来源按钮
+                document.getElementById('mode-selection-modal').style.display = 'block';
+                
+                // 高亮当前选中的模式
+                document.querySelectorAll('.mode-card').forEach(card => {
+                    if (card.getAttribute('data-mode') === selectedGameMode) {
+                        card.style.transform = 'translateY(-5px)';
+                        card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
+                        // 添加微光效果
+                        card.style.border = '2px solid rgba(255,255,255,0.7)';
+                    } else {
+                        card.style.transform = 'none';
+                        card.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                        card.style.border = 'none';
+                    }
+                });
+            }
+            
+            // 隐藏游戏模式选择模态框
+            function hideModeSelectionModal() {
+                document.getElementById('mode-selection-modal').style.display = 'none';
+            }
+            
+            // 取消按钮点击事件
+            document.querySelector('.ins-style-btn').addEventListener('click', hideModeSelectionModal);
+            
+            // 游戏模式卡片点击事件
+            document.querySelectorAll('.mode-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    selectedGameMode = this.getAttribute('data-mode');
+                    console.log('已选择游戏模式:', selectedGameMode);
+                    
+                    // 高亮侧边栏对应的按钮
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        if (btn.getAttribute('data-action') === selectedGameMode) {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    
+                    // 根据来源按钮跳转到不同页面
+                    if (actionSource === 'level') {
+                        // 开始闯关 - 跳转到级别选择页面
+                        window.location.href = `level.html?action=${selectedGameMode}`;
+                    } else if (actionSource === 'random') {
+                        // 随机挑战 - 直接跳转到游戏页面
+                        let targetUrl;
+                        
+                        // 设置WordDataLoader为随机模式
+                        if (window.WordDataLoader) {
+                            try {
+                                window.WordDataLoader.setPlayMode('random', { 
+                                    levelId: 'all',   // 所有级别
+                                    wordCount: 20
+                                });
+                                console.log('成功设置随机挑战模式');
+                            } catch (error) {
+                                console.error('设置随机挑战模式失败:', error);
+                            }
+                        }
+                        
+                        // 根据选择的游戏模式确定跳转目标
+                        switch(selectedGameMode) {
+                            case 'lianxianMode':
+                                targetUrl = 'game_1_lianxian.html?chapter=random&mode=random';
+                                break;
+                            case 'pipeiMode':
+                                targetUrl = 'game_2_pipei.html?chapter=random&mode=random';
+                                break;
+                            case 'jiyiMode':
+                                targetUrl = 'game_3_jiyi.html?chapter=random&mode=random';
+                                break;
+                            default:
+                                targetUrl = 'game_3_jiyi.html?chapter=random&mode=random';
+                                break;
+                        }
+                        
+                        window.location.href = targetUrl;
+                    }
+                    
+                    hideModeSelectionModal();
+                });
+                
+                // 添加悬停效果
+                card.addEventListener('mouseover', function() {
+                    if (this.getAttribute('data-mode') !== selectedGameMode) {
+                        this.style.transform = 'translateY(-3px)';
+                        this.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                    }
+                });
+                
+                card.addEventListener('mouseout', function() {
+                    if (this.getAttribute('data-mode') !== selectedGameMode) {
+                        this.style.transform = 'none';
+                        this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                    }
+                });
+                
+                // 卡片点击涟漪效果
+                card.addEventListener('click', function(e) {
+                    const ripple = document.createElement('div');
+                    ripple.style.cssText = `
+                        position: absolute;
+                        background: rgba(216,166,179,0.2);
+                        border-radius: 50%;
+                        transform: scale(0);
+                        animation: ripple 0.6s linear;
+                    `;
+                    
+                    const rect = card.getBoundingClientRect();
+                    ripple.style.width = ripple.style.height = 
+                        Math.max(rect.width, rect.height) + 'px';
+                    ripple.style.left = e.clientX - rect.left - ripple.offsetWidth/2 + 'px';
+                    ripple.style.top = e.clientY - rect.top - ripple.offsetHeight/2 + 'px';
+                    
+                    card.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+            
+            // 修改"开始闯关"按钮点击事件
+            const startLevelCard = document.querySelector('.func-card[data-type="primary"]');
+            if (startLevelCard) {
+                startLevelCard.onclick = function() {
+                    showModeSelectionModal('level');
+                };
+            }
+            
+            // 修改"随机挑战"按钮点击事件 - 使用模态框选择游戏模式
+            const randomChallengeCard = document.querySelector('.func-card[data-type="secondary"]:nth-child(2)');
+            if (randomChallengeCard) {
+                randomChallengeCard.onclick = function() {
+                    // 显示模态框，传入random作为来源
+                    showModeSelectionModal('random');
+                };
+            }
+        });
+    </script>
 </body>
 </html>
