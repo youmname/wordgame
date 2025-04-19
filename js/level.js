@@ -14,6 +14,122 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 当前选中的主章节ID
     let currentCategoryId = null;
+    
+    // 分页状态 - 级别
+    const categoryPagination = {
+        currentPage: 1,
+        itemsPerPage: 6,
+        totalPages: 1,
+        
+        // 计算总页数
+        calculateTotalPages: function(totalItems) {
+            return Math.ceil(totalItems / this.itemsPerPage);
+        },
+        
+        // 更新分页状态
+        update: function(totalItems) {
+            this.totalPages = this.calculateTotalPages(totalItems);
+            // 确保当前页不超过总页数
+            if (this.currentPage > this.totalPages) {
+                this.currentPage = this.totalPages;
+            }
+            if (this.currentPage < 1) {
+                this.currentPage = 1;
+            }
+        },
+        
+        // 获取当前页的数据
+        getCurrentPageItems: function(items) {
+            const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+            const endIndex = startIndex + this.itemsPerPage;
+            return items.slice(startIndex, endIndex);
+        },
+        
+        // 前往上一页
+        prevPage: function() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                return true;
+            }
+            return false;
+        },
+        
+        // 前往下一页
+        nextPage: function() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+                return true;
+            }
+            return false;
+        },
+        
+        // 前往指定页
+        goToPage: function(pageNum) {
+            if (pageNum >= 1 && pageNum <= this.totalPages) {
+                this.currentPage = pageNum;
+                return true;
+            }
+            return false;
+        }
+    };
+    
+    // 分页状态 - 章节
+    const subchapterPagination = {
+        currentPage: 1,
+        itemsPerPage: 6,
+        totalPages: 1,
+        
+        // 计算总页数
+        calculateTotalPages: function(totalItems) {
+            return Math.ceil(totalItems / this.itemsPerPage);
+        },
+        
+        // 更新分页状态
+        update: function(totalItems) {
+            this.totalPages = this.calculateTotalPages(totalItems);
+            // 确保当前页不超过总页数
+            if (this.currentPage > this.totalPages) {
+                this.currentPage = this.totalPages;
+            }
+            if (this.currentPage < 1) {
+                this.currentPage = 1;
+            }
+        },
+        
+        // 获取当前页的数据
+        getCurrentPageItems: function(items) {
+            const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+            const endIndex = startIndex + this.itemsPerPage;
+            return items.slice(startIndex, endIndex);
+        },
+        
+        // 前往上一页
+        prevPage: function() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                return true;
+            }
+            return false;
+        },
+        
+        // 前往下一页
+        nextPage: function() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+                return true;
+            }
+            return false;
+        },
+        
+        // 前往指定页
+        goToPage: function(pageNum) {
+            if (pageNum >= 1 && pageNum <= this.totalPages) {
+                this.currentPage = pageNum;
+                return true;
+            }
+            return false;
+        }
+    };
 
     // 初始化函数
     function init() {
@@ -37,6 +153,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         setupEventListeners();
         animateDecoElements();
+        
+        // 加载分页样式
+        loadPaginationStyles();
+    }
+    
+    // 加载分页样式
+    function loadPaginationStyles() {
+        // 检查是否已加载
+        if (document.getElementById('pagination-styles')) {
+            return;
+        }
+        
+        // 创建link元素
+        const link = document.createElement('link');
+        link.id = 'pagination-styles';
+        link.rel = 'stylesheet';
+        link.href = 'css/pagination.css';
+        
+        // 添加到head
+        document.head.appendChild(link);
     }
     
     // 从API加载级别数据
@@ -66,6 +202,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                 });
                 
+                // 更新分页状态
+                categoryPagination.update(categories.length);
+                
                 // 渲染级别
                 renderCategories();
                 
@@ -76,12 +215,20 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.warn('API返回的级别数据为空，尝试创建示例级别数据');
                 createSampleCategories();
+                
+                // 更新分页状态
+                categoryPagination.update(categories.length);
+                
                 renderCategories();
             }
         } catch (error) {
             console.error('加载级别数据失败:', error);
             // 使用示例数据作为后备
             createSampleCategories();
+            
+            // 更新分页状态
+            categoryPagination.update(categories.length);
+            
             renderCategories();
         }
     }
@@ -148,6 +295,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 progress: 0,
                 locked: true,
                 difficulty: 5
+            },
+            {
+                id: 7,
+                title: "商务英语",
+                description: "商务场景常用词汇",
+                totalChapters: 12,
+                completedChapters: 0,
+                progress: 0,
+                locked: true,
+                difficulty: 3
+            },
+            {
+                id: 8,
+                title: "旅游英语",
+                description: "旅行必备英语词汇",
+                totalChapters: 10,
+                completedChapters: 0,
+                progress: 0,
+                locked: true,
+                difficulty: 2
             }
         ];
         
@@ -329,8 +496,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 转换API数据格式为我们需要的格式
                 subchapters[categoryId] = apiChapters.map(chap => {
+                    // 获取级别名称
+                    const category = categories.find(c => c.id == categoryId);
+                    const categoryName = category ? category.title : `级别${categoryId}`;
+                    
                     return {
-                        id: `${categoryId}-${chap.id}`,
+                        // 为了兼容现有代码，保留组合ID格式
+                        id: `${categoryId}-${chap.id}`, 
+                        // 存储原始数据，方便后续使用
+                        originalId: chap.id,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
                         title: chap.name || `章节${chap.id}`,
                         wordCount: chap.word_count || 0,
                         masteredCount: chap.mastered_count || 0,
@@ -339,6 +515,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         difficulty: chap.difficulty || 1
                     };
                 });
+                
+                // 更新分页状态
+                subchapterPagination.currentPage = 1; // 重置为第一页
+                subchapterPagination.update(subchapters[categoryId].length);
                 
                 // 如果当前选中的是这个级别，则渲染章节
                 if (currentCategoryId === categoryId) {
@@ -352,6 +532,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     createSampleChaptersForCategory(categoryId);
                 }
                 
+                // 更新分页状态
+                subchapterPagination.currentPage = 1; // 重置为第一页
+                subchapterPagination.update(subchapters[categoryId].length);
+                
                 // 如果当前选中的是这个级别，则渲染章节
                 if (currentCategoryId === categoryId) {
                     renderSubchapters(categoryId);
@@ -364,6 +548,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!subchapters[categoryId] || subchapters[categoryId].length === 0) {
                 createSampleChaptersForCategory(categoryId);
             }
+            
+            // 更新分页状态
+            subchapterPagination.currentPage = 1; // 重置为第一页
+            subchapterPagination.update(subchapters[categoryId].length);
             
             // 如果当前选中的是这个级别，则渲染章节
             if (currentCategoryId === categoryId) {
@@ -403,6 +591,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             subchapters[categoryId].push({
                 id: `${categoryId}-${i}`,
+                originalId: i.toString(),
+                categoryId: categoryId,
+                categoryName: categoryName,
                 title: title,
                 wordCount: wordCount,
                 masteredCount: masteredCount,
@@ -417,6 +608,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function useDefaultData() {
         // 创建示例级别数据
         createSampleCategories();
+        
+        // 更新分页状态
+        categoryPagination.update(categories.length);
+        
         // 渲染级别
         renderCategories();
     }
@@ -435,7 +630,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        categories.forEach((category, index) => {
+        // 获取当前页的数据
+        const currentPageCategories = categoryPagination.getCurrentPageItems(categories);
+        
+        currentPageCategories.forEach((category, index) => {
             // 创建章节卡片
             const card = document.createElement('div');
             card.className = 'chapter-card';
@@ -470,6 +668,69 @@ document.addEventListener('DOMContentLoaded', function() {
                 drawProgressRing(canvas, category.progress);
             }
         });
+        
+        // 添加分页控件
+        renderCategoryPagination();
+    }
+    
+    // 渲染级别分页控件
+    function renderCategoryPagination() {
+        // 检查是否已存在分页容器，如果不存在则创建
+        let paginationContainer = document.getElementById('category-pagination');
+        if (!paginationContainer) {
+            paginationContainer = document.createElement('div');
+            paginationContainer.id = 'category-pagination';
+            paginationContainer.className = 'pagination-container';
+            
+            // 将分页容器添加到级别容器中
+            const categoryContainer = document.getElementById('category-container');
+            if (categoryContainer) {
+                categoryContainer.appendChild(paginationContainer);
+            }
+        }
+        
+        // 清空分页容器
+        paginationContainer.innerHTML = '';
+        
+        // 如果只有一页，不显示分页控件
+        if (categoryPagination.totalPages <= 1) {
+            paginationContainer.style.display = 'none';
+            return;
+        }
+        
+        paginationContainer.style.display = 'flex';
+        
+        // 创建上一页按钮
+        const prevButton = document.createElement('button');
+        prevButton.className = 'pagination-btn prev-btn';
+        prevButton.innerHTML = '« 上一页';
+        prevButton.disabled = categoryPagination.currentPage === 1;
+        prevButton.addEventListener('click', function() {
+            if (categoryPagination.prevPage()) {
+                renderCategories();
+            }
+        });
+        
+        // 创建页码指示器
+        const pageIndicator = document.createElement('div');
+        pageIndicator.className = 'pagination-indicator';
+        pageIndicator.textContent = `${categoryPagination.currentPage} / ${categoryPagination.totalPages}`;
+        
+        // 创建下一页按钮
+        const nextButton = document.createElement('button');
+        nextButton.className = 'pagination-btn next-btn';
+        nextButton.innerHTML = '下一页 »';
+        nextButton.disabled = categoryPagination.currentPage === categoryPagination.totalPages;
+        nextButton.addEventListener('click', function() {
+            if (categoryPagination.nextPage()) {
+                renderCategories();
+            }
+        });
+        
+        // 添加到分页容器
+        paginationContainer.appendChild(prevButton);
+        paginationContainer.appendChild(pageIndicator);
+        paginationContainer.appendChild(nextButton);
     }
 
     // 渲染子章节卡片
@@ -489,6 +750,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // 获取子章节数据
         const chapterList = subchapters[categoryId] || [];
         
+        // 更新分页状态
+        subchapterPagination.update(chapterList.length);
+        
         // 获取网格
         const grid = document.getElementById('subchapterGrid');
         if (!grid) return;
@@ -502,7 +766,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        chapterList.forEach((chapter, index) => {
+        // 获取当前页的数据
+        const currentPageChapters = subchapterPagination.getCurrentPageItems(chapterList);
+        
+        currentPageChapters.forEach((chapter, index) => {
             // 创建章节卡片
             const card = document.createElement('div');
             card.className = 'chapter-card';
@@ -538,9 +805,72 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // 添加分页控件
+        renderSubchapterPagination();
+        
         // 显示子章节容器，隐藏主章节容器
         document.getElementById('category-container').style.display = 'none';
         document.getElementById('subchapter-container').style.display = 'block';
+    }
+    
+    // 渲染章节分页控件
+    function renderSubchapterPagination() {
+        // 检查是否已存在分页容器，如果不存在则创建
+        let paginationContainer = document.getElementById('subchapter-pagination');
+        if (!paginationContainer) {
+            paginationContainer = document.createElement('div');
+            paginationContainer.id = 'subchapter-pagination';
+            paginationContainer.className = 'pagination-container';
+            
+            // 将分页容器添加到章节容器中
+            const subchapterContainer = document.getElementById('subchapter-container');
+            if (subchapterContainer) {
+                subchapterContainer.appendChild(paginationContainer);
+            }
+        }
+        
+        // 清空分页容器
+        paginationContainer.innerHTML = '';
+        
+        // 如果只有一页，不显示分页控件
+        if (subchapterPagination.totalPages <= 1) {
+            paginationContainer.style.display = 'none';
+            return;
+        }
+        
+        paginationContainer.style.display = 'flex';
+        
+        // 创建上一页按钮
+        const prevButton = document.createElement('button');
+        prevButton.className = 'pagination-btn prev-btn';
+        prevButton.innerHTML = '« 上一页';
+        prevButton.disabled = subchapterPagination.currentPage === 1;
+        prevButton.addEventListener('click', function() {
+            if (subchapterPagination.prevPage()) {
+                renderSubchapters(currentCategoryId);
+            }
+        });
+        
+        // 创建页码指示器
+        const pageIndicator = document.createElement('div');
+        pageIndicator.className = 'pagination-indicator';
+        pageIndicator.textContent = `${subchapterPagination.currentPage} / ${subchapterPagination.totalPages}`;
+        
+        // 创建下一页按钮
+        const nextButton = document.createElement('button');
+        nextButton.className = 'pagination-btn next-btn';
+        nextButton.innerHTML = '下一页 »';
+        nextButton.disabled = subchapterPagination.currentPage === subchapterPagination.totalPages;
+        nextButton.addEventListener('click', function() {
+            if (subchapterPagination.nextPage()) {
+                renderSubchapters(currentCategoryId);
+            }
+        });
+        
+        // 添加到分页容器
+        paginationContainer.appendChild(prevButton);
+        paginationContainer.appendChild(pageIndicator);
+        paginationContainer.appendChild(nextButton);
     }
 
     // 设置事件监听器
@@ -574,6 +904,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 加载章节数据
                 loadSubchaptersForCategory(categoryId);
             } else {
+                // 重置章节分页到第一页
+                subchapterPagination.currentPage = 1;
+                // 更新分页状态
+                subchapterPagination.update(subchapters[categoryId].length);
                 // 直接渲染子章节
                 renderSubchapters(categoryId);
             }
@@ -857,9 +1191,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 开始游戏
     function startGame(chapterId) {
-        console.log(`开始游戏：章节 ${chapterId}`);
-        // 跳转到游戏页面
-        window.location.href = `game_3.html?chapter=${chapterId}`;
+        // 查找章节对象
+        const chapter = findChapterById(chapterId);
+        
+        if (!chapter) {
+            console.error(`找不到章节: ${chapterId}`);
+            return;
+        }
+        
+        console.log(`开始游戏：级别=${chapter.categoryName}(${chapter.categoryId}), 章节=${chapter.title}(${chapter.originalId})`);
+        
+        // 跳转到游戏页面，传递原始章节ID和级别ID
+        window.location.href = `game_3.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&categoryName=${encodeURIComponent(chapter.categoryName)}&chapterName=${encodeURIComponent(chapter.title)}`;
     }
 
     // 复习单词

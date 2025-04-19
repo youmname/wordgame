@@ -1127,6 +1127,71 @@ app.get('/api/chapters/:chapterId/words', (req, res) => {
     });
 });
 
+// 获取特定章节的所有单词 - 不分页版本
+app.get('/api/chapters/:chapterId/allwords', (req, res) => {
+    // 从URL参数中获取章节ID
+    const chapterId = req.params.chapterId;
+    
+    // 步骤1: 查询总记录数 - 获取该章节的单词总数
+    db.get('SELECT COUNT(*) as total FROM Words WHERE chapter_id = ?', 
+        [chapterId], 
+        (err, countResult) => {
+            // 处理错误情况
+            if (err) {
+                console.error('获取章节单词数量失败:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: '获取章节单词失败: ' + err.message
+                });
+            }
+            
+            // 获取总数，如果没有结果则默认为0
+            const total = countResult ? countResult.total : 0;
+            console.log(`章节 ${chapterId} 有 ${total} 个单词`);
+            
+            // 步骤2: 查询单词数据 - 获取该章节的所有单词详情
+            // 注意：我们移除了LIMIT和OFFSET，获取所有单词
+            const query = `
+                SELECT 
+                    w.id, 
+                    w.word, 
+                    w.meaning, 
+                    w.phonetic,
+                    w.phrase,
+                    w.example,
+                    w.morphology,
+                    w.note,
+                    w.level_id,
+                    w.chapter_id,
+                    c.name AS chapter_name
+                FROM Words w
+                LEFT JOIN Chapters c ON w.chapter_id = c.id
+                WHERE w.chapter_id = ?
+                ORDER BY w.id
+            `;
+            
+            // 执行查询，只传入chapterId参数
+            db.all(query, [chapterId], (err, words) => {
+                // 处理错误情况
+                if (err) {
+                    console.error('获取章节单词失败:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: '获取章节单词失败: ' + err.message
+                    });
+                }
+                
+                // 成功响应 - 返回单词数据和总数
+                res.json({
+                    success: true,
+                    words: words || [],
+                    total: total
+                    // 移除了page字段，因为不再分页
+                });
+            });
+        });
+});
+
 // 删除章节
 app.delete('/api/chapters/:chapterId', authenticateToken, (req, res) => {
     const chapterId = req.params.chapterId;

@@ -1,0 +1,104 @@
+/* 分页控件样式 */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 30px;
+    box-shadow: var(--shadow-soft);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    background: linear-gradient(145deg, 
+        hsla(214, 32%, 92%, 0.9) 0%, 
+        hsla(214, 32%, 82%, 0.7) 100%);
+    border: none;
+    border-radius: 20px;
+    color: var(--dark-text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s var(--transition-bounce);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(145deg, 
+        hsla(214, 32%, 95%, 0.9) 0%, 
+        hsla(214, 32%, 85%, 0.7) 100%);
+}
+
+.pagination-btn:active:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 15px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    min-width: 80px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 5px 10px;
+    border-radius: 15px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .pagination-container {
+        max-width: 320px;
+        padding: 8px;
+    }
+    
+    .pagination-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .pagination-indicator {
+        margin: 0 10px;
+        font-size: 0.9rem;
+        min-width: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination-container {
+        max-width: 280px;
+        padding: 6px;
+    }
+    
+    .pagination-btn {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .pagination-indicator {
+        margin: 0 8px;
+        font-size: 0.8rem;
+        min-width: 50px;
+    }
+}

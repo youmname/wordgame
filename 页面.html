@@ -267,7 +267,7 @@
                     sessionStorage.removeItem('loginRedirecting');
 
                     // 使用 replace 跳转，避免浏览器历史记录问题
-                    const targetUrl = data.user.userType === 'admin' ? 'admin.html' : 'index.html';
+                    const targetUrl = data.user.userType === 'admin' ? 'admin.html' : 'shouye.html';
                     console.log('准备跳转到:', targetUrl);
                     window.location.replace(targetUrl);
 
@@ -375,7 +375,7 @@
             window.location.href = '页面.html'; // 跳转到登录页
         }
         // 你需要确保有一个按钮或其他元素调用这个logout函数，例如：
-        // <button onclick="logout()">退出登录</button> (这个按钮应该在index.html或admin.html中)
+        // <button onclick="logout()">退出登录</button> (这个按钮应该在shouye.html或admin.html中)
 
         // --- 体验一下处理函数 ---
         async function handleTryNow() {
@@ -419,7 +419,7 @@
                     
                     // 跳转到游戏页面
                     console.log('准备跳转到游戏页面');
-                    window.location.replace('index.html');
+                    window.location.replace('shouye.html');
                 } else {
                     // 登录失败
                     console.error('体验模式登录失败:', data.message);

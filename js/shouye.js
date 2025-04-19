@@ -759,7 +759,7 @@ function startChapter(chapterId) {
     
     // 延迟跳转，等待动画完成
     setTimeout(() => {
-        window.location.href = `index.html?chapter=${chapterId}`;
+        window.location.href = `shouye.html?chapter=${chapterId}`;
     }, 800);
 }
 
@@ -787,7 +787,7 @@ function startRandomChallenge() {
     // 延迟跳转
     setTimeout(() => {
         
-        window.location.href = 'index.html?mode=random';
+        window.location.href = 'shouye.html?mode=random';
     }, 800);
 }
 

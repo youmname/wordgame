@@ -318,7 +318,7 @@
     /**
      * 数据加载模块 - 负责获取和处理游戏数据
      */
-    const WordDataLoader = {
+    const game_2WordDataLoader = {
         // 已加载的词库
         loadedWordbanks: {},
         
@@ -470,7 +470,7 @@
     };
     
     // 输出到全局对象
-    window.WordDataLoader = WordDataLoader;
+    window.game_2WordDataLoader = game_2WordDataLoader;
     
     /**
      * 声音管理模块 - 处理游戏所有音效
@@ -2377,11 +2377,53 @@
          */
         async loadWordData() {
             try {
-                if (window.WordDataLoader) {
-                    // 使用数据加载模块获取单词
-                    this.wordPairs = await window.WordDataLoader.getCurrentWordPairs();
+                console.log('开始加载单词数据...');
+                console.log('WordDataLoader存在:', typeof window.WordDataLoader !== 'undefined');
+                
+                // 解析URL参数
+                const urlParams = new URLSearchParams(window.location.search);
+                const chapterId = urlParams.get('chapter'); // 获取章节ID
+                const categoryId = urlParams.get('category'); // 获取级别ID
+                const categoryName = urlParams.get('categoryName');
+                const chapterName = urlParams.get('chapterName');
+                
+                console.log('章节信息:', {
+                    chapterId,
+                    categoryId,
+                    categoryName,
+                    chapterName
+                });
+                
+                if (typeof window.WordDataLoader !== 'undefined' && chapterId) {
+                    console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
+                    
+                    try {
+                        // 使用数据加载模块获取单词 - 使用新方法获取所有单词
+                        const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
+                        console.log(`成功获取章节${chapterId}的单词数据:`, words);
+                        
+                        if (words && words.length > 0) {
+                            this.wordPairs = words;
+                            console.log(`获取到${words.length}个单词对`);
+                            
+                            // 打印单词示例
+                            if (words.length > 0) {
+                                console.log('单词示例:');
+                                for (let i = 0; i < Math.min(3, words.length); i++) {
+                                    console.log(`- ${words[i].word || '单词'}: ${words[i].definition || words[i].meaning || '含义'}`);
+                                }
+                            }
+                        } else {
+                            console.warn('获取到的单词数据为空，使用备用数据');
+                            this.wordPairs = WordConfig.SAMPLE_WORDS;
+                        }
+                    } catch (error) {
+                        console.error('调用WordDataLoader时出错:', error);
+                        this.wordPairs = WordConfig.SAMPLE_WORDS;
+                    }
                 } else {
-                    // 如果模块不存在，使用示例数据
+                    // 如果模块不存在或没有章节ID，使用示例数据
+                    console.warn('WordDataLoader不可用或未提供章节ID，使用备用数据');
                     this.wordPairs = WordConfig.SAMPLE_WORDS;
                 }
                 
@@ -2909,7 +2951,7 @@
         backToMenu() {
             // 在实际游戏中，这里会返回到主菜单页面
             // 简单示例：重定向到首页
-            window.location.href = 'index.html';
+            window.location.href = 'level.html';
         },
         
         /**
