@@ -131,8 +131,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    let gameAction = new URLSearchParams(window.location.search).get('action') || 'jiyiMode'; // 默认记忆模式
-    console.log('当前游戏模式:', gameAction);
+    let gameMode = new URLSearchParams(window.location.search).get('action') || 'jiyiMode'; // 默认记忆模式
+    console.log('当前游戏模式:', gameMode);
 
     // 初始化函数
     function init() {
@@ -1199,16 +1199,16 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error(`找不到章节: ${chapterId}`);
             return;
         }
-        
-        console.log(`开始游戏：章节=${chapter.title}, 模式=${gameAction}`);
+        let playMode = window.getPlayMode ? window.getPlayMode() : 'normal'; // 使用全局函数，并提供默认值
+        console.log(`开始游戏：章节=${chapter.title}, 模式=${gameMode}, chapterId=${chapterId},playMode=${playMode}`);
         
         // 根据data-action跳转
-        if (gameAction === 'lianxianMode') {
-            window.location.href = `game_1_lianxian.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}`;
-        } else if (gameAction === 'pipeiMode') {
-            window.location.href = `game_2_pipei.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}`;
-        } else if (gameAction === 'jiyiMode') {
-            window.location.href = `game_3_jiyi.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}`;
+        if (gameMode === 'lianxianMode') {
+            window.location.href = `game_1_lianxian.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}&mode=${playMode}`;
+        } else if (gameMode === 'pipeiMode') {
+            window.location.href = `game_2_pipei.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}&mode=${playMode}`;
+        } else if (gameMode === 'jiyiMode') {
+            window.location.href = `game_3_jiyi.html?chapter=${chapter.originalId}&category=${chapter.categoryId}&chapterName=${encodeURIComponent(chapter.title)}&mode=${playMode}`;
         }
     }
 

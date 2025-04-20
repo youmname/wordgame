@@ -165,12 +165,6 @@
                     <button class="nav-btn" data-action="showCalendar">🗓️ 学习日历</button>
                     <button class="nav-btn" data-action="showBadges">🏆 成就墙</button>
                 </div>
-                <div class="nav-section">
-                    <h3>挑战模式</h3>
-                    <button class="nav-btn" data-action="lianxianMode">⚡ 连线模式</button>
-                    <button class="nav-btn" data-action="pipeiMode">🧩 匹配模式</button>
-                    <button class="nav-btn" data-action="jiyiMode">🎮 记忆模式</button>
-                </div>
             </div>
             <div class="user-profile">
                 <div class="theme-switch">
@@ -204,42 +198,28 @@
             </div>
             
             <div class="features-grid">
-                <div class="func-card" data-type="primary" onclick="window.location.href='level.html'">
+                <div class="func-card" data-type="primary">
                     🚀 开始闯关  
                     <div class="sticker">Level 3</div>
                     <img src="assets/decorations/paper-clip.png" class="deco-clip">
                 </div>
                 
-                <div class="func-card" data-type="secondary" onclick="startRandomChallenge()">
+                <div class="func-card" data-type="secondary">
                     🎲 随机挑战  
                     <div class="sticker">Hot!</div>
                 </div>
                 
-                <div class="func-card" data-type="secondary" onclick="window.location.href='diy.html'">
+                <div class="func-card" data-type="secondary">
                     📚 导入单词  
                     <img src="assets/decorations/paper-clip-blue.png" class="deco-clip">
                 </div>
                 
-                <div class="func-card" data-type="secondary" onclick="startTodayChallenge()">
+                <div class="func-card" data-type="secondary">
                     🌟 今日推荐
                     <div class="sparkle-effect"></div>
                 </div>
             </div>
 
-            <!-- <div class="category-section">
-                <div class="category-title">
-                    <img src="assets/decorations/highlight.png" class="highlight">
-                    <h3>词汇分类</h3>
-                </div>
-                <div class="category-buttons">
-                    <button class="category-btn active" data-category="所有" data-level-id="1">所有词汇</button>
-                    <button class="category-btn" data-category="考研" data-level-id="2">考研词汇</button>
-                    <button class="category-btn" data-category="高考" data-level-id="3">高考词汇</button>
-                    <button class="category-btn" data-category="雅思" data-level-id="4">雅思词汇</button>
-                    <button class="category-btn" data-category="初中" data-level-id="5">初中词汇</button>
-                    <button class="category-btn" data-category="六级" data-level-id="6">六级词汇</button>
-                </div>
-            </div> -->
             
             <div class="stats-container">
                 <div class="data-module">
@@ -374,60 +354,31 @@
             </div>
         </div>
     </div>
-    
+    <script type="module" src="js/utils.js"></script>
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/sound-manager.js"></script>
+    <script type="module" src="js/store.js"></script>
+    <script type="module" src="js/data-loader.js"></script>
     <script type="module" src="js/shouye.js"></script>
     <script>
-        let selectedGameMode = 'jiyiMode'; // 默认为记忆模式
+        // 使用全局gameMode函数替代局部变量
         let actionSource = ''; // 记录用户点击的来源按钮
         
         // 页面加载完成后初始化所有事件
-        document.addEventListener('DOMContentLoaded', function() {
-            // 游戏模式按钮点击事件（侧边栏）
-            document.querySelectorAll('.nav-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    // 移除其他按钮的active类
-                    document.querySelectorAll('.nav-btn').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    
-                    // 给当前按钮添加active类
-                    this.classList.add('active');
-                    
-                    // 保存选择的游戏模式
-                    selectedGameMode = this.getAttribute('data-action');
-                    console.log('已选择游戏模式:', selectedGameMode);
-                    
-                    // 显示一个小提示
-                    const toast = document.createElement('div');
-                    toast.className = 'toast-message';
-                    toast.textContent = `已选择: ${this.textContent.trim()}`;
-                    toast.style.position = 'fixed';
-                    toast.style.bottom = '20px';
-                    toast.style.left = '50%';
-                    toast.style.transform = 'translateX(-50%)';
-                    toast.style.padding = '10px 20px';
-                    toast.style.backgroundColor = 'rgba(0,0,0,0.7)';
-                    toast.style.color = 'white';
-                    toast.style.borderRadius = '5px';
-                    toast.style.zIndex = '9999';
-                    
-                    document.body.appendChild(toast);
-                    setTimeout(() => {
-                        toast.style.opacity = '0';
-                        toast.style.transition = 'opacity 0.5s';
-                        setTimeout(() => document.body.removeChild(toast), 500);
-                    }, 1500);
-                });
-            });
-            
+        document.addEventListener('DOMContentLoaded', function() {  
             // 显示游戏模式选择模态框
             function showModeSelectionModal(source) {
                 actionSource = source; // 记录来源按钮
+                console.log('showModeSelectionModal函数被调用，source的值为:', source);
                 document.getElementById('mode-selection-modal').style.display = 'block';
                 
+                // 获取当前游戏模式
+                const currentMode = window.getGameMode ? window.getGameMode() : 'pipeiMode';
+                console.log('~~~~~~~~~window.getGameMode的值为:', window.getGameMode);
+                console.log('showModeSelectionModal函数被调用，currentMode的值为:', currentMode);
                 // 高亮当前选中的模式
                 document.querySelectorAll('.mode-card').forEach(card => {
-                    if (card.getAttribute('data-mode') === selectedGameMode) {
+                    if (card.getAttribute('data-mode') === currentMode) {
                         card.style.transform = 'translateY(-5px)';
                         card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
                         // 添加微光效果
@@ -451,71 +402,40 @@
             // 游戏模式卡片点击事件
             document.querySelectorAll('.mode-card').forEach(card => {
                 card.addEventListener('click', function() {
-                    selectedGameMode = this.getAttribute('data-mode');
-                    console.log('已选择游戏模式:', selectedGameMode);
+                    const selectedMode = this.getAttribute('data-mode');
                     
-                    // 高亮侧边栏对应的按钮
-                    document.querySelectorAll('.nav-btn').forEach(btn => {
-                        if (btn.getAttribute('data-action') === selectedGameMode) {
-                            btn.classList.add('active');
-                        } else {
-                            btn.classList.remove('active');
-                        }
-                    });
-                    
-                    // 根据来源按钮跳转到不同页面
-                    if (actionSource === 'level') {
-                        // 开始闯关 - 跳转到级别选择页面
-                        window.location.href = `level.html?action=${selectedGameMode}`;
-                    } else if (actionSource === 'random') {
-                        // 随机挑战 - 直接跳转到游戏页面
-                        let targetUrl;
-                        
-                        // 设置WordDataLoader为随机模式
-                        if (window.WordDataLoader) {
-                            try {
-                                window.WordDataLoader.setPlayMode('random', { 
-                                    levelId: 'all',   // 所有级别
-                                    wordCount: 20
-                                });
-                                console.log('成功设置随机挑战模式');
-                            } catch (error) {
-                                console.error('设置随机挑战模式失败:', error);
-                            }
-                        }
-                        
-                        // 根据选择的游戏模式确定跳转目标
-                        switch(selectedGameMode) {
-                            case 'lianxianMode':
-                                targetUrl = 'game_1_lianxian.html?chapter=random&mode=random';
-                                break;
-                            case 'pipeiMode':
-                                targetUrl = 'game_2_pipei.html?chapter=random&mode=random';
-                                break;
-                            case 'jiyiMode':
-                                targetUrl = 'game_3_jiyi.html?chapter=random&mode=random';
-                                break;
-                            default:
-                                targetUrl = 'game_3_jiyi.html?chapter=random&mode=random';
-                                break;
-                        }
-                        
-                        window.location.href = targetUrl;
+                    // 使用全局函数保存游戏模式
+                    if (window.saveGameMode) {
+                        window.saveGameMode(selectedMode);
                     }
                     
+                    console.log('已选择游戏模式:', selectedMode);
+                    // 根据来源按钮跳转到不同页面
+                    if (actionSource === 'normal') {
+                        // 开始闯关 - 跳转到级别选择页面
+                        window.location.href = `level.html?action=${selectedMode}`;
+                    } else if (actionSource === 'random') {
+                        // 随机挑战 - 启动随机挑战
+                        if (typeof window.startRandomChallenge === 'function') {
+                            console.log('随机挑战在首页确实已经判断成功了，下一步跳转到了startRandomChallenge');
+                            window.startRandomChallenge();
+                        }
+                    }
                     hideModeSelectionModal();
                 });
                 
                 // 添加悬停效果
                 card.addEventListener('mouseover', function() {
-                    if (this.getAttribute('data-mode') !== selectedGameMode) {
+                    const currentMode = window.getGameMode ? window.getGameMode() : 'jiyiMode';
+                    if (this.getAttribute('data-mode') !== currentMode) {
                         this.style.transform = 'translateY(-3px)';
                         this.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
                     }
                 });
                 
                 card.addEventListener('mouseout', function() {
-                    if (this.getAttribute('data-mode') !== selectedGameMode) {
+                    const currentMode = window.getGameMode ? window.getGameMode() : 'jiyiMode';
+                    if (this.getAttribute('data-mode') !== currentMode) {
                         this.style.transform = 'none';
                         this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
                     }
@@ -547,7 +467,11 @@
             const startLevelCard = document.querySelector('.func-card[data-type="primary"]');
             if (startLevelCard) {
                 startLevelCard.onclick = function() {
-                    showModeSelectionModal('level');
+                    // 设置内容模式为normal(章节学习)
+                    if (window.setPlayMode) {
+                        window.setPlayMode('normal');
+                    }
+                    showModeSelectionModal('normal');
                 };
             }
             
@@ -555,8 +479,43 @@
             const randomChallengeCard = document.querySelector('.func-card[data-type="secondary"]:nth-child(2)');
             if (randomChallengeCard) {
                 randomChallengeCard.onclick = function() {
+                    // 设置内容模式为random(随机挑战)
+                    if (window.setPlayMode) {
+                        window.setPlayMode('random');
+                    }
+                    console.log('随机挑战在首页确实已经判断成功了，下一步跳转到了showModeSelectionModal');
                     // 显示模态框，传入random作为来源
                     showModeSelectionModal('random');
+                };
+            }
+
+            // 修改"导入单词"按钮点击事件
+            const importWordCard = document.querySelector('.func-card[data-type="secondary"]:nth-child(3)');
+            if (importWordCard) {
+                importWordCard.onclick = function() {
+                    // 设置内容模式为imported(用户导入)
+                    if (window.setPlayMode) {
+                        window.setPlayMode('imported');
+                    }
+                    // 原有的onclick行为：window.location.href='diy.html'
+                    window.location.href = 'diy.html';
+                };
+            }
+
+            // 修改"今日推荐"按钮点击事件
+            const recommendCard = document.querySelector('.func-card[data-type="secondary"]:nth-child(4)');
+            if (recommendCard) {
+                recommendCard.onclick = function() {
+                    // 设置内容模式为recommended(今日推荐)
+                    if (window.setPlayMode) {
+                        window.setPlayMode('recommended');
+                    }
+                    // 原有的onclick行为：startTodayChallenge()
+                    if (typeof window.showTodayRecommend === 'function') {
+                        window.showTodayRecommend();
+                    } else {
+                        startTodayChallenge();
+                    }
                 };
             }
         });

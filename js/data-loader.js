@@ -16,18 +16,6 @@ window.WordDataLoader = {
         WORDS: '/api/words'
     },
     
-    // 游戏类型 - 默认为normal(闯关模式)
-    // 可选值: normal(闯关), random(随机), imported(导入), daily(今日推荐)
-    currentPlayMode: 'normal',
-    
-    // 当前游戏参数
-    playParams: {
-        levelId: null,
-        chapterId: null,
-        wordCount: 20,
-        sourceId: null
-    },
-    
     /**
      * 获取所有词汇级别
      * @returns {Promise<Array>} 词汇级别数组
@@ -136,33 +124,34 @@ window.WordDataLoader = {
      */
     getAllWordsByChapter: async function(chapterId) {
         try {
-            // 特殊处理：如果chapter是random，直接调用随机单词获取逻辑
-            if (chapterId === 'random') {
-                console.log('WordDataLoader: 检测到随机章节ID，将调用随机单词获取逻辑');
-                return await this.getRandomWordsFromLevel('all', 20);
+            // 获取当前游戏类型 - 从store获取
+            let playMode = 'normal';
+            if (window.store && typeof window.store.getState === 'function') {
+                playMode = window.store.getState().game.playMode || 'normal';
             }
-            
-            // 获取当前游戏类型
-            const playMode = this.getPlayMode();
+            if(chapterId === 'random'){
+                console.log('~~~~~~~~~chapterId的值为:~~~~~~~~~~~~~ ', chapterId);
+                console.log("~~~~~~~~~playMode的值为:~~~~~~~~~~~~~",playMode);
+                return await this.getRandomWordsFromLevel(chapterId, 20);
+            }
             console.log(`WordDataLoader: 当前游戏类型 [${playMode}]`);
             
-            // 根据游戏类型返回不同的单词数据
+            // 根据游戏类型返回不同的单词数据，强制使用对应的数据源
             switch (playMode) {
-                case 'random':
-                    // 随机挑战模式
-                    const levelId = this.playParams.levelId || 'all';
-                    const wordCount = this.playParams.wordCount || 20;
+                case 'random':                  
+                    // 随机挑战模式 - 强制使用随机数据源
+                    const levelId = window.store.getState().game.currentLevel || 'all';
+                    const wordCount = 20;
                     console.log(`WordDataLoader: 随机挑战模式，从级别[${levelId}]获取[${wordCount}]个单词`);
                     return await this.getRandomWordsFromLevel(levelId, wordCount);
                     
                 case 'imported':
-                    // 导入单词模式
-                    const sourceId = this.playParams.sourceId || '';
-                    console.log(`WordDataLoader: 导入单词模式，来源ID[${sourceId}]`);
-                    return await this.getImportedWords(sourceId);
+                    // 导入单词模式 - 强制使用本地导入数据
+                    console.log(`WordDataLoader: 导入单词模式`);
+                    return await this.getImportedWords();
                     
                 case 'daily':
-                    // 今日推荐模式
+                    // 今日推荐模式 - 强制使用推荐数据
                     console.log('WordDataLoader: 今日推荐模式');
                     return await this.getDailyRecommendedWords();
                     
@@ -173,7 +162,7 @@ window.WordDataLoader = {
                         return [];
                     }
                     
-                    console.log(`WordDataLoader: 闯关模式，获取章节[${chapterId}]的单词`);
+                    console.log(`WordDataLoader: 闯关(章节)模式，获取章节[${chapterId}]的单词`);
                     const url = `${this.API_BASE_URL}${this.API_ENDPOINTS.CHAPTERS}/${chapterId}/allwords`;
                     console.log('请求URL:', url);
                     
@@ -209,54 +198,13 @@ window.WordDataLoader = {
             }
         } catch (error) {
             console.error(`WordDataLoader.getAllWordsByChapter 错误:`, error);
-            // 返回空数组，让调用者处理
+            // 返回空数组，不再尝试其他数据源
             return [];
         }
     },
 
-    // 根据游戏类型获取单词数据
-    getWordsByPlayMode: async function(mode, params = {}) {
-        console.log(`WordDataLoader: 根据游戏类型[${mode}]获取单词，参数:`, params);
-        
-        try {
-            let words = [];
-            
-            switch(mode) {
-                case 'normal': // 开始闯关模式
-                    if (!params.chapterId) {
-                        throw new Error('开始闯关模式需要提供章节ID');
-                    }
-                    words = await this.getAllWordsByChapter(params.chapterId);
-                    break;
-                    
-                case 'random': // 随机挑战模式
-                    if (!params.levelId) {
-                        throw new Error('随机挑战模式需要提供级别ID');
-                    }
-                    words = await this.getRandomWordsFromLevel(params.levelId, params.wordCount || 20);
-                    break;
-                    
-                case 'imported': // 导入单词模式
-                    words = await this.getImportedWords(params.sourceId);
-                    break;
-                    
-                case 'daily': // 今日推荐模式
-                    words = await this.getDailyRecommendedWords();
-                    break;
-                    
-                default:
-                    throw new Error(`未知的游戏类型: ${mode}`);
-            }
-            
-            console.log(`游戏类型[${mode}]获取到${words.length}个单词`);
-            return words;
-        } catch (error) {
-            console.error(`WordDataLoader.getWordsByPlayMode错误:`, error);
-            return [];
-        }
-    },
-    
     // 从特定级别随机抽取单词
+    
     getRandomWordsFromLevel: async function(levelId, count = 20) {
         try {
             console.log(`WordDataLoader: 随机抽取${count}个单词，级别ID: ${levelId}`);
@@ -455,50 +403,114 @@ window.WordDataLoader = {
         }
     },
     
-    // 获取导入的单词
-    getImportedWords: async function(sourceId) {
+    /**
+     * 获取导入的单词
+     * @returns {Promise<Array>} 单词数组
+     */
+    getImportedWords: async function() {
         try {
-            console.log(`WordDataLoader: 获取导入的单词，来源ID: ${sourceId}`);
+            // 检查当前是否为imported模式
+            let playMode = this.getPlayMode();
+            if (window.store && typeof window.store.getState === 'function') {
+                playMode = window.store.getState().game.playMode;
+            }
             
-            // 如果有本地存储的导入单词数据，优先使用
-            const localImportedWords = this.getLocalImportedWords(sourceId);
+            if (playMode !== 'imported') {
+                console.log('当前不是导入模式，不使用本地导入数据');
+                return [];
+            }
+            
+            console.log(`WordDataLoader: 获取导入的单词`);
+            
+            // 首先检查全局变量是否有导入的单词数据
+            if (window.importedWordPairs && Array.isArray(window.importedWordPairs) && window.importedWordPairs.length > 0) {
+                console.log(`从全局变量获取到${window.importedWordPairs.length}个导入单词`);
+                return window.importedWordPairs;
+            }
+            
+            // 获取当前设置的数据源类型
+            const dataSourceType = localStorage.getItem('wordgame_data_source_type') || 'latest';
+            console.log(`当前数据源类型: ${dataSourceType}`);
+            
+            // 根据数据源类型获取单词
+            let localImportedWords;
+            
+            if (dataSourceType === 'excel') {
+                // 优先使用Excel导入的单词
+                localImportedWords = this.getLocalImportedWords('excel_import');
+                if (localImportedWords && localImportedWords.length > 0) {
+                    console.log(`从Excel导入获取到${localImportedWords.length}个单词`);
+                    return localImportedWords;
+                }
+            } 
+            else if (dataSourceType === 'input') {
+                // 优先使用手动输入的单词
+                localImportedWords = this.getLocalImportedWords('custom_input');
+                if (localImportedWords && localImportedWords.length > 0) {
+                    console.log(`从手动输入获取到${localImportedWords.length}个单词`);
+                    return localImportedWords;
+                }
+            }
+            else {
+                // 使用最新的导入单词，不管来源
+                localImportedWords = this.getLocalImportedWords('latest');
+                if (localImportedWords && localImportedWords.length > 0) {
+                    console.log(`从最新导入获取到${localImportedWords.length}个单词`);
+                    return localImportedWords;
+                }
+            }
+            
+            // 如果指定类型没有找到数据，尝试其他来源
+            
+            // 尝试Excel导入
+            if (dataSourceType !== 'excel') {
+                localImportedWords = this.getLocalImportedWords('excel_import');
+                if (localImportedWords && localImportedWords.length > 0) {
+                    console.log(`从Excel导入获取到${localImportedWords.length}个单词（备选）`);
+                    return localImportedWords;
+                }
+            }
+            
+            // 尝试手动输入
+            if (dataSourceType !== 'input') {
+                localImportedWords = this.getLocalImportedWords('custom_input');
+                if (localImportedWords && localImportedWords.length > 0) {
+                    console.log(`从手动输入获取到${localImportedWords.length}个单词（备选）`);
+                    return localImportedWords;
+                }
+            }
+            
+            // 如果还没找到数据，尝试latest
+            localImportedWords = this.getLocalImportedWords('latest');
             if (localImportedWords && localImportedWords.length > 0) {
-                console.log(`从本地存储获取到${localImportedWords.length}个导入单词`);
+                console.log(`从最新导入获取到${localImportedWords.length}个单词（备选）`);
                 return localImportedWords;
             }
             
-            // 否则从服务器获取
-            const url = `${this.API_BASE_URL}/api/imported/${sourceId || 'latest'}`;
-            console.log('导入单词请求URL:', url);
-            
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                throw new Error(`获取导入单词失败: ${response.status} ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message || '获取导入单词失败');
-            }
-            
-            // 标准化单词格式
-            const formattedWords = data.words.map(word => ({
-                word: word.word || '',
-                meaning: word.meaning || '',
-                id: word.id,
-                phonetic: word.phonetic || '',
-                phrase: word.phrase || '',
-                example: word.example || '',
-                note: word.note || ''
-            })).filter(pair => pair.word && pair.meaning);
-            
-            console.log(`获取到${formattedWords.length}个导入单词`);
-            return formattedWords;
+            // 如果没有找到任何导入单词，返回一些默认单词
+            console.warn('未找到导入的单词，使用默认单词');
+            return [
+                { word: "apple", meaning: "苹果", id: "default_1" },
+                { word: "banana", meaning: "香蕉", id: "default_2" },
+                { word: "orange", meaning: "橙子", id: "default_3" },
+                { word: "grape", meaning: "葡萄", id: "default_4" },
+                { word: "strawberry", meaning: "草莓", id: "default_5" },
+                { word: "computer", meaning: "电脑", id: "default_6" },
+                { word: "phone", meaning: "手机", id: "default_7" },
+                { word: "table", meaning: "桌子", id: "default_8" },
+                { word: "chair", meaning: "椅子", id: "default_9" },
+                { word: "book", meaning: "书", id: "default_10" }
+            ];
         } catch (error) {
             console.error(`WordDataLoader.getImportedWords错误:`, error);
-            return [];
+            // 发生错误时返回一些简单的单词
+            return [
+                { word: "hello", meaning: "你好", id: "error_1" },
+                { word: "world", meaning: "世界", id: "error_2" },
+                { word: "study", meaning: "学习", id: "error_3" },
+                { word: "word", meaning: "单词", id: "error_4" },
+                { word: "game", meaning: "游戏", id: "error_5" }
+            ];
         }
     },
     
@@ -529,6 +541,39 @@ window.WordDataLoader = {
                 return false;
             }
             
+            // 获取当前激活的卡片类型
+            const isUploadCardActive = document.querySelector('.upload-card.active') !== null;
+            const isInputCardActive = document.querySelector('.input-card.active') !== null;
+            
+            // 设置数据源类型
+            let dataSourceType = 'latest';
+            if (isUploadCardActive && sourceId !== 'custom_input') {
+                dataSourceType = 'excel';
+                // 同时保存到excel_import
+                const excelKey = 'imported_words_excel_import';
+                const excelData = {
+                    timestamp: Date.now(),
+                    words: words
+                };
+                localStorage.setItem(excelKey, JSON.stringify(excelData));
+                console.log(`已保存${words.length}个单词到Excel导入存储`);
+            } else if (isInputCardActive || sourceId === 'custom_input') {
+                dataSourceType = 'input';
+                // 同时保存到custom_input
+                const inputKey = 'imported_words_custom_input';
+                const inputData = {
+                    timestamp: Date.now(),
+                    words: words
+                };
+                localStorage.setItem(inputKey, JSON.stringify(inputData));
+                console.log(`已保存${words.length}个单词到手动输入存储`);
+            }
+            
+            // 保存数据源类型
+            localStorage.setItem('wordgame_data_source_type', dataSourceType);
+            console.log(`设置当前数据源类型: ${dataSourceType}`);
+            
+            // 保存到latest
             const key = sourceId ? `imported_words_${sourceId}` : 'imported_words_latest';
             const data = {
                 timestamp: Date.now(),
@@ -588,9 +633,6 @@ window.WordDataLoader = {
         
         console.log(`WordDataLoader: API基础URL设置为 ${this.API_BASE_URL}`);
         
-        // 恢复之前保存的游戏类型
-        this.getPlayMode();
-        
         // 设置首页功能卡片点击事件处理
         this.setupFunctionCardListeners();
         
@@ -617,8 +659,10 @@ window.WordDataLoader = {
                 const originalOnClick = startLevelCard.onclick;
                 startLevelCard.onclick = (e) => {
                     // 设置为普通闯关模式
-                    this.setPlayMode('normal');
-                    console.log('WordDataLoader: 已设置为普通闯关模式');
+                    if (window.store && typeof window.store.updatePlayMode === 'function') {
+                        window.store.updatePlayMode('normal');
+                        console.log('WordDataLoader: 已设置为普通闯关模式');
+                    }
                     
                     // 执行原始点击事件（如果有）
                     if (typeof originalOnClick === 'function') {
@@ -633,8 +677,10 @@ window.WordDataLoader = {
                 const originalOnClick = randomCard.onclick;
                 randomCard.onclick = (e) => {
                     // 设置为随机挑战模式
-                    this.setPlayMode('random', { wordCount: 20 });
-                    console.log('WordDataLoader: 已设置为随机挑战模式');
+                    if (window.store && typeof window.store.updatePlayMode === 'function') {
+                        window.store.updatePlayMode('random');
+                        console.log('WordDataLoader: 已设置为随机挑战模式');
+                    }
                     
                     // 执行原始点击事件（如果有）
                     if (typeof originalOnClick === 'function') {
@@ -649,8 +695,10 @@ window.WordDataLoader = {
                 const originalOnClick = importCard.onclick;
                 importCard.onclick = (e) => {
                     // 设置为导入单词模式
-                    this.setPlayMode('imported');
-                    console.log('WordDataLoader: 已设置为导入单词模式');
+                    if (window.store && typeof window.store.updatePlayMode === 'function') {
+                        window.store.updatePlayMode('imported');
+                        console.log('WordDataLoader: 已设置为导入单词模式');
+                    }
                     
                     // 执行原始点击事件（如果有）
                     if (typeof originalOnClick === 'function') {
@@ -665,8 +713,10 @@ window.WordDataLoader = {
                 const originalOnClick = dailyCard.onclick;
                 dailyCard.onclick = (e) => {
                     // 设置为今日推荐模式
-                    this.setPlayMode('daily');
-                    console.log('WordDataLoader: 已设置为今日推荐模式');
+                    if (window.store && typeof window.store.updatePlayMode === 'function') {
+                        window.store.updatePlayMode('daily');
+                        console.log('WordDataLoader: 已设置为今日推荐模式');
+                    }
                     
                     // 执行原始点击事件（如果有）
                     if (typeof originalOnClick === 'function') {
@@ -703,9 +753,67 @@ window.WordDataLoader = {
         }
     },
 
+    // 获取当前游戏类型
+    getPlayMode: function() {
+        // 优先从store获取
+        if (window.store && typeof window.store.getState === 'function') {
+            try {
+                const storePlayMode = window.store.getState().game.playMode;
+                if (storePlayMode) {
+                    // 同步到本地状态
+                    this.playMode = storePlayMode;
+                    console.log(`从store获取游戏模式: [${storePlayMode}]`);
+                    return storePlayMode;
+                }
+            } catch (error) {
+                console.warn('尝试从store获取游戏模式时出错:', error);
+            }
+        }
+        
+        // 回退到localStorage
+        if (!this.playMode || this.playMode === 'normal') {
+            // 尝试从两个可能的键名中获取
+            const savedMode = localStorage.getItem('PlayMode');
+            if (savedMode) {
+                this.playMode = savedMode;
+                
+                // 恢复参数
+                try {
+                    const savedParams = localStorage.getItem('playModeParams');
+                    if (savedParams) {
+                        this.playParams = JSON.parse(savedParams);
+                    }
+                } catch (error) {
+                    console.error('恢复游戏参数失败:', error);
+                }
+                
+                console.log(`从localStorage恢复游戏类型 [${this.playMode}], 参数:`, this.playParams);
+                
+                // 同步到store
+                this.syncToStore(this.playMode);
+            }
+        }
+        
+        return this.playMode || 'normal';
+    },
+
     // 设置游戏类型
     setPlayMode: function(mode, params = {}) {
-        this.currentPlayMode = mode || 'normal';
+        // 记录上一个模式
+        const previousMode = this.playMode;
+        
+        this.playMode = mode || 'normal';
+        
+        // 如果切换了模式，清除上一个模式的状态
+        if (previousMode !== this.playMode) {
+            console.log(`游戏模式从 [${previousMode}] 切换到 [${this.playMode}]`);
+            
+            // 如果从imported模式切换出来，清除内存数据
+            if (previousMode === 'imported') {
+                window.importedWordPairs = [];
+                console.log('已清除导入模式的内存数据');
+            }
+        }
         
         // 更新参数
         if (params.levelId) this.playParams.levelId = params.levelId;
@@ -714,36 +822,311 @@ window.WordDataLoader = {
         if (params.sourceId) this.playParams.sourceId = params.sourceId;
         
         // 保存到localStorage以便在页面跳转后恢复
-        localStorage.setItem('wordgame_mode', this.currentPlayMode);
-        localStorage.setItem('wordgame_params', JSON.stringify(this.playParams));
+        localStorage.setItem('PlayMode', this.playMode);
+        localStorage.setItem('playModeParams', JSON.stringify(this.playParams));
         
-        console.log(`WordDataLoader: 已设置游戏类型为 [${this.currentPlayMode}], 参数:`, this.playParams);
+        // 同步到store（更新store中的状态）
+        if(window.store && typeof window.store.updatePlayMode === 'function'){
+            window.store.updatePlayMode(mode);
+        }
+        //保存到localStorage
+        localStorage.setItem('PlayMode', this.playMode);
+        
+        console.log(`WordDataLoader: 已设置游戏类型为 [${this.playMode}], 参数:`, this.playParams);
         return this;
     },
     
-    // 获取当前游戏类型
-    getPlayMode: function() {
-        // 尝试从localStorage恢复模式设置
-        if (!this.currentPlayMode || this.currentPlayMode === 'normal') {
-            const savedMode = localStorage.getItem('wordgame_mode');
-            if (savedMode) {
-                this.currentPlayMode = savedMode;
-                
-                // 恢复参数
-                try {
-                    const savedParams = localStorage.getItem('wordgame_params');
-                    if (savedParams) {
-                        this.playParams = JSON.parse(savedParams);
-                    }
-                } catch (error) {
-                    console.error('恢复游戏参数失败:', error);
-                }
-                
-                console.log(`WordDataLoader: 已恢复游戏类型 [${this.currentPlayMode}], 参数:`, this.playParams);
-            }
+    // 同步到store的辅助方法
+    syncToStore: function(mode) {
+        // 同步到store
+        if (window.store && typeof window.store.updatePlayMode === 'function') {
+            
+        }
+    },
+
+    // Excel数据存储
+    excelData: {},
+    
+    /**
+     * 处理Excel文件上传
+     * @param {File} file - 上传的Excel文件
+     * @returns {Promise<Array>} 处理后的单词数组
+     */
+    handleExcelUpload: async function(file) {
+        if (!file) {
+            console.error('WordDataLoader.handleExcelUpload: 未提供文件');
+            return [];
         }
         
-        return this.currentPlayMode;
+        return new Promise((resolve, reject) => {
+            try {
+                console.log('WordDataLoader: 开始处理Excel文件', file.name);
+                
+                // 检查是否加载了XLSX库
+                if (typeof XLSX === 'undefined') {
+                    console.warn('XLSX库未加载，尝试动态加载');
+                    
+                    // 如果XLSX未定义，动态加载
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+                    script.onload = () => {
+                        console.log('XLSX库加载成功，重新处理Excel');
+                        this.processExcelFile(file).then(resolve).catch(reject);
+                    };
+                    script.onerror = () => {
+                        const error = new Error('无法加载XLSX库');
+                        console.error(error);
+                        reject(error);
+                    };
+                    document.head.appendChild(script);
+                    return;
+                }
+                
+                this.processExcelFile(file).then(resolve).catch(reject);
+            } catch (error) {
+                console.error('Excel处理错误:', error);
+                reject(error);
+            }
+        });
+    },
+    
+    /**
+     * 处理Excel文件
+     * @private
+     */
+    processExcelFile: async function(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array',
+                        cellDates: true,
+                        cellNF: true,
+                        cellText: true
+                    });
+                    
+                    console.log("Excel文件包含以下工作表:", workbook.SheetNames);
+                    
+                    // 清空现有数据
+                    this.excelData = {};
+                    
+                    // 所有有效单词列表
+                    let allWords = [];
+                    
+                    // 处理每个工作表
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        
+                        console.log(`工作表 ${sheetName} 数据行数: ${json.length}`);
+                        
+                        if (json.length === 0) {
+                            console.warn(`工作表 ${sheetName} 没有数据，跳过`);
+                            return;
+                        }
+                        
+                        // 检查第一行数据的格式
+                        const firstRow = json[0];
+                        console.log("第一行数据:", firstRow);
+                        
+                        // 找出表头列名
+                        let wordColumnName = null;
+                        let defColumnName = null;
+    
+                        // 先尝试常见名称
+                        const wordKeywords = ['单词', 'word', '词汇', 'term', 'vocabulary'];
+                        const defKeywords = ['定义', 'definition', 'def', '释义', '解释', '中文', 'meaning', '翻译', 'translation'];
+    
+                        // 尝试查找匹配的列名
+                        for (const key of Object.keys(firstRow)) {
+                            const keyLower = key.toLowerCase();
+                            
+                            // 检查是否匹配任何单词关键词
+                            if (!wordColumnName && wordKeywords.some(keyword => keyLower.includes(keyword))) {
+                                wordColumnName = key;
+                            }
+                            
+                            // 检查是否匹配任何定义关键词
+                            if (!defColumnName && defKeywords.some(keyword => keyLower.includes(keyword))) {
+                                defColumnName = key;
+                            }
+                        }
+    
+                        // 如果没找到匹配，尝试使用第一列和第二列
+                        if (!wordColumnName && !defColumnName && Object.keys(firstRow).length >= 2) {
+                            console.log("未找到匹配的列名，尝试使用前两列");
+                            const keys = Object.keys(firstRow);
+                            wordColumnName = keys[0];
+                            defColumnName = keys[1];
+                        }
+    
+                        console.log(`选择的单词列: ${wordColumnName}, 定义列: ${defColumnName}`);
+                        
+                        if (!wordColumnName || !defColumnName) {
+                            console.error(`工作表 ${sheetName} 缺少单词或定义列`);
+                            return;
+                        }
+                        
+                        // 提取单词和定义
+                        const wordList = [];
+                        json.forEach((row, index) => {
+                            const word = (row[wordColumnName] || '').toString().trim();
+                            let meaning = (row[defColumnName] || '').toString().trim();
+                            
+                            // 处理HTML标签
+                            meaning = meaning.replace(/<[^>]*>/g, ' ');
+                            
+                            // 添加调试信息
+                            if (index < 5) { // 只打印前5行作为示例
+                                console.log(`行${index + 1}: 单词="${word}", 定义="${meaning}"`);
+                            }
+                            
+                            // 确保单词和定义非空
+                            if (word && meaning) {
+                                // 使用与data-loader.js相同的属性名
+                                wordList.push({
+                                    word: word,
+                                    meaning: meaning,
+                                    id: `excel_${sheetName}_${index}`,
+                                    phonetic: row.phonetic || '',
+                                    example: row.example || ''
+                                });
+                            } else {
+                                console.log(`跳过行${index + 1}: 单词或定义为空`);
+                            }
+                        });
+                        
+                        if (wordList.length > 0) {
+                            console.log(`工作表${sheetName}提取到${wordList.length}个有效单词`);
+                            this.excelData[sheetName] = wordList;
+                            // 添加到总列表
+                            allWords = allWords.concat(wordList);
+                        } else {
+                            console.warn(`工作表${sheetName}没有有效单词`);
+                        }
+                    });
+                    
+                    // 检查是否成功解析了数据
+                    if (allWords.length === 0) {
+                        throw new Error("未能从Excel中提取有效数据，请检查文件格式");
+                    }
+                    
+                    // 保存到本地存储
+                    this.setLocalImportedWords(allWords, 'excel_import');
+                    
+                    // 设置为导入模式
+                    if (window.store && typeof window.store.updatePlayMode === 'function') {
+                        window.store.updatePlayMode('imported');
+                        console.log('已更新store为导入模式');
+                    }
+                    
+                    console.log(`Excel处理完成，共提取${allWords.length}个单词`);
+                    resolve(allWords);
+                    
+                } catch (err) {
+                    console.error("Excel解析错误:", err);
+                    reject(err);
+                }
+            };
+            
+            reader.onerror = () => {
+                const error = new Error("文件读取错误");
+                console.error(error);
+                reject(error);
+            };
+            
+            // 读取文件
+            reader.readAsArrayBuffer(file);
+        });
+    },
+    
+    /**
+     * 处理自定义输入的单词
+     * @param {string} inputText - 用户输入的文本
+     * @returns {Array} 处理后的单词对象数组
+     */
+    processCustomInput: function(inputText) {
+        if (!inputText || typeof inputText !== 'string') {
+            console.error('WordDataLoader.processCustomInput: 无效的输入文本');
+            return [];
+        }
+        
+        try {
+            console.log('WordDataLoader: 处理自定义输入文本');
+            
+            // 按行分割
+            const lines = inputText.split(/\r?\n/).filter(line => line.trim());
+            
+            // 存储结果
+            const wordPairs = [];
+            
+            // 检测分隔符模式
+            let separator = '';
+            
+            // 尝试检测最常见的分隔符
+            const testLine = lines[0] || '';
+            if (testLine.includes(':')) separator = ':';
+            else if (testLine.includes('：')) separator = '：';
+            else if (testLine.includes('-')) separator = '-';
+            else if (testLine.includes('=')) separator = '=';
+            else if (testLine.includes('\t')) separator = '\t';
+            else separator = ' ';  // 默认使用空格
+            
+            console.log(`检测到分隔符: "${separator}"`);
+            
+            // 处理每一行
+            lines.forEach((line, index) => {
+                // 移除多余空格并按分隔符划分
+                const parts = line.split(separator).map(part => part.trim());
+                
+                // 如果分割后有两个以上部分，取第一个作为单词，其余拼接作为定义
+                if (parts.length >= 2) {
+                    const word = parts[0].trim();
+                    const meaning = parts.slice(1).join(' ').trim();
+                    
+                    if (word && meaning) {
+                        wordPairs.push({
+                            word: word,
+                            meaning: meaning,
+                            id: `custom_${index}`,
+                            phonetic: '',
+                            example: ''
+                        });
+                    }
+                } else if (parts.length === 1 && parts[0].trim()) {
+                    // 只有一个部分，仍然添加到列表（可能用于手动指定定义）
+                    wordPairs.push({
+                        word: parts[0].trim(),
+                        meaning: '(未提供释义)',
+                        id: `custom_${index}`,
+                        phonetic: '',
+                        example: ''
+                    });
+                }
+            });
+            
+            console.log(`从自定义输入中提取了${wordPairs.length}个单词`);
+            
+            // 保存到本地存储
+            if (wordPairs.length > 0) {
+                this.setLocalImportedWords(wordPairs, 'custom_input');
+                
+                // 设置为导入模式
+                if (window.store && typeof window.store.updatePlayMode === 'function') {
+                    window.store.updatePlayMode('imported');
+                    console.log('已更新store为导入模式');
+                }
+            }
+            
+            return wordPairs;
+            
+        } catch (error) {
+            console.error('处理自定义输入错误:', error);
+            return [];
+        }
     }
 };
 

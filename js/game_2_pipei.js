@@ -6,7 +6,7 @@
 
 // 立即执行函数，创建模块化结构并避免全局变量污染
 (function() {
-    'use strict';
+    //'use strict';
     
     // 创建全局命名空间，使其他文件可以访问核心对象
     window.WordGame = {};
@@ -1561,6 +1561,7 @@
          * @param {Array} wordPairs - 单词对数组
          */
         setupBoard(wordPairs) {
+            console.log("wordPairs的值为:~~~~~~~~~~~~~ ", wordPairs);
             console.log(`设置游戏板: 使用 ${wordPairs.length} 对单词，共 ${wordPairs.length * 2} 张卡片`);
             
             // 清空现有卡片
@@ -2373,62 +2374,97 @@
         
         /**
          * 加载单词数据
-         * @returns {Promise} - 加载完成Promise
+         * @returns {Promise<Array>} - 加载完成后的单词数组
          */
         async loadWordData() {
             try {
                 console.log('开始加载单词数据...');
-                console.log('WordDataLoader存在:', typeof window.WordDataLoader !== 'undefined');
                 
                 // 解析URL参数
                 const urlParams = new URLSearchParams(window.location.search);
-                const chapterId = urlParams.get('chapter'); // 获取章节ID
-                const categoryId = urlParams.get('category'); // 获取级别ID
+                const chapterId = urlParams.get('chapter'); // 章节ID
+                const mode = urlParams.get('mode'); // 获取模式
+                const categoryId = urlParams.get('category'); // 级别ID
                 const categoryName = urlParams.get('categoryName');
                 const chapterName = urlParams.get('chapterName');
                 
-                console.log('章节信息:', {
+                console.log('加载参数:', {
                     chapterId,
+                    mode,
                     categoryId,
                     categoryName,
                     chapterName
                 });
                 
-                if (typeof window.WordDataLoader !== 'undefined' && chapterId) {
-                    console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
-                    
-                    try {
-                        // 使用数据加载模块获取单词 - 使用新方法获取所有单词
-                        const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
-                        console.log(`成功获取章节${chapterId}的单词数据:`, words);
-                        
-                        if (words && words.length > 0) {
-                            this.wordPairs = words;
-                            console.log(`获取到${words.length}个单词对`);
+                // 检查WordDataLoader是否可用
+                if (typeof window.WordDataLoader !== 'undefined') {
+                    // 如果是导入模式，直接获取导入的单词
+                    if (mode === 'imported') {
+                        console.log('检测到导入模式，直接获取导入的单词...');
+                        try {
+                            // 调用getImportedWords而不需要章节ID
+                            const words = await window.WordDataLoader.getImportedWords();
+                            console.log(`成功获取导入的单词:`, words);
                             
-                            // 打印单词示例
-                            if (words.length > 0) {
-                                console.log('单词示例:');
-                                for (let i = 0; i < Math.min(3, words.length); i++) {
-                                    console.log(`- ${words[i].word || '单词'}: ${words[i].definition || words[i].meaning || '含义'}`);
+                            if (words && words.length > 0) {
+                                this.wordPairs = words;
+                                console.log(`获取到${words.length}个单词对`);
+                                
+                                // 打印单词示例
+                                if (words.length > 0) {
+                                    console.log('单词示例:');
+                                    for (let i = 0; i < Math.min(3, words.length); i++) {
+                                        console.log(`- ${words[i].word || '单词'}: ${words[i].meaning || words[i].definition || '含义'}`);
+                                    }
                                 }
+                                this.totalPairs = this.wordPairs.length;
+                                return words; // 成功获取导入单词，提前返回
                             }
-                        } else {
-                            console.warn('获取到的单词数据为空，使用备用数据');
-                            this.wordPairs = WordConfig.SAMPLE_WORDS;
+                        } catch (error) {
+                            console.error('获取导入单词时出错:', error);
+                            // 继续执行，使用备用数据
                         }
-                    } catch (error) {
-                        console.error('调用WordDataLoader时出错:', error);
-                        this.wordPairs = WordConfig.SAMPLE_WORDS;
                     }
-                } else {
-                    // 如果模块不存在或没有章节ID，使用示例数据
-                    console.warn('WordDataLoader不可用或未提供章节ID，使用备用数据');
-                    this.wordPairs = WordConfig.SAMPLE_WORDS;
+                    // 普通章节模式，需要chapter参数
+                    else if (mode === 'normal') {
+                        console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
+                        
+                        try {
+                            // 使用数据加载模块获取单词 - 使用新方法获取所有单词
+                            const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
+                            console.log(`成功获取章节${chapterId}的单词数据:`, words);
+                            
+                            if (words && words.length > 0) {
+                                this.wordPairs = words;
+                                console.log(`获取到${words.length}个单词对`);
+                                
+                                // 打印单词示例
+                                if (words.length > 0) {
+                                    console.log('单词示例:');
+                                    for (let i = 0; i < Math.min(3, words.length); i++) {
+                                        console.log(`- ${words[i].word || '单词'}: ${words[i].definition || words[i].meaning || '含义'}`);
+                                    }
+                                }
+                                this.totalPairs = this.wordPairs.length;
+                                return words; // 成功获取单词，提前返回
+                            }
+                        } catch (error) {
+                            console.error('调用WordDataLoader时出错:', error);
+                            // 继续执行，使用备用数据
+                        }
+                    }else if(mode === 'random'){
+                        console.log('~~~~~~~~~判断中mode的值为:~~~~~~~~~~~~~', mode);
+                        try{
+                            const words = await window.WordDataLoader.getRandomWordsFromLevel("all", 20);
+                            console.log('~~~~~~~~~words的值yesyes为:~~~~~~~~~~~~~ ', words);
+                            this.wordPairs = words;
+                            this.totalPairs = this.wordPairs.length;
+                            return words; // 成功获取单词，提前返回
+                        }catch(error){
+                            console.error('获取随机单词时出错:', error);
+                        }
+                    }
                 }
-                
-                this.totalPairs = this.wordPairs.length;
-                return this.wordPairs;
             } catch (error) {
                 console.error('加载单词数据失败:', error);
                 // 使用示例数据作为备用
@@ -2951,7 +2987,7 @@
         backToMenu() {
             // 在实际游戏中，这里会返回到主菜单页面
             // 简单示例：重定向到首页
-            window.location.href = 'level.html';
+            window.location.href = 'shouye.html';
         },
         
         /**

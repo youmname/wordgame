@@ -4,18 +4,79 @@
  */
 
 // 导入依赖模块
-import { store } from './store.js';
 import { initTheme } from './theme.js';
 import { createParticleManager } from './particles.js';
 import { createSoundManager } from './sound.js';
 import {  mark, measure } from './monitoring.js';
 import HeatmapCalendar from './heatmap-calendar.js';
 
+
 // 全局变量
 let heatmapCalendar = null;
 let progressWorker = null;
 let particleManager = null;
 let soundManager = null;
+
+/**
+ * 保存游戏模式到localStorage
+ * @param {string} mode 游戏模式
+ */
+function saveGameMode(mode) {
+    // 使用store.updateGameMode代替直接操作localStorage
+    if (window.store && typeof window.store.updateGameMode === 'function') {
+        window.store.updateGameMode(mode);
+    } else {
+        // 回退方案，直接保存到localStorage
+        localStorage.setItem('gameMode', mode);
+    }
+}
+
+/**
+ * 从localStorage获取游戏模式
+ * @returns {string} 游戏模式
+ */
+function getGameMode() {
+    // 优先从store获取
+    if (window.store && window.store.getState) {
+        const state = window.store.getState();
+        if (state && state.game && state.game.gameMode) {
+            return state.game.gameMode;
+        }
+    }
+    // 回退方案，从localStorage获取
+    return localStorage.getItem('gameMode') || 'jiyiMode';
+}
+
+/**
+ * 设置游戏内容模式
+ * @param {string} mode 游戏内容模式 (normal/random/imported/recommended)
+ */
+function setPlayMode(mode) {
+    // 使用store.updatePlayMode更新游戏内容模式
+    if (window.store && typeof window.store.updatePlayMode === 'function') {
+        window.store.updatePlayMode(mode);
+    } else {
+        // 回退方案，直接保存到localStorage
+        localStorage.setItem('playMode', mode);
+    }
+    console.log(`已设置游戏内容模式: ${mode}`);
+}
+
+/**
+ * 获取当前游戏内容模式
+ * @returns {string} 游戏内容模式
+ */
+function getPlayMode() {
+    // 优先从store获取
+    if (window.store && window.store.getState) {
+        const state = window.store.getState();
+        if (state && state.game && state.game.playMode) {
+            return state.game.playMode;
+        }
+    }
+    // 回退方案，从localStorage获取
+    return localStorage.getItem('playMode') || 'normal';
+}
 
 /**
  * 页面加载完成后初始化应用
@@ -92,7 +153,7 @@ function registerServiceWorker() {
  */
 async function initSoundSystem() {
     // 使用状态中的音效设置
-    const { soundEnabled } = store.getState().system;
+    const { soundEnabled } = window.store.getState().system;
     soundManager.setEnabled(soundEnabled);
     
     // 预加载音效
@@ -124,14 +185,14 @@ function initWorkers() {
  */
 async function loadUserData() {
     try {
-        store.updateUiState({ loading: true });
+        window.store.updateUiState({ loading: true });
     const userData = await simulateFetch('/api/user', {
             method: 'GET',
             credentials: 'include'
     });
     
     // 更新状态
-        store.updateUserData(userData);
+        window.store.updateUserData(userData);
     
         // 更新界面显示
     updateUserInterface(userData);
@@ -141,7 +202,7 @@ async function loadUserData() {
     console.error('加载用户数据失败:', error);
         showErrorAlert('加载用户数据失败，请检查网络连接');
     } finally {
-        store.updateUiState({ loading: false });
+        window.store.updateUiState({ loading: false });
     }
 }
 
@@ -465,7 +526,7 @@ function bindEventListeners() {
     window.showTodayRecommend = showTodayRecommend;
     window.toggleTheme = toggleTheme; // 添加主题切换函数
     
-    // 绑定移动端菜单切换
+    // 绑定移动端菜单切换，控制侧边导航栏显示/隐藏
     const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
     const sideNav = document.querySelector('.side-nav');
     
@@ -476,7 +537,7 @@ function bindEventListeners() {
         });
     }
     
-    // 绑定右侧面板切换
+    // 绑定右侧面板切换，控制右侧面板显示/隐藏
     const panelToggle = document.querySelector('.panel-toggle');
     const rightPanel = document.querySelector('.right-panel');
     
@@ -487,7 +548,7 @@ function bindEventListeners() {
         });
     }
     
-    // 绑定分类按钮事件
+    // 绑定分类按钮事件，用于切换单词分类
     document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault(); // 防止默认行为
@@ -503,13 +564,13 @@ function bindEventListeners() {
                 console.warn('播放点击音效失败:', error);
             }
             
-            // 获取分类ID
+            // 获取分类ID，点击后调用loadChapters(categoryId)加载相应分类的章节
             const categoryId = btn.getAttribute('data-category');
             loadChapters(categoryId);
         });
     });
 
-    // 确保所有主菜单项可点击
+    // 确保所有主菜单项可点击，点击后更新按钮状态，移除所有active类再添加到当前按钮
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -572,7 +633,7 @@ function bindEventListeners() {
  */
 async function loadChapters(categoryId) {
     try {
-        store.updateUiState({ loading: true });
+        window.store.updateUiState({ loading: true });
         
         const chapters = await simulateFetch(`/api/chapters/${categoryId}`, {
             method: 'GET',
@@ -586,7 +647,7 @@ async function loadChapters(categoryId) {
         console.error('加载章节数据失败:', error);
         showErrorAlert('加载章节数据失败');
     } finally {
-        store.updateUiState({ loading: false });
+        window.store.updateUiState({ loading: false });
     }
 }
 
@@ -751,15 +812,38 @@ function startChapter(chapterId) {
         spread: 120
     });
     
+    // 从localStorage获取当前游戏模式
+    const gameMode = getGameMode();
+    
+    // 设置内容模式为normal(章节学习)
+    setPlayMode('normal');
+    
     // 更新游戏状态
-    store.updateGameState({
+    window.store.updateGameState({
         currentChapter: chapterId,
-        gameMode: 'normal'
+        playMode: 'normal',
+        gameMode: gameMode // 添加游戏模式
     });
     
     // 延迟跳转，等待动画完成
     setTimeout(() => {
-        window.location.href = `shouye.html?chapter=${chapterId}`;
+        // 根据游戏模式决定跳转到哪个页面
+        let targetUrl;
+        switch(gameMode) {
+            case 'lianxianMode':
+                targetUrl = `game_1_lianxian.html?chapter=${chapterId}&mode=normal`;
+                break;
+            case 'pipeiMode':
+                targetUrl = `game_2_pipei.html?chapter=${chapterId}&mode=normal`;
+                break;
+            case 'jiyiMode':
+                targetUrl = `game_3_jiyi.html?chapter=${chapterId}&mode=normal`;
+                break;
+            default:
+                targetUrl = `game_3_jiyi.html?chapter=${chapterId}&mode=normal`;
+        }
+        
+        window.location.href = targetUrl;
     }, 800);
 }
 
@@ -767,6 +851,7 @@ function startChapter(chapterId) {
  * 开始随机挑战
  */
 function startRandomChallenge() {
+    console.log('~~~~~~~~~~~~~~~~~开始随机挑战~~~~~~~~~~~~~~~~~');
     // 播放音效
     soundManager.play('click');
     
@@ -779,9 +864,16 @@ function startRandomChallenge() {
         spread: 150
     });
     
+    // 从localStorage获取当前游戏模式
+    const gameMode = getGameMode();
+    
+    // 设置内容模式为random(随机挑战)
+    setPlayMode('random');
+    
     // 更新游戏状态 - 使用与data-loader一致的变量命名
-    store.updateGameState({
-        playMode: 'random'
+    window.store.updateGameState({
+        playMode: 'random',
+        gameMode: gameMode // 添加游戏模式
     });
     
     // 设置WordDataLoader游戏类型为随机 - 不指定具体级别，让其从所有级别获取单词
@@ -797,25 +889,13 @@ function startRandomChallenge() {
         }
     }
     
-    // 获取当前选中的游戏模式
-    let selectedGameMode = 'jiyiMode'; // 默认为记忆模式
-    try {
-        // 尝试从侧边栏获取当前选中的游戏模式
-        const activeBtn = document.querySelector('.nav-btn.active[data-action]');
-        if (activeBtn) {
-            selectedGameMode = activeBtn.getAttribute('data-action');
-        }
-    } catch (error) {
-        console.warn('获取当前游戏模式失败，使用默认记忆模式', error);
-    }
-    
-    console.log(`随机挑战：使用游戏模式 ${selectedGameMode}`);
+    console.log(`随机挑战：使用游戏模式 ${gameMode}`);
     
     // 延迟跳转
     setTimeout(() => {
         // 根据游戏模式直接跳转到对应的游戏页面，而不是级别选择页面
         let targetUrl;
-        switch (selectedGameMode) {
+        switch (gameMode) {
             case 'lianxianMode':
                 targetUrl = 'game_1_lianxian.html?chapter=random&mode=random';
                 break;
@@ -851,6 +931,9 @@ function openWordLibrary() {
         spread: 100
     });
     
+    // 设置内容模式为imported(用户导入)
+    setPlayMode('imported');
+    
     // 延迟跳转
     setTimeout(() => {
         window.location.href = 'word-library.html';
@@ -872,6 +955,9 @@ function showTodayRecommend() {
         colors: ['#2196F3', '#03A9F4', '#00BCD4'],
         spread: 120
     });
+    
+    // 设置内容模式为recommended(今日推荐)
+    setPlayMode('recommended');
     
     // 显示推荐内容
     showModal('今日推荐', '这里是根据您的学习历史，为您推荐的单词内容。');
@@ -1165,3 +1251,9 @@ function toggleTheme(theme) {
         localStorage.setItem('preferred-theme', theme);
     }
 }
+
+// 将全局gameMode和playMode相关函数暴露给HTML
+window.getGameMode = getGameMode;
+window.saveGameMode = saveGameMode;
+window.getPlayMode = getPlayMode;
+window.setPlayMode = setPlayMode;

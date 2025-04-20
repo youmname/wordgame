@@ -1873,47 +1873,65 @@
         },
         
         /**
-         * 显示提示
-         * @returns {boolean} 是否成功找到提示
-         */
-        showHint() {
-            console.log("WordBoard.showHint被调用");
-            
-            // 播放提示音效（可选，由GameCore控制）
-            // if (window.WordSoundManager) {
-            //     window.WordSoundManager.play('hint');
-            // }
-            
-            // 移除已有的提示高亮
-            const highlightedCards = document.querySelectorAll('.card.hint');
-            highlightedCards.forEach(card => card.classList.remove('hint'));
-            
-            // 寻找可连接的卡片对
-            const hintPair = ImprovedPathFinder.findConnectablePair();
-            console.log("找到提示卡片对:", hintPair);
-            
-            if (hintPair) {
-                // 高亮显示卡片，但不显示连接线
-                hintPair.card1.element.classList.add('hint');
-                hintPair.card2.element.classList.add('hint');
-                
-                // 延时恢复
-                setTimeout(() => {
-                    if (hintPair.card1.element) hintPair.card1.element.classList.remove('hint');
-                    if (hintPair.card2.element) hintPair.card2.element.classList.remove('hint');
-                }, 3000); // 3秒后消失
-                
-                // 触发提示事件（已经由GameCore监听并处理）
-                if (window.WordUtils && window.WordUtils.EventSystem) {
-                    window.WordUtils.EventSystem.emit('board:hint-used');
-                }
-                
-                return true;
-            } else {
-                console.log("没有找到可连接的卡片对");
-                return false;
-            }
-        },
+		 * 显示提示
+		 * @returns {boolean} 是否成功找到提示
+		 */
+		showHint() {
+			console.log("WordBoard.showHint被调用");
+			
+			// 移除已有的提示高亮
+			const highlightedCards = document.querySelectorAll('.card.hint');
+			highlightedCards.forEach(card => card.classList.remove('hint'));
+			
+			// 寻找可连接的卡片对
+			const hintPair = ImprovedPathFinder.findConnectablePair();
+			console.log("找到提示卡片对:", hintPair);
+			
+			// 获取所有未匹配的卡片
+			const allCards = document.querySelectorAll('.card:not(.matched)');
+			
+			if (hintPair) {
+				// 先将所有卡片翻转显示
+				allCards.forEach(card => {
+					this.flipCard(card, true); // 翻转显示卡片正面
+				});
+				
+				// 高亮显示匹配的卡片对
+				hintPair.card1.element.classList.add('hint');
+				hintPair.card2.element.classList.add('hint');
+				
+				// 延时2秒后将所有卡片翻转回去，但保持高亮
+				setTimeout(() => {
+					// 将所有卡片翻转回去
+					allCards.forEach(card => {
+						// 如果不是高亮的提示卡片，则翻转回去
+						if (!card.classList.contains('hint')) {
+							this.flipCard(card, false); // 翻转回卡片背面
+						}
+					});
+					
+					// 延时3秒后移除高亮效果
+					setTimeout(() => {
+						if (hintPair.card1.element) hintPair.card1.element.classList.remove('hint');
+						if (hintPair.card2.element) hintPair.card2.element.classList.remove('hint');
+						
+						// 将高亮的卡片也翻转回去
+						if (hintPair.card1.element) this.flipCard(hintPair.card1.element, false);
+						if (hintPair.card2.element) this.flipCard(hintPair.card2.element, false);
+					}, 3000); // 3秒后移除高亮并翻转回去
+				}, 2000); // 2秒后翻转非高亮卡片
+				
+				// 触发提示事件
+				if (window.WordUtils && window.WordUtils.EventSystem) {
+					window.WordUtils.EventSystem.emit('board:hint-used');
+				}
+				
+				return true;
+			} else {
+				console.log("没有找到可连接的卡片对");
+				return false;
+			}
+		},
         
         /**
          * 洗牌
@@ -2287,62 +2305,97 @@
         
         /**
          * 加载单词数据
-         * @returns {Promise} - 加载完成Promise
+         * @returns {Promise<Array>} - 加载完成后的单词数组
          */
         async loadWordData() {
             try {
                 console.log('开始加载单词数据...');
-                console.log('WordDataLoader存在:', typeof window.WordDataLoader !== 'undefined');
                 
                 // 解析URL参数
                 const urlParams = new URLSearchParams(window.location.search);
-                const chapterId = urlParams.get('chapter'); // 获取章节ID
-                const categoryId = urlParams.get('category'); // 获取级别ID
+                const chapterId = urlParams.get('chapter'); // 章节ID
+                const mode = urlParams.get('mode'); // 获取模式
+                const categoryId = urlParams.get('category'); // 级别ID
                 const categoryName = urlParams.get('categoryName');
                 const chapterName = urlParams.get('chapterName');
                 
-                console.log('章节信息:', {
+                console.log('加载参数:', {
                     chapterId,
+                    mode,
                     categoryId,
                     categoryName,
                     chapterName
                 });
                 
-                if (typeof window.WordDataLoader !== 'undefined' && chapterId) {
-                    console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
-                    
-                    try {
-                        // 使用数据加载模块获取单词 - 使用新方法获取所有单词
-                        const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
-                        console.log(`成功获取章节${chapterId}的单词数据:`, words);
-                        
-                        if (words && words.length > 0) {
-                            this.wordPairs = words;
-                            console.log(`获取到${words.length}个单词对`);
+                // 检查WordDataLoader是否可用
+                if (typeof window.WordDataLoader !== 'undefined') {
+                    // 如果是导入模式，直接获取导入的单词
+                    if (mode === 'imported') {
+                        console.log('检测到导入模式，直接获取导入的单词...');
+                        try {
+                            // 调用getImportedWords而不需要章节ID
+                            const words = await window.WordDataLoader.getImportedWords();
+                            console.log(`成功获取导入的单词:`, words);
                             
-                            // 打印单词示例
-                            if (words.length > 0) {
-                                console.log('单词示例:');
-                                for (let i = 0; i < Math.min(3, words.length); i++) {
-                                    console.log(`- ${words[i].word || '单词'}: ${words[i].definition || words[i].meaning || '含义'}`);
+                            if (words && words.length > 0) {
+                                this.wordPairs = words;
+                                console.log(`获取到${words.length}个单词对`);
+                                
+                                // 打印单词示例
+                                if (words.length > 0) {
+                                    console.log('单词示例:');
+                                    for (let i = 0; i < Math.min(3, words.length); i++) {
+                                        console.log(`- ${words[i].word || '单词'}: ${words[i].meaning || words[i].definition || '含义'}`);
+                                    }
                                 }
+                                this.totalPairs = this.wordPairs.length;
+                                return words; // 成功获取导入单词，提前返回
                             }
-                        } else {
-                            console.warn('获取到的单词数据为空，使用备用数据');
-                            this.wordPairs = WordConfig.SAMPLE_WORDS;
+                        } catch (error) {
+                            console.error('获取导入单词时出错:', error);
+                            // 继续执行，使用备用数据
                         }
-                    } catch (error) {
-                        console.error('调用WordDataLoader时出错:', error);
-                        this.wordPairs = WordConfig.SAMPLE_WORDS;
                     }
-                } else {
-                    // 如果模块不存在或没有章节ID，使用示例数据
-                    console.warn('WordDataLoader不可用或未提供章节ID，使用备用数据');
-                    this.wordPairs = WordConfig.SAMPLE_WORDS;
+                    // 普通章节模式，需要chapter参数
+                    else if (mode === 'normal') {
+                        console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
+                        
+                        try {
+                            // 使用数据加载模块获取单词 - 使用新方法获取所有单词
+                            const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
+                            console.log(`成功获取章节${chapterId}的单词数据:`, words);
+                            
+                            if (words && words.length > 0) {
+                                this.wordPairs = words;
+                                console.log(`获取到${words.length}个单词对`);
+                                
+                                // 打印单词示例
+                                if (words.length > 0) {
+                                    console.log('单词示例:');
+                                    for (let i = 0; i < Math.min(3, words.length); i++) {
+                                        console.log(`- ${words[i].word || '单词'}: ${words[i].definition || words[i].meaning || '含义'}`);
+                                    }
+                                }
+                                this.totalPairs = this.wordPairs.length;
+                                return words; // 成功获取单词，提前返回
+                            }
+                        } catch (error) {
+                            console.error('调用WordDataLoader时出错:', error);
+                            // 继续执行，使用备用数据
+                        }
+                    }else if(mode === 'random'){
+                        console.log('~~~~~~~~~判断中mode的值为:~~~~~~~~~~~~~', mode);
+                        try{
+                            const words = await window.WordDataLoader.getRandomWordsFromLevel("all", 20);
+                            console.log('~~~~~~~~~words的值yesyes为:~~~~~~~~~~~~~ ', words);
+                            this.wordPairs = words;
+                            this.totalPairs = this.wordPairs.length;
+                            return words; // 成功获取单词，提前返回
+                        }catch(error){
+                            console.error('获取随机单词时出错:', error);
+                        }
+                    }
                 }
-                
-                this.totalPairs = this.wordPairs.length;
-                return this.wordPairs;
             } catch (error) {
                 console.error('加载单词数据失败:', error);
                 // 使用示例数据作为备用
@@ -2865,7 +2918,7 @@
         backToMenu() {
             // 在实际游戏中，这里会返回到主菜单页面
             // 简单示例：重定向到首页
-            window.location.href = 'level.html';
+            window.location.href = 'shouye.html';
         },
         
         /**

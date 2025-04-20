@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="css/animations.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
 
+    <!-- 添加XLSX库引用 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
     <style>
         /* 基础样式和变量 */
         :root {
@@ -333,6 +336,235 @@
                 margin-right: 0;
             }
         }
+
+        /* 添加Toast提示消息样式 */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            background: rgba(76, 175, 80, 0.9);
+        }
+        
+        .toast.error {
+            background: rgba(244, 67, 54, 0.9);
+        }
+        
+        .toast.warning {
+            background: rgba(255, 152, 0, 0.9);
+        }
+        
+        /* 添加加载中遮罩层样式 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--eco-green);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            font-size: 1.1rem;
+            color: var(--dark-text);
+        }
+
+        /* 添加词单结果区域样式 */
+        #result-section {
+            display: none;
+            margin-top: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow-soft);
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--misty-blue);
+        }
+        
+        .word-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .word-item {
+            display: grid;
+            grid-template-columns: 50px 1fr 1fr;
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .word-item.header {
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        
+        .word-index {
+            text-align: center;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 游戏模式选择模态框样式 */
+        #mode-selection-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            font-family: 'PingFang SC', 'Quicksand', sans-serif;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            max-width: 900px;
+            min-height: 60vh;
+            background: rgba(250, 243, 224, 0.9);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: 0 16px 40px rgba(176, 196, 222, 0.2);
+            border: 1px solid rgba(211, 183, 166, 0.2);
+        }
+        
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .mode-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 24px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                rgba(199, 232, 213, 0.1) 0%, 
+                rgba(255, 183, 197, 0.05) 100%);
+            transform: rotate(45deg);
+        }
+        
+        .mode-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(176, 196, 222, 0.3);
+        }
+        
+        .mode-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        .mode-title {
+            color: #4A4A4A;
+            font-size: 24px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .mode-desc {
+            color: #7A7A7A;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        /* 动态装饰元素 */
+        .deco-line {
+            position: absolute;
+            background: rgba(216, 166, 179, 0.3);
+            transform-origin: left;
+            animation: drawLine 1.2s ease-out;
+        }
+        
+        @keyframes drawLine {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
+        }
+        
+        .ins-style-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .ins-style-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -375,9 +607,78 @@
                 <button class="confirm-btn">生成词单</button>
             </div>
         </div>
+        
+        <!-- 添加结果显示区域 -->
+        <div id="result-section">
+            <div class="result-header">
+                <h3>📝 生成的词单</h3>
+                <div>总计: <span id="word-count">0</span> 个单词</div>
+            </div>
+            <div id="word-list" class="word-list">
+                <!-- 单词列表将在JavaScript中动态生成 -->
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="confirm-btn" id="start-practice-btn">开始练习</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏模式选择模态框 - 横向排列 -->
+    <div id="mode-selection-modal">
+        <div class="modal-content">
+            <!-- 装饰线条 -->
+            <div class="deco-line" style="top:15%; left:5%; width:120px; height:2px;"></div>
+            <div class="deco-line" style="bottom:20%; right:5%; width:80px; height:2px;"></div>
+            
+            <h3 style="text-align:center; color:#4A4A4A; font-size:32px; margin-bottom:40px;">
+                ✨ 选择学习模式
+            </h3>
+    
+            <div class="mode-grid">
+                <!-- 连线模式 -->
+                <div class="mode-card" data-mode="lianxianMode" data-url="game_1_lianxian.html">
+                    <div class="mode-icon">🌿</div>
+                    <div class="mode-title">自然连线</div>
+                    <div class="mode-desc">
+                        通过视觉联想建立单词间的记忆纽带<br>
+                        <span style="color:#D8A6B3;">推荐给视觉学习者</span>
+                    </div>
+                </div>
+    
+                <!-- 匹配模式 -->
+                <div class="mode-card" data-mode="pipeiMode" data-url="game_2_pipei.html">
+                    <div class="mode-icon">🍃</div>
+                    <div class="mode-title">叶片匹配</div>
+                    <div class="mode-desc">
+                        翻转叶片寻找隐藏的单词伙伴<br>
+                        <span style="color:#8E7CC3;">适合碎片时间练习</span>
+                    </div>
+                </div>
+    
+                <!-- 记忆模式 -->
+                <div class="mode-card" data-mode="jiyiMode" data-url="game_3_jiyi.html">
+                    <div class="mode-icon">🌸</div>
+                    <div class="mode-title">记忆花园</div>
+                    <div class="mode-desc">
+                        在限定时间培育你的单词花园<br>
+                        <span style="color:#B6D7A8;">挑战记忆力极限</span>
+                    </div>
+                </div>
+            </div>
+    
+            <div style="text-align:center;">
+                <button class="ins-style-btn" id="cancel-mode-btn"
+                        style="background:rgba(216, 166, 179, 0.1); color:#D8A6B3;">
+                    稍后选择
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
+        // 创建全局变量用于存储导入的单词对
+        window.importedWordPairs = [];
+        
         document.addEventListener('DOMContentLoaded', function() {
             // 返回按钮事件
             document.getElementById('back-btn').addEventListener('click', function() {
@@ -392,10 +693,27 @@
                     cards.forEach(c => c.classList.remove('active'));
                     // 为当前卡片添加活跃状态
                     this.classList.add('active');
+                    
+                    // 根据当前激活的卡片更新数据源类型
+                    if (this.classList.contains('upload-card') && uploadedExcelFile) {
+                        localStorage.setItem('wordgame_data_source_type', 'excel');
+                        console.log('已将数据源类型设置为Excel上传');
+                    } else if (this.classList.contains('input-card')) {
+                        // 只有在有输入内容或已存在手动输入数据时才更新
+                        const textInput = document.querySelector('.ins-textarea');
+                        if ((textInput && textInput.value.trim()) || 
+                            (window.WordDataLoader && window.WordDataLoader.getLocalImportedWords('custom_input'))) {
+                            localStorage.setItem('wordgame_data_source_type', 'input');
+                            console.log('已将数据源类型设置为手动输入');
+                        }
+                    }
                 });
             });
 
-            // 文件拖拽交互
+            // 文件处理
+            let uploadedExcelFile = null; // 存储上传的Excel文件
+
+            // 拖放区域事件处理
             const dropZone = document.querySelector('.drop-zone');
             const uploadCard = document.querySelector('.upload-card');
             const fileInput = document.getElementById('excelUpload');
@@ -411,7 +729,7 @@
                 uploadCard.classList.remove('dragover');
             });
 
-            // 文件处理
+            // 拖放区域事件处理
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 uploadCard.classList.remove('dragover');
@@ -421,72 +739,392 @@
                 }
             });
 
-            // 文件选择处理
-            fileInput.addEventListener('change', (e) => {
-                if (fileInput.files.length > 0) {
-                    handleFiles(fileInput.files[0]);
+            // 文件输入框change事件处理
+            document.getElementById('excelUpload').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFiles(e.target.files[0]);
                 }
             });
 
-            // 处理上传的文件
+            // 统一的文件处理函数
             function handleFiles(file) {
-                if (file) {
-                    // 显示文件预览
-                    filePreview.classList.add('active');
-                    filePreview.textContent = `已选择文件: ${file.name} (${formatFileSize(file.size)})`;
-                    
-                    // 在实际项目中，这里会处理文件上传和解析
-                    console.log("文件上传:", file.name, file.type, file.size);
+                // 检查文件类型
+                const validExts = ['.xls', '.xlsx', '.csv'];
+                const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                
+                if (!validExts.includes(fileExt)) {
+                    showToast('请上传Excel或CSV文件', 'error');
+                    return;
+                }
+                
+                // 显示文件名
+                const fileNameDisplay = document.getElementById('selected-file-name');
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = file.name;
+                    fileNameDisplay.style.display = 'block';
+                }
+                
+                // 保存文件引用
+                uploadedExcelFile = file;
+                
+                // 显示提示信息
+                showToast(`已选择文件: ${file.name}`, 'success');
+                
+                // 更新上传卡片UI
+                const uploadIcon = document.querySelector('.upload-icon');
+                if (uploadIcon) {
+                    uploadIcon.innerHTML = '✅';
+                }
+                
+                const uploadText = document.querySelector('.upload-text');
+                if (uploadText) {
+                    uploadText.textContent = '文件已选择，点击生成词单按钮处理';
+                }
+                
+                // 更新文件预览区域
+                filePreview.innerHTML = `
+                    <div style="display:flex; align-items:center; padding:5px;">
+                        <span style="font-size:1.5rem; margin-right:10px;">📄</span>
+                        <div>
+                            <div style="font-weight:500;">${file.name}</div>
+                            <div style="font-size:0.8rem; color:#666;">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                    </div>
+                `;
+                filePreview.classList.add('active');
+                
+                // 显示清除按钮
+                const clearExcelBtn = document.getElementById('clear-excel-btn');
+                if (clearExcelBtn) {
+                    clearExcelBtn.style.display = 'block';
                 }
             }
-
-            // 格式化文件大小
-            function formatFileSize(bytes) {
-                if (bytes < 1024) return bytes + ' B';
-                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-                else return (bytes / 1048576).toFixed(1) + ' MB';
-            }
-
-            // 自定义输入验证动效
-            document.querySelector('.confirm-btn').addEventListener('click', () => {
-                const textarea = document.querySelector('.ins-textarea');
-                const button = document.querySelector('.confirm-btn');
-                
-                if (textarea.value.trim().length === 0) {
-                    // 错误反馈动效
-                    textarea.style.transform = 'translateX(10px)';
-                    setTimeout(() => {
-                        textarea.style.transform = 'translateX(-10px)';
-                        setTimeout(() => {
-                            textarea.style.transform = 'translateX(5px)';
-                            setTimeout(() => {
-                                textarea.style.transform = 'translateX(-5px)';
-                                setTimeout(() => {
-                                    textarea.style.transform = 'translateX(0)';
-                                }, 50);
-                            }, 50);
-                        }, 50);
-                    }, 50);
+            
+            // 添加清除Excel文件的按钮
+            filePreview.insertAdjacentHTML('afterend', `
+                <button id="clear-excel-btn" style="display:none; margin-top:10px; padding:5px 10px; background:#f8d7da; border:none; border-radius:5px; cursor:pointer;">
+                    清除已上传文件
+                </button>
+            `);
+            
+            // 添加清除按钮的事件处理
+            document.body.addEventListener('click', function(e) {
+                if (e.target && e.target.id === 'clear-excel-btn') {
+                    uploadedExcelFile = null;
+                    filePreview.classList.remove('active');
+                    filePreview.innerHTML = '';
+                    e.target.style.display = 'none';
+                    showToast('已清除上传的文件', 'info');
                     
-                    textarea.focus();
-                } else {
-                    // 显示加载状态
-                    button.classList.add('loading');
-                    // 模拟处理时间
-                    setTimeout(() => {
-                        button.classList.remove('loading');
-                        processCustomInput(textarea.value);
-                    }, 1500);
+                    // 重置上传卡片UI
+                    const uploadIcon = document.querySelector('.upload-icon');
+                    if (uploadIcon) {
+                        uploadIcon.innerHTML = '📁';
+                    }
+                    
+                    const uploadText = document.querySelector('.upload-text');
+                    if (uploadText) {
+                        uploadText.textContent = '点击或拖放Excel文件上传';
+                    }
+                    
+                    // 清除后默认切换到输入模式
+                    document.querySelector('.input-card').click();
+                    
+                    // 如果本地存储中有手动输入的单词，将数据源类型切换为input
+                    if (window.WordDataLoader && window.WordDataLoader.getLocalImportedWords('custom_input')) {
+                        localStorage.setItem('wordgame_data_source_type', 'input');
+                        console.log('已将数据源类型切换为手动输入');
+                    }
                 }
             });
 
-            // 处理自定义输入
-            function processCustomInput(input) {
-                // 实际场景中，这里会处理用户输入并生成词单
-                console.log("处理用户输入:", input);
-                alert("词单生成成功！包含 " + input.split(/[,，;；\s]+/).filter(word => word.trim() !== '').length + " 个单词");
+            // "生成词单"按钮点击事件
+            document.querySelector('.confirm-btn').addEventListener('click', async function() {
+                const loadingElement = document.createElement('div');
+                loadingElement.className = 'loading-overlay';
+                loadingElement.innerHTML = '<div class="spinner"></div><div class="loading-text">处理中...</div>';
+                document.body.appendChild(loadingElement);
+                
+                try {
+                    let wordPairs = [];
+                    
+                    // 检查当前激活的是哪个卡片
+                    const isUploadCardActive = document.querySelector('.upload-card').classList.contains('active');
+                    const isInputCardActive = document.querySelector('.input-card').classList.contains('active');
+                    
+                    // 根据激活的卡片选择数据源
+                    if (isUploadCardActive && uploadedExcelFile) {
+                        // 用户选择了上传卡片，且有Excel文件
+                        try {
+                            // 确保WordDataLoader可用
+                            if (!window.WordDataLoader) {
+                                throw new Error('WordDataLoader未初始化');
+                            }
+                            
+                            // 处理Excel文件
+                            wordPairs = await window.WordDataLoader.handleExcelUpload(uploadedExcelFile);
+                            showToast(`成功从Excel导入${wordPairs.length}个单词`, 'success');
+                            
+                        } catch (error) {
+                            console.error('Excel处理错误:', error);
+                            showToast('Excel处理失败: ' + error.message, 'error');
+                            document.body.removeChild(loadingElement);
+                            return;
+                        }
+                    } else if (isInputCardActive || !uploadedExcelFile) {
+                        // 用户选择了输入卡片，或者没有上传Excel文件
+                        const customInput = document.querySelector('.ins-textarea').value;
+                        if (customInput.trim()) {
+                            // 确保WordDataLoader可用
+                            if (!window.WordDataLoader) {
+                                throw new Error('WordDataLoader未初始化');
+                            }
+                            
+                            wordPairs = window.WordDataLoader.processCustomInput(customInput);
+                            // 明确设置数据源类型为手动输入
+                            localStorage.setItem('wordgame_data_source_type', 'input');
+                            showToast(`成功从输入框导入${wordPairs.length}个单词`, 'success');
+                        } else {
+                            showToast('请在输入框中输入单词', 'warning');
+                            document.body.removeChild(loadingElement);
+                            return;
+                        }
+                    } else {
+                        // 用户选择了上传卡片，但没有上传文件
+                        showToast('请上传Excel文件或切换到手动输入模式', 'warning');
+                        document.body.removeChild(loadingElement);
+                        return;
+                    }
+                    
+                    // 验证生成的单词对
+                    if (!wordPairs || wordPairs.length === 0) {
+                        showToast('未能生成有效的单词对，请检查输入', 'error');
+                        document.body.removeChild(loadingElement);
+                        return;
+                    }
+                    
+                    console.log('生成的单词对:', wordPairs);
+                    
+                    // 更新全局变量 - 保存处理好的单词数据，供其他页面使用
+                    window.importedWordPairs = wordPairs;
+                    
+                    // 保存到本地存储 - 备用方案
+                    if (window.WordDataLoader) {
+                        window.WordDataLoader.setLocalImportedWords(wordPairs, 'latest');
+                    }
+                    
+                    // 显示生成的单词列表
+                    displayWordPairs(wordPairs);
+                    
+                    // 更新UI状态
+                    document.getElementById('result-section').style.display = 'block';
+                    document.getElementById('word-count').textContent = wordPairs.length.toString();
+                    
+                    // 滚动到结果区域
+                    document.getElementById('result-section').scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    
+                } catch (error) {
+                    console.error('处理出错:', error);
+                    showToast('处理失败: ' + error.message, 'error');
+                } finally {
+                    // 移除加载状态
+                    document.body.removeChild(loadingElement);
+                }
+            });
+            
+            // 显示单词对的函数
+            function displayWordPairs(wordPairs) {
+                const wordListContainer = document.getElementById('word-list');
+                if (!wordListContainer) return;
+                
+                // 清空现有内容
+                wordListContainer.innerHTML = '';
+                
+                // 添加表头
+                const header = document.createElement('div');
+                header.className = 'word-item header';
+                header.innerHTML = `
+                    <div class="word-index">#</div>
+                    <div class="word-english">单词</div>
+                    <div class="word-chinese">释义</div>
+                `;
+                wordListContainer.appendChild(header);
+                
+                // 添加单词
+                wordPairs.forEach((pair, index) => {
+                    const wordItem = document.createElement('div');
+                    wordItem.className = 'word-item';
+                    wordItem.innerHTML = `
+                        <div class="word-index">${index + 1}</div>
+                        <div class="word-english">${escapeHtml(pair.word)}</div>
+                        <div class="word-chinese">${escapeHtml(pair.meaning)}</div>
+                    `;
+                    wordListContainer.appendChild(wordItem);
+                });
             }
+            
+            // HTML转义函数
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // 显示提示消息
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                
+                document.body.appendChild(toast);
+                
+                // 动画显示
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+                
+                // 自动关闭
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 3000);
+            }
+            
+            // 游戏模式选择模态框处理
+            const modalElement = document.getElementById('mode-selection-modal');
+            const modalCards = document.querySelectorAll('.mode-card');
+            
+            // 显示游戏模式选择模态框
+            function showModeSelectionModal() {
+                modalElement.style.display = 'block';
+                
+                // 获取上次使用的游戏模式
+                const lastMode = localStorage.getItem('gameMode') || 'jiyiMode';
+                
+                // 高亮上次使用的模式
+                modalCards.forEach(card => {
+                    if (card.getAttribute('data-mode') === lastMode) {
+                        card.style.transform = 'translateY(-5px)';
+                        card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
+                        card.style.border = '2px solid rgba(255,255,255,0.7)';
+                    } else {
+                        card.style.transform = 'none';
+                        card.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                        card.style.border = 'none';
+                    }
+                });
+            }
+            
+            // 隐藏游戏模式选择模态框
+            function hideModeSelectionModal() {
+                modalElement.style.display = 'none';
+            }
+            
+            // 取消按钮点击事件
+            document.getElementById('cancel-mode-btn').addEventListener('click', hideModeSelectionModal);
+            
+            // 游戏模式卡片点击事件
+            modalCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const selectedMode = this.getAttribute('data-mode');
+                    const selectedUrl = this.getAttribute('data-url');
+                    
+                    // 保存游戏模式到localStorage
+                    localStorage.setItem('gameMode', selectedMode);
+                    
+                    // 设置游戏模式为导入模式
+                    if (window.WordDataLoader) {
+                        window.WordDataLoader.setPlayMode('imported');
+                    }
+                    
+                    // 隐藏模态框
+                    hideModeSelectionModal();
+                    
+                    // 显示提示
+                    showToast('正在准备游戏...', 'info');
+                    
+                    // 跳转到相应的游戏页面
+                    setTimeout(() => {
+                        window.location.href = `${selectedUrl}?mode=imported`;
+                    }, 800);
+                });
+                
+                // 添加鼠标悬停效果
+                card.addEventListener('mouseover', function() {
+                    const lastMode = localStorage.getItem('gameMode') || 'jiyiMode';
+                    if (this.getAttribute('data-mode') !== lastMode) {
+                        this.style.transform = 'translateY(-3px)';
+                        this.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                    }
+                });
+                
+                card.addEventListener('mouseout', function() {
+                    const lastMode = localStorage.getItem('gameMode') || 'jiyiMode';
+                    if (this.getAttribute('data-mode') !== lastMode) {
+                        this.style.transform = 'none';
+                        this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                    }
+                });
+                
+                // 添加点击涟漪效果
+                card.addEventListener('click', function(e) {
+                    const ripple = document.createElement('div');
+                    ripple.style.cssText = `
+                        position: absolute;
+                        background: rgba(216,166,179,0.2);
+                        border-radius: 50%;
+                        transform: scale(0);
+                        animation: ripple 0.6s linear;
+                        width: 100px;
+                        height: 100px;
+                    `;
+                    
+                    const rect = card.getBoundingClientRect();
+                    ripple.style.left = (e.clientX - rect.left - 50) + 'px';
+                    ripple.style.top = (e.clientY - rect.top - 50) + 'px';
+                    
+                    card.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+
+            // 添加"开始练习"按钮事件处理
+            document.getElementById('start-practice-btn').addEventListener('click', function() {
+                try {
+                    // 确保已有单词数据
+                    const wordCount = parseInt(document.getElementById('word-count').textContent || '0');
+                    if (wordCount <= 0) {
+                        showToast('请先生成词单', 'warning');
+                        return;
+                    }
+                    
+                    // 检查全局变量是否有单词数据
+                    if (!window.importedWordPairs || window.importedWordPairs.length === 0) {
+                        showToast('未找到有效的单词数据，请重新生成', 'warning');
+                        return;
+                    }
+                    
+                    // 设置游戏模式为导入模式
+                    if (window.WordDataLoader) {
+                        window.WordDataLoader.setPlayMode('imported');
+                    }
+                    
+                    // 显示游戏模式选择模态框
+                    showModeSelectionModal();
+                    
+                } catch (error) {
+                    console.error('开始练习时出错:', error);
+                    showToast('启动练习失败: ' + error.message, 'error');
+                }
+            });
         });
     </script>
+    
+    <!-- 添加data-loader.js引用 -->
+    <script src="js/data-loader.js"></script>
 </body>
 </html>
