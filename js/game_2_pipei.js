@@ -3064,75 +3064,94 @@
          * 下一关
          */
         async nextLevel() {
-            console.log("[Next Level] Clicked.");
-            // 隐藏模态框
-            document.getElementById('result-modal').classList.remove('active');
+            console.log('[匹配游戏] "下一关"按钮点击');
+            // 隐藏模态框 (恢复使用原生JS和原始ID)
+            // $('#levelCompleteModal').modal('hide');
+            const resultModal = document.getElementById('result-modal');
+            if (resultModal) {
+                resultModal.classList.remove('active');
+            } else {
+                console.warn('未能找到 ID 为 result-modal 的模态框');
+                const levelCompleteModal = document.getElementById('levelCompleteModal');
+                if (levelCompleteModal) {
+                     levelCompleteModal.classList.remove('active');
+                }
+            }
 
-            // 检查是否处于可以进入下一关的状态 (普通模式且有当前关卡信息)
-            if (!this.currentLevelId || this.currentChapterOrderNum === null || this.currentChapterOrderNum === undefined) {
-                console.warn("[Next Level] Cannot proceed: Missing levelId or chapterOrderNum (likely random/imported mode).");
-                alert("随机或导入模式下无法进入下一关。");
+            // 验证必要信息是否存在
+            if (!this.currentLevelId || this.currentChapterOrderNum === undefined || this.currentChapterOrderNum === null) {
+                console.error('[匹配游戏] 缺少 currentLevelId 或 currentChapterOrderNum 无法进入下一关');
+                alert('无法确定当前关卡信息，请刷新页面或重新选择关卡。');
                 return;
             }
 
-            const nextOrderNum = this.currentChapterOrderNum + 1;
-            console.log(`[Next Level] Trying to find chapter with order ${nextOrderNum} for level ${this.currentLevelId}`);
+            const currentNum = parseInt(this.currentChapterOrderNum, 10);
+            if (isNaN(currentNum)) {
+                 console.error('[匹配游戏] currentChapterOrderNum 无效:', this.currentChapterOrderNum);
+                 alert('关卡序号无效，无法进入下一关。');
+                 return;
+            }
 
-            // 获取 Token
+            const nextOrderNum = currentNum + 1;
+            // 构造预期的下一章节标识符 (基于 "级别名称第X章" 的模式)
+            const predictedChapterId = `${this.currentLevelId}第${nextOrderNum}章`;
+            console.log(`[匹配游戏] 尝试构造并检查下一章节: ${predictedChapterId}`);
+
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
-                console.error("[Next Level] Cannot fetch next chapter: authToken not found.");
-                alert("请先登录！");
+                console.error('[匹配游戏] 未找到认证令牌');
+                alert('请先登录！');
+                window.location.href = '/login.html'; // 或者其他登录页面
                 return;
             }
 
             try {
-                WordUtils.LoadingManager.show('正在加载下一关...'); // 显示加载提示
-                console.log('============================开始加载下一关============================')
-                console.log('encodeURIComponent(this.currentLevelId)：', encodeURIComponent(this.currentLevelId))
-                console.log('this.currentChapterOrderNum：', this.currentChapterOrderNum)
+                WordUtils.LoadingManager.show('检查下一关是否存在...'); // 显示加载提示
 
-                // 调用后端API查找下一关
-                const response = await fetch(`/api/chapters/find-next?levelId=${encodeURIComponent(this.currentLevelId)}&currentOrderNum=${this.currentChapterOrderNum}`, {
+                // 尝试获取下一关的单词，以此判断章节是否存在
+                const checkUrl = `/api/chapters/${encodeURIComponent(predictedChapterId)}/allwords`;
+                const response = await fetch(checkUrl, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
 
-                if (response.status === 404) {
-                    console.log("[Next Level] API response: No next chapter found.");
-                    alert("恭喜！您已完成当前级别的所有关卡！");
-                    WordUtils.LoadingManager.hide();
-                    // 可以选择返回关卡选择页面或首页
-                    // window.location.href = 'level.html'; 
-                    return;
-                }
+                WordUtils.LoadingManager.hide(); // 隐藏加载提示
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: '无法解析错误信息' }));
-                    throw new Error(`查找下一关失败: ${response.status} - ${errorData.message}`);
-                }
+                if (response.ok) {
+                    // 章节存在，构建跳转 URL
+                    console.log(`[匹配游戏] 找到下一章节 ${predictedChapterId}，准备跳转...`);
+                    // 假设所有匹配游戏都使用 game_2_pipei.html (修正：使用 category 和 chapter 参数名)
+                    // const nextLevelUrl = `game_2_pipei.html?levelId=${encodeURIComponent(this.currentLevelId)}&chapterId=${encodeURIComponent(predictedChapterId)}`;
+                     const nextLevelUrl = `game_2_pipei.html?category=${encodeURIComponent(this.currentLevelId)}&chapter=${encodeURIComponent(predictedChapterId)}&mode=normal`; // 添加 mode=normal
+                    window.location.href = nextLevelUrl;
 
-                const data = await response.json();
-
-                if (data.success && data.nextChapter) {
-                    const nextChapter = data.nextChapter;
-                    console.log(`[Next Level] Found next chapter: ID=${nextChapter.id}, Name=${nextChapter.name}`);
-
-                    // 构造下一关的URL (假设游戏类型不变，仍是 game_2_pipei.html)
-                    const nextChapterUrl = `game_2_pipei.html?chapter=${encodeURIComponent(nextChapter.id)}&category=${encodeURIComponent(this.currentLevelId)}&chapterName=${encodeURIComponent(nextChapter.name)}&mode=normal`;
-
-                    console.log(`[Next Level] Redirecting to: ${nextChapterUrl}`);
-                    window.location.href = nextChapterUrl;
-                    // 跳转后加载提示会自动消失
+                } else if (response.status === 404) {
+                    // 章节不存在，说明已经是最后一关
+                    console.log(`[匹配游戏] 未找到章节 ${predictedChapterId}，判定为最后一关。`);
+                     Swal.fire({
+                        title: '恭喜通关！',
+                        text: `您已完成 "${this.currentLevelId}" 级别的所有匹配关卡！`,
+                        icon: 'success',
+                        confirmButtonText: '返回首页',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '/shouye.html'; // 跳转到首页或其他页面
+                        }
+                    });
                 } else {
-                    throw new Error('未能从API获取有效的下一关信息');
+                    // 其他错误
+                    console.error(`[匹配游戏] 检查下一关时发生错误，状态码: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: '无法解析错误信息' }));
+                    alert(`加载下一关失败: ${errorData.message || response.statusText}`);
                 }
 
             } catch (error) {
-                console.error("[Next Level] Error:", error);
-                alert(`加载下一关时出错：${error.message}`);
                 WordUtils.LoadingManager.hide(); // 隐藏加载提示
+                console.error('[匹配游戏] 请求下一关信息时网络或处理错误:', error);
+                alert(`加载下一关时出错: ${error.message}`);
             }
         }
     };
