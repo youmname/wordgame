@@ -1,7 +1,8 @@
 /**
  * 主页面入口文件
  * 负责初始化和协调各个模块
- */
+de7783fd-94dc-4fcf-b57a-9fb7ad14c74a 
+*/
 
 // 导入依赖模块
 import { initTheme } from './theme.js';

@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 当前选中的主章节ID
     let currentCategoryId = null;
+    // 当前查看级别的进度信息 (用于 modal)
+    let currentLevelProgressInfo = null; 
     
     // 分页状态 - 级别
     const categoryPagination = {
@@ -488,25 +490,53 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadSubchaptersForCategory(categoryId) {
         try {
             console.log(`开始从API加载级别${categoryId}的章节数据`);
-            
-            // 使用WordDataLoader获取章节数据
-            const apiChapters = await WordDataLoader.getChaptersByLevel(categoryId);
-            
+
+            // 使用WordDataLoader获取章节数据，现在期望返回包含 last_accessed_order 的对象
+            // const apiChapters = await WordDataLoader.getChaptersByLevel(categoryId); // 旧方法，只返回章节数组
+
+            // 假设 WordDataLoader.getChaptersByLevel 现在能处理并返回完整响应
+            // 或者我们直接在这里调用 fetch (如果 WordDataLoader 不方便修改)
+            // 为了演示，我们假设可以直接获取带 last_accessed_order 的数据
+            const authToken = localStorage.getItem('authToken'); // 需要 Token
+            if (!authToken) {
+                console.error('无法加载章节数据: 未找到认证令牌');
+                // 可以选择显示错误消息或跳转登录
+                return;
+            }
+
+            const response = await fetch(`/api/vocabulary-levels/${categoryId}/chapters`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`API 请求失败: ${response.status}`);
+            }
+
+            const responseData = await response.json();
+            if (!responseData.success) {
+                throw new Error(responseData.message || '获取章节数据失败');
+            }
+
+            const apiChapters = responseData.chapters; // 章节数组
+            const lastUnlockedOrder = responseData.last_unlocked_order; 
+            const lastAccessedOrder = responseData.last_accessed_order; 
+            console.log(`API返回: last_unlocked_order = ${lastUnlockedOrder}, last_accessed_order = ${lastAccessedOrder}`);
+            const progressInfo = { lastUnlockedOrder, lastAccessedOrder }; 
+            currentLevelProgressInfo = progressInfo; // <-- 存储进度信息
+
             console.log('API返回的章节数据:', apiChapters);
-            
+
             if (apiChapters && apiChapters.length > 0) {
                 console.log(`从API获取到级别${categoryId}的${apiChapters.length}个章节`);
-                
+
                 // 转换API数据格式为我们需要的格式
                 subchapters[categoryId] = apiChapters.map(chap => {
-                    // 获取级别名称
                     const category = categories.find(c => c.id == categoryId);
                     const categoryName = category ? category.title : `级别${categoryId}`;
-                    
                     return {
-                        // 为了兼容现有代码，保留组合ID格式
                         id: `${categoryId}-${chap.id}`, 
-                        // 存储原始数据，方便后续使用
                         originalId: chap.id,
                         categoryId: categoryId,
                         categoryName: categoryName,
@@ -515,18 +545,43 @@ document.addEventListener('DOMContentLoaded', function() {
                         masteredCount: chap.mastered_count || 0,
                         progress: chap.progress || 0,
                         locked: chap.locked === true,
-                        difficulty: chap.difficulty || 1
+                        difficulty: chap.difficulty || 1,
+                        orderNum: chap.order_num // 确保 order_num 存在，以便计算页码
                     };
                 });
 
-                // 添加这行调试
                 console.log(`loadSubchaptersForCategory: 处理后的级别 ${categoryId} 章节数据 (检查 locked 状态):`, subchapters[categoryId]);
 
-                // 更新分页状态
-                subchapterPagination.currentPage = 1; // 重置为第一页
+                // --- 新增：计算并设置目标页码 ---
+                if (lastAccessedOrder > 0 && subchapterPagination.itemsPerPage > 0) {
+                    // 根据 last_accessed_order 找到对应的章节在列表中的索引
+                    // 注意：这里的 lastAccessedOrder 是 order_num，不是数组索引
+                    const targetChapterIndex = subchapters[categoryId].findIndex(chap => chap.orderNum === lastAccessedOrder);
+                    if (targetChapterIndex !== -1) {
+                         // 计算目标页码 (索引从0开始，页码从1开始)
+                         const targetPage = Math.ceil((targetChapterIndex + 1) / subchapterPagination.itemsPerPage);
+                         console.log(`计算目标页码: lastAccessedOrder=${lastAccessedOrder}, targetChapterIndex=${targetChapterIndex}, itemsPerPage=${subchapterPagination.itemsPerPage}, targetPage=${targetPage}`);
+                         // 设置分页组件的当前页
+                         if (targetPage >= 1) {
+                            subchapterPagination.currentPage = targetPage;
+                         } else {
+                            subchapterPagination.currentPage = 1; // 默认为第一页
+                         }
+                    } else {
+                        console.warn(`未能根据 lastAccessedOrder=${lastAccessedOrder} 找到对应章节索引，将显示第一页`);
+                        subchapterPagination.currentPage = 1;
+                    }
+                } else {
+                    // 如果没有有效的 lastAccessedOrder 或 itemsPerPage，重置为第一页
+                    subchapterPagination.currentPage = 1;
+                }
+                // --- 结束新增代码 ---
+
+                // 更新分页状态 (总页数和确保当前页有效)
                 subchapterPagination.update(subchapters[categoryId].length);
-                
-                // 如果当前选中的是这个级别，则渲染章节
+                console.log(`更新分页状态: currentPage=${subchapterPagination.currentPage}, totalPages=${subchapterPagination.totalPages}`);
+
+                // 如果当前选中的是这个级别，则渲染章节 (现在会渲染计算出的目标页)
                 if (currentCategoryId === categoryId) {
                     renderSubchapters(categoryId);
                 }
@@ -656,7 +711,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h3>${category.title}</h3>
                 <p class="word-count">${category.description}</p>
                 <p class="difficulty">${stars}</p>
-                <canvas class="progress-ring-small" width="50" height="50" data-progress="${category.progress}"></canvas>
                 <div class="lock-status" data-locked="${category.locked}">${category.locked ? '🔒' : '🔓'}</div>
             `;
 
@@ -667,12 +721,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 添加到网格
             grid.appendChild(card);
-
-            // 绘制小进度环
-            const canvas = card.querySelector('.progress-ring-small');
-            if (canvas) {
-                drawProgressRing(canvas, category.progress);
-            }
         });
         
         // 添加分页控件
@@ -741,6 +789,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 渲染子章节卡片
     function renderSubchapters(categoryId) {
+        // --- 新增日志：确认渲染时的 currentPage --- 
+        console.log(`[renderSubchapters ENTRY] Rendering for category ${categoryId}. Current page is: ${subchapterPagination.currentPage}`);
+        // --- 结束新增 --- 
+
         const categoryData = categories.find(c => c.id == categoryId);
         if (!categoryData) return;
 
@@ -755,9 +807,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 获取子章节数据
         const chapterList = subchapters[categoryId] || [];
-        
-        // 更新分页状态
-        subchapterPagination.update(chapterList.length);
         
         // 获取网格
         const grid = document.getElementById('subchapterGrid');
@@ -791,9 +840,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="deco-leaf" style="top: ${Math.random() * 60 + 20}%; left: ${Math.random() * 60 + 20}%">🍃</div>
                 <h3>${chapter.title}</h3>
                 <p class="word-count">📖 ${chapter.wordCount} 个单词</p>
-                <p class="difficulty">${stars}</p>
-                <canvas class="progress-ring-small" width="50" height="50" data-progress="${chapter.progress}"></canvas>
-                <div class="lock-status" data-locked="${chapter.locked}">${chapter.locked ? '🔒' : '🔓'}</div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <p class="difficulty" style="margin: 0;">${chapter.locked ? '加油💪' : '⭐⭐⭐'}</p>
+                    <div class="lock-status" data-locked="${chapter.locked}">${chapter.locked ? '🔒' : '🥇'}</div>
+                    <div class="chapter-completion-icon" style="pointer-events: none; margin-left: 8px;">${chapter.locked ? '✒️' : '🎉'}</div>
+                </div>
+                <div class="chapter-icon">${getChapterIcon(chapter, currentLevelProgressInfo)}</div>
             `;
 
             // 如果章节锁定，添加锁定样式
@@ -803,12 +855,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 添加到网格
             grid.appendChild(card);
-
-            // 绘制小进度环
-            const canvas = card.querySelector('.progress-ring-small');
-            if (canvas) {
-                drawProgressRing(canvas, chapter.progress);
-            }
         });
 
         // 添加分页控件
@@ -912,11 +958,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 加载章节数据
                 loadSubchaptersForCategory(categoryId);
             } else {
-                // 重置章节分页到第一页
-                subchapterPagination.currentPage = 1;
-                // 更新分页状态
+                // 如果数据已加载，直接渲染
+                console.log(`[chapterGrid Click] 级别 ${categoryId} 数据已加载，直接渲染。`); // 添加日志确认
+                // 更新分页状态（总页数，不重置当前页）
                 subchapterPagination.update(subchapters[categoryId].length);
-                // 直接渲染子章节
+                // 直接渲染子章节 (应使用 loadSubchaptersForCategory 中设置好的 currentPage)
                 renderSubchapters(categoryId);
             }
             
@@ -1010,8 +1056,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return categories.find(category => category.id == chapterId);
     }
 
-    // 绘制进度环
-    function drawProgressRing(canvas, progress) {
+    // 绘制进度环 (添加 colorOverride 参数)
+    function drawProgressRing(canvas, progress, colorOverride) {
         const ctx = canvas.getContext('2d');
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
@@ -1031,9 +1077,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (progress > 0) {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, -Math.PI/2, (Math.PI*2)*progress - Math.PI/2);
-            // 根据进度调整颜色
-            const hue = progress < 0.3 ? 0 : (progress < 0.7 ? 40 : 146);
-            ctx.strokeStyle = `hsl(${hue}, ${30 + progress*20}%, ${60 + progress*10}%)`;
+            // --- 修改：直接使用传入的 colorOverride --- 
+            ctx.strokeStyle = colorOverride; // 直接使用传入的颜色
+            // --- 结束修改 ---
             ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.stroke();
@@ -1050,48 +1096,77 @@ document.addEventListener('DOMContentLoaded', function() {
         // 清除画布
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 绘制背景圆环
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-        ctx.lineWidth = 8;
-        ctx.stroke();
+        // // 绘制背景圆环
+        // ctx.beginPath();
+        // ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        // ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+        // ctx.lineWidth = 8;
+        // ctx.stroke();
         
-        // 绘制进度圆环
-        if (progress > 0) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, -Math.PI/2, (Math.PI*2)*progress - Math.PI/2);
-            // 根据进度调整颜色
-            const hue = progress < 0.3 ? 0 : (progress < 0.7 ? 40 : 146);
-            ctx.strokeStyle = `hsl(${hue}, ${30 + progress*20}%, ${60 + progress*10}%)`;
-            ctx.lineWidth = 8;
-            ctx.lineCap = 'round';
-            ctx.stroke();
-        }
+        // // 绘制进度圆环
+        // if (progress > 0) {
+        //     ctx.beginPath();
+        //     ctx.arc(centerX, centerY, radius, -Math.PI/2, (Math.PI*2)*progress - Math.PI/2);
+        //     // 根据进度调整颜色
+        //     const hue = progress < 0.3 ? 0 : (progress < 0.7 ? 40 : 146);
+        //     ctx.strokeStyle = `hsl(${hue}, ${30 + progress*20}%, ${60 + progress*10}%)`;
+        //     ctx.lineWidth = 8;
+        //     ctx.lineCap = 'round';
+        //     ctx.stroke();
+        // }
     }
 
     // 显示章节详情模态框
     function showChapterModal(chapter) {
-        // 获取模态框元素
         const modal = document.getElementById('chapter-modal');
-        if (!modal) return;
-        
-        // 更新模态框内容
-        document.getElementById('chapter-title').textContent = chapter.title;
-        document.getElementById('word-count').textContent = chapter.wordCount;
-        document.getElementById('mastered-count').textContent = chapter.masteredCount;
-        document.getElementById('difficulty').textContent = '⭐'.repeat(chapter.difficulty);
-        document.getElementById('progress-percentage').textContent = `${Math.round(chapter.progress * 100)}%`;
-        
-        // 为按钮添加章节ID
-        document.getElementById('play-btn').dataset.chapterId = chapter.id;
-        document.getElementById('review-btn').dataset.chapterId = chapter.id;
-        
-        // 绘制进度环
-        const canvas = document.getElementById('progress-ring');
-        if (canvas) {
-            drawLargeProgressRing(canvas, chapter.progress);
+        if (!modal) {
+            console.error("Modal element #chapter-modal not found!");
+            return;
         }
+        
+        // --- 修改：使用 subchapters 和 currentLevelProgressInfo 计算级别进度 ---
+        let categoryProgress = 0;
+        const chapterList = subchapters[chapter.categoryId];
+        
+        if (chapterList && currentLevelProgressInfo) {
+            const totalChapters = chapterList.length;
+            if (totalChapters > 0) {
+                const completedChapters = chapterList.filter(chap => chap.orderNum < currentLevelProgressInfo.lastAccessedOrder).length;
+                categoryProgress = completedChapters / totalChapters;
+                console.log(`[showChapterModal] Calculated category progress: ${completedChapters}/${totalChapters} = ${categoryProgress}`);
+            } else {
+                console.warn(`[showChapterModal] No chapters found for category ${chapter.categoryId} in subchapters data.`);
+            }
+        } else {
+            console.warn(`[showChapterModal] Missing chapterList or currentLevelProgressInfo, cannot calculate category progress.`, { chapterList, currentLevelProgressInfo });
+        }
+        // --- 结束修改 ---
+        
+        // --- 修改：更新模态框内容，并添加空值检查 --- 
+        const chapterTitleEl = document.getElementById('chapter-title');
+        if (chapterTitleEl) chapterTitleEl.textContent = chapter.title;
+        else console.error("Element #chapter-title not found!");
+
+        const wordCountEl = document.getElementById('word-count');
+        if (wordCountEl) wordCountEl.textContent = chapter.wordCount;
+        else console.error("Element #word-count not found!");
+        
+        const masteredCountEl = document.getElementById('mastered-count');
+        if (masteredCountEl) masteredCountEl.textContent = chapter.masteredCount;
+        else console.error("Element #mastered-count not found!");
+
+        const difficultyEl = document.getElementById('difficulty');
+        if (difficultyEl) difficultyEl.textContent = '⭐'.repeat(chapter.difficulty);
+        else console.error("Element #difficulty not found!");
+        
+        const playBtnEl = document.getElementById('play-btn');
+        if (playBtnEl) playBtnEl.dataset.chapterId = chapter.id;
+        else console.error("Element #play-btn not found!");
+
+        const reviewBtnEl = document.getElementById('review-btn');
+        if (reviewBtnEl) reviewBtnEl.dataset.chapterId = chapter.id;
+        else console.error("Element #review-btn not found!");
+        // --- 结束修改 ---
         
         // 显示模态框
         modal.classList.add('active');
@@ -1220,10 +1295,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 获取章节图标
     function getChapterIcon(chapter, progress) {
-        if (chapter.order_num > progress.lastUnlocked) return '🔒';
-        if (chapter.order_num === progress.lastAccessed) return '🎮';
-        return '📘';
-      }
+        // 1. 已完成 (且上次访问)
+        if (chapter.order_num === progress.lastAccessed) {
+            return '👑'; // Crown icon (Completed and last accessed)
+        }
+        // 2. 已完成 (且非上次访问)
+        if (chapter.order_num < progress.lastAccessed) {
+            return '✅'; // Checkmark icon (Completed)
+        }
+        // 3. 可玩 (已解锁，非上次访问，非已完成) - 返回空字符串，不显示图标
+        // return '📘'; // Book icon (Available to play)
+        return ''; // Return empty string for available state
+    }
 
     // 开始游戏
     function startGame(chapterId) {

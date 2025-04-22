@@ -1319,10 +1319,10 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
 
     // --- 非管理员用户处理 ---
 
-    // 2. 获取用户在该级别的进度 (last_unlocked_order)
+    // 2. 获取用户在该级别的进度 (last_unlocked_order 和 last_accessed_order)
     const getProgress = () => {
         return new Promise((resolve, reject) => {
-            // 确保进度记录存在，不存在则插入默认值 (解锁第一章)
+            // 确保进度记录存在，不存在则插入默认值 (解锁第一章, 访问第一章)
             const ensureSql = `INSERT OR IGNORE INTO UserChapterProgress (user_id, level_id, last_unlocked_order, last_accessed_order) VALUES (?, ?, 1, 1)`;
             db.run(ensureSql, [userId, levelId], (err) => {
                 if (err) {
@@ -1332,16 +1332,18 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
                     console.log(`[Get Chapters - Ensure Progress] Ensured record for User ${userId}, Level ${levelId}.`);
                 }
 
-                // 查询进度
-                const selectSql = 'SELECT last_unlocked_order FROM UserChapterProgress WHERE user_id = ? AND level_id = ?';
+                // 查询进度 (同时获取 last_unlocked_order 和 last_accessed_order)
+                const selectSql = 'SELECT last_unlocked_order, last_accessed_order FROM UserChapterProgress WHERE user_id = ? AND level_id = ?';
                 db.get(selectSql, [userId, levelId], (err, row) => {
                     if (err) {
                         console.error(`[Get Chapters - Get Progress] Failed for User ${userId}, Level ${levelId}:`, err.message);
                         reject(err); // 查询失败，拒绝 Promise
                     } else {
                         const lastUnlocked = row ? row.last_unlocked_order : 1; // 默认解锁第一章
-                        console.log(`[Get Chapters - Get Progress] User ${userId}, Level ${levelId}, Last Unlocked Order: ${lastUnlocked}`);
-                        resolve(lastUnlocked);
+                        const lastAccessed = row ? row.last_accessed_order : 1; // 默认访问第一章
+                        console.log(`[Get Chapters - Get Progress] User ${userId}, Level ${levelId}, Last Unlocked Order: ${lastUnlocked}, Last Accessed Order: ${lastAccessed}`);
+                        // 返回包含两个值的对象
+                        resolve({ lastUnlockedOrder: lastUnlocked, lastAccessedOrder: lastAccessed });
                     }
                 });
             });
@@ -1351,7 +1353,20 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
     // 3. 获取所有章节并计算锁定状态
     const getChaptersWithLockStatus = (lastUnlockedOrder) => {
         return new Promise((resolve, reject) => {
-            const query = 'SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num';
+            // --- 修改 SQL 查询以包含 word_count --- 
+            // const query = 'SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num'; 
+            const query = `
+                SELECT 
+                    c.*, 
+                    (SELECT COUNT(*) FROM Words w WHERE w.chapter_id = c.id) as word_count
+                FROM 
+                    Chapters c 
+                WHERE 
+                    c.level_id = ? 
+                ORDER BY 
+                    c.order_num
+            `;
+            // --- 结束修改 ---
             db.all(query, [levelId], (err, chapters) => {
                 if (err) {
                     console.error(`[Get Chapters - Fetch Chapters] Failed for Level ${levelId}:`, err.message);
@@ -1381,7 +1396,7 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
     // 4. 特殊处理游客：检查是否访问第一个级别
     const handleGuestAndProceed = async () => {
         try {
-            let lastUnlockedOrder = 1; // 默认值
+            let progressData = { lastUnlockedOrder: 1, lastAccessedOrder: 1 }; // 默认值
 
             if (userType === 'guest') {
                 // 检查是否为第一个级别
@@ -1395,20 +1410,22 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
 
                 if (!firstLevel || levelId !== firstLevel.id) {
                     console.log(`[Get Chapters - Guest] Access denied. Guest user trying to access non-first level (${levelId}).`);
-                    return res.json({ success: true, chapters: [] }); // 游客访问非第一级别，返回空列表
+                    // 游客访问非第一级别，返回空列表和默认访问进度
+                    return res.json({ success: true, chapters: [], last_accessed_order: 1 });
                 }
                 console.log(`[Get Chapters - Guest] Guest accessing the first level (${levelId}). Proceeding.`);
                 // 游客访问第一级别，需要获取他们的进度
-                lastUnlockedOrder = await getProgress();
+                progressData = await getProgress();
             } else {
                 // 其他用户，直接获取进度
-                lastUnlockedOrder = await getProgress();
+                progressData = await getProgress();
             }
 
             // 获取带有锁定状态的章节列表
-            const chapters = await getChaptersWithLockStatus(lastUnlockedOrder);
+            const chapters = await getChaptersWithLockStatus(progressData.lastUnlockedOrder);
             console.log(`[Get Chapters] Successfully processed chapters for User ${userId}, Level ${levelId}. Sending response.`);
-            res.json({ success: true, chapters: chapters || [] });
+            // 在响应中同时包含章节列表和 last_accessed_order
+            res.json({ success: true, chapters: chapters || [], last_accessed_order: progressData.lastAccessedOrder });
 
         } catch (error) {
             console.error(`[Get Chapters] Error processing request for User ${userId}, Level ${levelId}:`, error.message);
