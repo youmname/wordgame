@@ -225,8 +225,8 @@
                 <div class="data-module">
                     <div class="data-label">连续学习</div>
                     <div class="data-value">7天 <span class="fire">🔥</span></div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="streak-progress"></div>
+                    <div class="progress-bar" id="streak-progress">
+                        <div class="progress-fill"></div>
                     </div>
                     <div class="badge-tip">再坚持3天可获得"学习达人"勋章</div>
                 </div>
@@ -234,8 +234,8 @@
                 <div class="data-module">
                     <div class="data-label">已掌握单词</div>
                     <div class="data-value">364 <span class="mastery-count">/ 1000</span></div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="mastery-progress"></div>
+                    <div class="progress-bar" id="mastery-progress">
+                        <div class="progress-fill"></div>
                     </div>
                 </div>
             </div>
@@ -354,11 +354,25 @@
             </div>
         </div>
     </div>
-    <script type="module" src="js/utils.js"></script>
-    <script type="module" src="js/config.js"></script>
-    <script type="module" src="js/sound-manager.js"></script>
+    <script  src="js/config.js"></script>
     <script type="module" src="js/store.js"></script>
-    <script type="module" src="js/data-loader.js"></script>
+    <script type="module" src="js/state.js"></script>
+    <script src="js/data-loader.js"></script>
+    <script type="module" src="js/theme.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script type="module" src="js/heatmap-calendar.js"></script>
+    <script type="module" src="js/sound.js"></script>
+    <script src="js/sound-manager.js"></script>
+    <script type="module" src="js/performance.js"></script>
+    <script type="module" src="js/particles.js"></script>
+    <script type="module" src="js/monitoring.js"></script>
+    <script src="js/progress-calculator.js"></script>
+    <script src="js/progress-worker.js"></script>
+    <script type="module" src="js/skill-radar.js"></script>
+    <script src="js/level-system.js"></script>
+    <script type="module" src="js/error-monitoring.js"></script>
     <script type="module" src="js/shouye.js"></script>
     <script>
         // 使用全局gameMode函数替代局部变量

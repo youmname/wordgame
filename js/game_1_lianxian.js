@@ -2399,23 +2399,38 @@
         async loadWordData() {
             try {
                 console.log('开始加载单词数据...');
-                
+
                 // 解析URL参数
                 const urlParams = new URLSearchParams(window.location.search);
                 const chapterId = urlParams.get('chapter'); // 章节ID
                 const mode = urlParams.get('mode'); // 获取模式
-                const categoryId = urlParams.get('category'); // 级别ID
-                const categoryName = urlParams.get('categoryName');
-                const chapterName = urlParams.get('chapterName');
-                
+                const levelId = urlParams.get('category'); // 级别ID (从 level.html 传递过来)
+                this.currentLevelId = levelId; // 直接存储 levelId
+                this.currentChapterOrderNum = null; // 初始化 orderNum
+
                 console.log('加载参数:', {
                     chapterId,
                     mode,
-                    categoryId,
-                    categoryName,
-                    chapterName
+                    levelId
                 });
-                
+
+                // 如果是普通模式，尝试获取章节的 order_num
+                if (mode === 'normal' && chapterId && typeof window.WordDataLoader !== 'undefined') {
+                    try {
+                        console.log(`尝试获取章节 ${chapterId} 的详情...`);
+                        const chapterDetails = await window.WordDataLoader.getChapterDetails(chapterId);
+                        if (chapterDetails && chapterDetails.order_num !== undefined) {
+                            this.currentChapterOrderNum = chapterDetails.order_num;
+                            console.log(`成功获取章节 ${chapterId} 的 order_num: ${this.currentChapterOrderNum}`);
+                        } else {
+                            console.warn(`未能获取章节 ${chapterId} 的 order_num。`);
+                        }
+                    } catch (error) {
+                        console.error(`获取章节 ${chapterId} 详情时出错:`, error);
+                    }
+                }
+
+
                 // 检查WordDataLoader是否可用
                 if (typeof window.WordDataLoader !== 'undefined') {
                     // 如果是导入模式，直接获取导入的单词
@@ -2425,11 +2440,11 @@
                             // 调用getImportedWords而不需要章节ID
                             const words = await window.WordDataLoader.getImportedWords();
                             console.log(`成功获取导入的单词:`, words);
-                            
+
                             if (words && words.length > 0) {
                                 this.wordPairs = words;
                                 console.log(`获取到${words.length}个单词对`);
-                                
+
                                 // 打印单词示例
                                 if (words.length > 0) {
                                     console.log('单词示例:');
@@ -2446,18 +2461,18 @@
                         }
                     }
                     // 普通章节模式，需要chapter参数
-                    else if (mode === 'normal') {
+                    else if (mode === 'normal' && chapterId) { // 确保 chapterId 存在
                         console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
-                        
+
                         try {
                             // 使用数据加载模块获取单词 - 使用新方法获取所有单词
                             const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
                             console.log(`成功获取章节${chapterId}的单词数据:`, words);
-                            
+
                             if (words && words.length > 0) {
                                 this.wordPairs = words;
                                 console.log(`获取到${words.length}个单词对`);
-                                
+
                                 // 打印单词示例
                                 if (words.length > 0) {
                                     console.log('单词示例:');
@@ -2491,7 +2506,16 @@
                 this.wordPairs = WordConfig.SAMPLE_WORDS;
                 this.totalPairs = this.wordPairs.length;
                 return this.wordPairs;
-            }
+            } finally {
+                // 确保在所有路径（包括错误）后都能获取到单词对
+                if (!this.wordPairs || this.wordPairs.length === 0) {
+                   console.warn('最终未能加载任何单词，将使用示例数据。');
+                   this.wordPairs = WordConfig.SAMPLE_WORDS;
+                   this.totalPairs = this.wordPairs.length;
+                }
+                // 可以在这里添加额外的日志记录
+                console.log(`loadWordData 结束，最终单词对数量: ${this.totalPairs}`);
+             }
         },
         
         
@@ -2926,6 +2950,52 @@
             
             // 记录游戏结果
             this.saveGameResult(isWin);
+
+            // --- 新增：如果胜利，则更新进度 ---
+            if (isWin && this.currentLevelId && this.currentChapterOrderNum !== null && this.currentChapterOrderNum !== undefined) {
+                const authToken = localStorage.getItem('authToken'); // 假设 Token 存储在 localStorage
+
+                if (!authToken) {
+                    console.warn('无法更新进度：未找到 authToken');
+                    return; // 没有 Token 无法更新
+                }
+
+                console.log(`准备更新进度: levelId=${this.currentLevelId}, completedOrderNum=${this.currentChapterOrderNum}`);
+
+                fetch('/api/progress/complete-chapter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        levelId: this.currentLevelId,
+                        completedOrderNum: this.currentChapterOrderNum
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // 如果响应状态码不是 2xx，则抛出错误
+                        return response.text().then(text => { 
+                            throw new Error(`服务器错误: ${response.status} - ${text}`);
+                        });
+                    }
+                    return response.json(); // 解析 JSON
+                })
+                .then(data => {
+                    if (data.success) {
+                        console.log('用户进度更新成功！');
+                    } else {
+                        console.error('更新用户进度失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('调用进度更新接口时出错:', error);
+                });
+            } else if (isWin) {
+                console.log('胜利，但缺少 levelId 或 chapterOrderNum，跳过进度更新 (可能是随机模式或导入模式?)');
+            }
+            // --- 结束新增代码 ---
         },
         
         /**
@@ -3020,7 +3090,7 @@
         },
         
         /**
-         * 返回菜单/上一级
+         * 返回菜单
          */
         backToMenu() {
             // 在实际游戏中，这里会返回到主菜单页面
@@ -3031,21 +3101,75 @@
         /**
          * 下一关
          */
-        nextLevel() {
-            // 在实际游戏中，这里会加载下一关
-            
-            // 简单示例：增加难度后重新开始
-            const difficulties = ['EASY', 'MEDIUM', 'HARD'];
-            const currentIndex = difficulties.indexOf(this.difficulty);
-            const nextIndex = (currentIndex + 1) % difficulties.length;
-            
-            this.difficulty = difficulties[nextIndex];
-            
+        async nextLevel() {
+            console.log("[Next Level] Clicked.");
             // 隐藏模态框
             document.getElementById('result-modal').classList.remove('active');
-            
-            // 开始新游戏
-            this.startGame();
+
+            // 检查是否处于可以进入下一关的状态 (普通模式且有当前关卡信息)
+            if (!this.currentLevelId || this.currentChapterOrderNum === null || this.currentChapterOrderNum === undefined) {
+                console.warn("[Next Level] Cannot proceed: Missing levelId or chapterOrderNum (likely random/imported mode).");
+                alert("随机或导入模式下无法进入下一关。");
+                return;
+            }
+
+            const nextOrderNum = this.currentChapterOrderNum + 1;
+            console.log(`[Next Level] Trying to find chapter with order ${nextOrderNum} for level ${this.currentLevelId}`);
+
+            // 获取 Token
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                console.error("[Next Level] Cannot fetch next chapter: authToken not found.");
+                alert("请先登录！");
+                return;
+            }
+
+            try {
+                WordUtils.LoadingManager.show('正在加载下一关...'); // 显示加载提示
+
+                // 调用后端API查找下一关
+                const response = await fetch(`/api/chapters/find-next?levelId=${encodeURIComponent(this.currentLevelId)}&currentOrderNum=${this.currentChapterOrderNum}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.status === 404) {
+                    console.log("[Next Level] API response: No next chapter found.");
+                    alert("恭喜！您已完成当前级别的所有关卡！");
+                    WordUtils.LoadingManager.hide();
+                    // 可以选择返回关卡选择页面或首页
+                    // window.location.href = 'level.html'; 
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: '无法解析错误信息' }));
+                    throw new Error(`查找下一关失败: ${response.status} - ${errorData.message}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.nextChapter) {
+                    const nextChapter = data.nextChapter;
+                    console.log(`[Next Level] Found next chapter: ID=${nextChapter.id}, Name=${nextChapter.name}`);
+
+                    // 构造下一关的URL (假设游戏类型不变，仍是 game_1_lianxian.html)
+                    // 注意：chapter参数应该传递ID，chapterName传递名称
+                    const nextChapterUrl = `game_1_lianxian.html?chapter=${encodeURIComponent(nextChapter.id)}&category=${encodeURIComponent(this.currentLevelId)}&chapterName=${encodeURIComponent(nextChapter.name)}&mode=normal`;
+
+                    console.log(`[Next Level] Redirecting to: ${nextChapterUrl}`);
+                    window.location.href = nextChapterUrl;
+                    // 跳转后加载提示会自动消失
+                } else {
+                    throw new Error('未能从API获取有效的下一关信息');
+                }
+
+            } catch (error) {
+                console.error("[Next Level] Error:", error);
+                alert(`加载下一关时出错：${error.message}`);
+                WordUtils.LoadingManager.hide(); // 隐藏加载提示
+            }
         }
     };
     

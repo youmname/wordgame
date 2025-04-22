@@ -84,5 +84,12 @@ quality    质量，品质`,
         LEVEL_DATA: 'word-game-level-data',
         THEME: 'preferred-theme',
         CUSTOM_BG: 'custom-background'
+    },
+
+    // 新增安全配置
+    SECURITY: {
+        MAX_CHAPTER_JUMP: 2,    // 允许的最大章节跳跃数
+        MIN_PLAY_TIME: 30,      // 最小章节完成时间(秒)
+        ALLOW_DEVICE_CHANGE: false
     }
 };

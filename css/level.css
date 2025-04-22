@@ -535,7 +535,29 @@ body {
     }
 }
 
-
+/* 章节状态指示 */
+.chapter-item.locked {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  
+  .chapter-item .last-played {
+    font-size: 12px;
+    color: #4CAF50;
+    margin-top: 4px;
+  }
+  
+  /* 解锁动画 */
+  @keyframes unlock {
+    0% { transform: scale(0); opacity: 0; }
+    80% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  
+  .unlock-effect {
+    animation: unlock 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+  
 
 /* pageination */
 /* 分页控件样式 */

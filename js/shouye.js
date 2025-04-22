@@ -105,8 +105,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // 2. 加载用户数据
         mark('load_data_start');
-        await loadUserData();
-        await loadBadges();
+        const userData = await loadUserData();
         
         // 3. 初始化界面组件
         mark('init_ui_start');
@@ -122,8 +121,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         const initTime = measure('total_init', 'init_start', 'init_complete');
         console.log(`初始化耗时: ${initTime.toFixed(2)}ms`);
         
-        // 应用初始化动画
-        animatePageLoad();
+        // // 应用初始化动画
+        // animatePageLoad();
+
+        // 修改后的加载顺序
+        if (userData) {
+            updateUserInterface(userData);
+        }
+
+        await loadBadges();
+
+        // 最后统一显示
+        requestAnimationFrame(() => {
+            if (typeof revealElements === 'function') {
+                revealElements([
+                    '.stats-container',
+                    '.user-profile',
+                    '.features-grid'
+                ]);
+            } else {
+                console.warn('revealElements function not found.');
+                document.querySelectorAll('.stats-container, .user-profile, .features-grid').forEach(el => {
+                    el.style.opacity = '1';
+                });
+            }
+        });
     } catch (error) {
         console.error('初始化过程出错:', error);
         // 显示错误提示
@@ -193,9 +215,6 @@ async function loadUserData() {
     
     // 更新状态
         window.store.updateUserData(userData);
-    
-        // 更新界面显示
-    updateUserInterface(userData);
     
         return userData;
   } catch (error) {
@@ -729,10 +748,48 @@ function updateProgressBar(id, value, max) {
     const percentage = Math.min(100, Math.round((value / max) * 100));
     const progressFill = progressBar.querySelector('.progress-fill');
     
-    if (progressFill) {
-        // 使用CSS变量实现更好的动画
-        progressBar.style.setProperty('--progress-percent', `${percentage}%`);
+    // if (progressFill) {
+    //     // 使用CSS变量实现更好的动画
+    //     progressBar.style.setProperty('--progress-percent', `${percentage}%`);
+    // }
+     // 添加初始化标记
+     if (!progressBar.dataset.initialized) {
+        progressBar.style.setProperty('--progress-percent', '0%');
+        progressBar.dataset.initialized = true;
     }
+
+    // 分阶段更新
+    requestAnimationFrame(() => {
+        progressFill.style.transition = 'none';
+        progressBar.style.setProperty('--progress-percent', `${percentage}%`);
+        
+        requestAnimationFrame(() => {
+            progressFill.style.transition = '';
+            progressBar.style.setProperty('--progress-percent', `${percentage}%`);
+        });
+    });
+
+}
+
+// js/shouye.js
+function revealElement(element) {
+    // 先准备DOM
+    element.style.opacity = '0';
+    element.removeAttribute('data-hidden');
+    
+    // 分阶段显示
+    requestAnimationFrame(() => {
+        element.style.transition = 'opacity 0.5s ease';
+        element.style.opacity = '1';
+        
+        // 延迟触发进度条动画
+        setTimeout(() => {
+            element.querySelectorAll('.progress-bar').forEach(bar => {
+                bar.style.setProperty('--progress-percent', 
+                    bar.style.getPropertyValue('--progress-percent'));
+            });
+        }, 300);
+    });
 }
 
 /**

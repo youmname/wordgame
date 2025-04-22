@@ -614,7 +614,15 @@ body {
   animation: gradientFlow 2s linear infinite;
   border-radius: 4px;
   width: 70%; /* 默认值，会被JS更新 */
-  transition: width 0.5s ease;
+  /* transition: width 0.5s ease; */
+}
+.progress-fill {
+  transition: width 0.5s ease 0.3s; /* 添加0.3s延迟 */
+}
+
+[data-hidden] .progress-fill {
+  opacity: 0;
+  transition: none !important;
 }
 
 @keyframes gradientFlow {

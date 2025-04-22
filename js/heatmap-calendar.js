@@ -293,7 +293,6 @@ class HeatmapCalendar {
       }
       
       this.daysGrid.appendChild(dayEl);
-      console.log(`添加日期: ${day}`); // 调试每个日期的添加
     }
     
     // 输出日历内容以供调试
@@ -325,13 +324,19 @@ class HeatmapCalendar {
       console.log(`日历总格子数: ${totalCells}, 当月日期数: ${currentMonthCells}`);
       
       // 检查1号-15号是否存在并可见
+      let allElementsFound = true; // 增加一个标记
       for (let day = 1; day <= 15; day++) {
         const dayEl = this.daysGrid.querySelector(`[data-date="${day}"]`);
         if (dayEl) {
-          console.log(`${day}号日期元素存在`);
+          // console.log(`${day}号日期元素存在`);
         } else {
-          console.error(`${day}号日期元素不存在!`);
+          console.error(`HeatmapCalendar: 检查时发现 ${day}号日期元素不存在!`);
+          allElementsFound = false; // 发现错误，设置标记
         }
+      }
+      // 循环结束后检查标记
+      if (allElementsFound) {
+          console.log("HeatmapCalendar: 检查完毕，1-15号日期元素均存在。"); // 打印总结信息
       }
     }, 100);
   }

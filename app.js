@@ -244,6 +244,26 @@ const initializeDatabase = () => {
         }
         console.log('UserProgress表检查/创建成功');
     });
+
+    // 新增进度表事务
+    const createUserChapterProgressTable = `
+        CREATE TABLE IF NOT EXISTS UserChapterProgress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            level_id TEXT NOT NULL,
+            last_unlocked_order INTEGER NOT NULL,
+            last_accessed_order INTEGER NOT NULL,
+            PRIMARY KEY (user_id, level_id),
+      FOREIGN KEY (user_id) REFERENCES Users(id),
+            FOREIGN KEY (level_id) REFERENCES Categories(id)
+        )`;
+
+    db.run(createUserChapterProgressTable, (err) => {
+        if (err) {
+            console.error('创建UserChapterProgress表失败:', err);
+        }
+        console.log('UserChapterProgress表检查/创建成功');
+    });
 };
 
 // 检查并创建管理员账号
@@ -379,24 +399,28 @@ const initializeAdmin = async () => {
 
 // 验证Token的中间件
 const authenticateToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
     if (!token) {
-        return res.status(401).json({
+        console.log('[authenticateToken] 拒绝访问：未提供 Token');
+        return res.status(401).json({ // 直接返回 401
             success: false,
-            message: '未提供认证token'
+            message: '需要提供认证 Token'
         });
     }
-    
+
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        console.log('[authenticateToken] 验证通过，用户ID:', decoded.userId);
-        req.user = decoded;
-        next();
+        console.log('[authenticateToken] JWT 验证通过，用户ID:', decoded.userId);
+        // 确保证包含了需要的信息，特别是 id 和 type
+        req.user = { id: decoded.userId, username: decoded.username, type: decoded.userType };
+        next(); // 验证成功，继续处理请求
     } catch (error) {
-        console.error('[authenticateToken] 验证失败:', error.message);
-        res.status(401).json({
+        console.error('[authenticateToken] JWT 验证失败:', error.message);
+        return res.status(401).json({ // Token 无效或过期，返回 401
             success: false,
-            message: 'token无效或已过期'
+            message: 'Token 无效或已过期'
         });
     }
 };
@@ -1271,32 +1295,130 @@ app.get('/api/vocabulary-levels', (req, res) => {
 });
 
 // 获取特定级别的所有章节
-app.get('/api/vocabulary-levels/:levelId/chapters', (req, res) => {
+app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res) => {
     const levelId = req.params.levelId;
-    
-    // 构建查询 - 使用正确的字段名和表名
-    const query = `
-        SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num
-    `;
-    
-    // 执行查询
-    db.all(query, [levelId], (err, rows) => {
-        if (err) {
-            console.error(`获取级别 ${levelId} 的章节失败:`, err.message);
-            return res.status(500).json({
-            success: false,
-                message: '数据库查询错误',
-                error: err.message
-            });
-        }
-        
-        console.log(`数据库成功返回级别 ${levelId} 的 ${rows ? rows.length : 0} 个章节`);
-                res.json({
-                    success: true,
-            chapters: rows || []
+    const userId = req.user.id; // 从 authenticateToken 获取
+    const userType = req.user.type; // 从 authenticateToken 获取
+
+    console.log(`[Get Chapters] Request received for level: ${levelId}, UserID: ${userId}, UserType: ${userType}`);
+
+    // 1. 管理员特权处理
+    if (userType === 'admin') {
+        console.log('[Get Chapters] Admin user detected. Unlocking all chapters.');
+        const query = 'SELECT *, 0 as locked FROM Chapters WHERE level_id = ? ORDER BY order_num';
+        db.all(query, [levelId], (err, chapters) => {
+            if (err) {
+                console.error(`[Get Chapters - Admin] Database error for level ${levelId}:`, err.message);
+                return res.status(500).json({ success: false, message: '数据库查询错误' });
+            }
+            console.log(`[Get Chapters - Admin] Successfully fetched ${chapters.length} chapters for level ${levelId}.`);
+            return res.json({ success: true, chapters: chapters || [] });
+        });
+        return; // 管理员逻辑结束
+    }
+
+    // --- 非管理员用户处理 ---
+
+    // 2. 获取用户在该级别的进度 (last_unlocked_order)
+    const getProgress = () => {
+        return new Promise((resolve, reject) => {
+            // 确保进度记录存在，不存在则插入默认值 (解锁第一章)
+            const ensureSql = `INSERT OR IGNORE INTO UserChapterProgress (user_id, level_id, last_unlocked_order, last_accessed_order) VALUES (?, ?, 1, 1)`;
+            db.run(ensureSql, [userId, levelId], (err) => {
+                if (err) {
+                    console.error(`[Get Chapters - Ensure Progress] Failed for User ${userId}, Level ${levelId}:`, err.message);
+                    // 即使确保失败，也尝试查询，可能记录已存在
+                } else {
+                    console.log(`[Get Chapters - Ensure Progress] Ensured record for User ${userId}, Level ${levelId}.`);
+                }
+
+                // 查询进度
+                const selectSql = 'SELECT last_unlocked_order FROM UserChapterProgress WHERE user_id = ? AND level_id = ?';
+                db.get(selectSql, [userId, levelId], (err, row) => {
+                    if (err) {
+                        console.error(`[Get Chapters - Get Progress] Failed for User ${userId}, Level ${levelId}:`, err.message);
+                        reject(err); // 查询失败，拒绝 Promise
+                    } else {
+                        const lastUnlocked = row ? row.last_unlocked_order : 1; // 默认解锁第一章
+                        console.log(`[Get Chapters - Get Progress] User ${userId}, Level ${levelId}, Last Unlocked Order: ${lastUnlocked}`);
+                        resolve(lastUnlocked);
+                    }
                 });
             });
-    });
+        });
+    };
+
+    // 3. 获取所有章节并计算锁定状态
+    const getChaptersWithLockStatus = (lastUnlockedOrder) => {
+        return new Promise((resolve, reject) => {
+            const query = 'SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num';
+            db.all(query, [levelId], (err, chapters) => {
+                if (err) {
+                    console.error(`[Get Chapters - Fetch Chapters] Failed for Level ${levelId}:`, err.message);
+                    reject(err);
+                } else {
+                    console.log(`[Get Chapters - Fetch Chapters] Fetched ${chapters.length} chapters for level ${levelId}. Calculating lock status...`);
+                    const chaptersWithStatus = chapters.map(chapter => {
+                        let isLocked;
+                        if (userType === 'guest') {
+                            // 游客逻辑：解锁条件是 order_num <= lastUnlockedOrder AND order_num <= 5
+                            isLocked = !(chapter.order_num <= lastUnlockedOrder && chapter.order_num <= 5);
+                        } else {
+                            // 其他用户逻辑：解锁条件是 order_num <= lastUnlockedOrder
+                            isLocked = !(chapter.order_num <= lastUnlockedOrder);
+                        }
+                        return {
+                            ...chapter,
+                            locked: isLocked // boolean true or false
+                        };
+                    });
+                    resolve(chaptersWithStatus);
+                }
+            });
+        });
+    };
+
+    // 4. 特殊处理游客：检查是否访问第一个级别
+    const handleGuestAndProceed = async () => {
+        try {
+            let lastUnlockedOrder = 1; // 默认值
+
+            if (userType === 'guest') {
+                // 检查是否为第一个级别
+                const firstLevelQuery = 'SELECT id FROM Categories ORDER BY order_num ASC LIMIT 1';
+                const firstLevel = await new Promise((resolve, reject) => {
+                    db.get(firstLevelQuery, [], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row);
+                    });
+                });
+
+                if (!firstLevel || levelId !== firstLevel.id) {
+                    console.log(`[Get Chapters - Guest] Access denied. Guest user trying to access non-first level (${levelId}).`);
+                    return res.json({ success: true, chapters: [] }); // 游客访问非第一级别，返回空列表
+                }
+                console.log(`[Get Chapters - Guest] Guest accessing the first level (${levelId}). Proceeding.`);
+                // 游客访问第一级别，需要获取他们的进度
+                lastUnlockedOrder = await getProgress();
+            } else {
+                // 其他用户，直接获取进度
+                lastUnlockedOrder = await getProgress();
+            }
+
+            // 获取带有锁定状态的章节列表
+            const chapters = await getChaptersWithLockStatus(lastUnlockedOrder);
+            console.log(`[Get Chapters] Successfully processed chapters for User ${userId}, Level ${levelId}. Sending response.`);
+            res.json({ success: true, chapters: chapters || [] });
+
+        } catch (error) {
+            console.error(`[Get Chapters] Error processing request for User ${userId}, Level ${levelId}:`, error.message);
+            res.status(500).json({ success: false, message: '处理章节信息时出错' });
+        }
+    };
+
+    // --- 执行 ---
+    handleGuestAndProceed();
+});
 
 // 导入单词API
 app.post('/api/import-words', (req, res) => {
@@ -2332,6 +2454,173 @@ app.post('/api/words/bulk-import', authenticateToken, (req, res) => {
             message: '处理JSON数据失败: ' + error.message
         });
     }
+});
+
+// 获取用户进度API端点
+app.get('/api/progress', async (req, res) => {
+    const userId = getUserId(req); // 从session/cookie获取用户ID
+    const levelId = req.query.level;
+  
+    // 初始化进度
+    await db.run(`
+      INSERT OR IGNORE INTO UserChapterProgress (user_id, level_id)
+      VALUES (?, ?)
+    `, [userId, levelId]);
+  
+    // 获取进度
+    const progress = await db.get(`
+      SELECT last_unlocked, last_accessed 
+      FROM UserChapterProgress
+      WHERE user_id = ? AND level_id = ?
+    `, [userId, levelId]);
+  
+    res.json({
+      lastUnlocked: progress?.last_unlocked || 1,
+      lastAccessed: progress?.last_accessed || 1
+    });
+  });
+  
+// 更新用户进度
+  app.post('/api/progress', async (req, res) => {
+    const { levelId, chapterOrder } = req.body;
+    const userId = getUserId(req);
+  
+    await db.run(`
+      UPDATE UserChapterProgress
+      SET 
+        last_accessed = ?,
+        last_unlocked = MAX(last_unlocked, ?)
+      WHERE user_id = ? AND level_id = ?
+    `, [chapterOrder, chapterOrder, userId, levelId]);
+  
+    res.sendStatus(200);
+  });
+
+// 新增：更新用户章节进度接口
+app.post('/api/progress/complete-chapter', authenticateToken, (req, res) => {
+    console.log('[Complete Chapter - TRACE] Handler started.'); // <-- 新增日志
+    const userId = req.user.id;
+    const { levelId, completedOrderNum } = req.body;
+
+    console.log(`[Complete Chapter] Received request: User ${userId}, Level ${levelId}, Completed Order ${completedOrderNum}`);
+
+    // 1. 参数验证
+    if (!levelId || completedOrderNum === undefined || completedOrderNum === null) {
+        console.error('[Complete Chapter] Bad request: Missing levelId or completedOrderNum.');
+        return res.status(400).json({ success: false, message: '缺少 levelId 或 completedOrderNum' });
+    }
+
+    const completedNum = parseInt(completedOrderNum, 10);
+    if (isNaN(completedNum) || completedNum < 1) {
+        console.error('[Complete Chapter] Bad request: Invalid completedOrderNum:', completedOrderNum);
+        return res.status(400).json({ success: false, message: '无效的 completedOrderNum' });
+    }
+
+    // 2. 计算下一个解锁的 order_num
+    const nextOrderNum = completedNum + 1;
+    console.log('[Complete Chapter - TRACE] Parameters validated:', { userId, levelId, completedNum, nextOrderNum }); // <-- 新增日志
+
+    // 3. 更新数据库
+    const sql = `
+        UPDATE UserChapterProgress
+        SET
+            last_accessed_order = ?,
+            last_unlocked_order = MAX(last_unlocked_order, ?)
+        WHERE user_id = ? AND level_id = ?
+    `;
+
+    try { // <-- 添加 try 块以防万一
+        console.log('[Complete Chapter - TRACE] Preparing to execute db.run...'); // <-- 新增日志
+        db.run(sql, [completedNum, nextOrderNum, userId, levelId], function(err) {
+            if (err) {
+                console.error('[Complete Chapter - TRACE] db.run callback error:', err); // <-- 修改日志
+                console.error(`[Complete Chapter] Database error updating progress for User ${userId}, Level ${levelId}:`, err.message);
+                // 避免在回调错误中再次发送响应，如果已经发送过
+                if (!res.headersSent) {
+                   return res.status(500).json({ success: false, message: '更新进度失败' });
+                }
+                return; // 明确返回
+            }
+
+            console.log('[Complete Chapter - TRACE] db.run callback success. Changes:', this.changes); // <-- 新增日志
+            // 检查是否有行被更新
+            if (this.changes === 0) {
+                console.warn(`[Complete Chapter] No rows updated for User ${userId}, Level ${levelId}. Record might not exist yet (should have been created on chapter load).`);
+            }
+
+            console.log(`[Complete Chapter] Successfully updated progress for User ${userId}, Level ${levelId}. Last accessed: ${completedNum}, Unlocked up to: ${nextOrderNum}.`);
+            // 避免在回调成功中再次发送响应，如果已经发送过
+            if (!res.headersSent) {
+               res.status(200).json({ success: true, message: '进度更新成功' });
+            }
+        });
+    } catch (syncError) { // <-- 添加 catch 块
+        console.error('[Complete Chapter - TRACE] Synchronous error during db.run initiation:', syncError);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: '更新进度时发生意外错误' });
+        }
+    }
+});
+
+// 新增：查找下一章节API端点
+app.get('/api/chapters/find-next', authenticateToken, (req, res) => {
+    console.log('============================开始寻找下一个章节============================')
+    const { levelId, currentOrderNum } = req.query;
+    const userId = req.user.id;
+
+    console.log(`[Find Next Chapter] Request received: User ${userId}, Level ${levelId}, Current Order ${currentOrderNum}`);
+
+    // 参数验证
+    if (!levelId || currentOrderNum === undefined || currentOrderNum === null) {
+        console.error('[Find Next Chapter] Bad request: Missing levelId or currentOrderNum.');
+        return res.status(400).json({ success: false, message: '缺少 levelId 或 currentOrderNum' });
+    }
+
+    const currentNum = parseInt(currentOrderNum, 10);
+    if (isNaN(currentNum) || currentNum < 0) { // currentOrderNum 可以是 0 或更大
+        console.error('[Find Next Chapter] Bad request: Invalid currentOrderNum:', currentOrderNum);
+        return res.status(400).json({ success: false, message: '无效的 currentOrderNum' });
+    }
+
+    const nextOrderNum = currentNum + 1;
+    console.log(`[Find Next Chapter] Looking for chapter with order_num = ${nextOrderNum} in level ${levelId}`);
+
+    // 查询数据库
+    const sql = `
+        SELECT id, name
+        FROM Chapters
+        WHERE level_id = ? AND order_num = ?
+        LIMIT 1
+    `;
+
+    const params = [levelId, nextOrderNum]; // 将参数放入数组
+    console.log(`[Find Next Chapter - DEBUG] Executing SQL: ${sql.replace(/\s+/g, ' ').trim()} with params:`, params); // 添加详细日志
+
+    console.log('============================开始查询数据库============================')
+    // db.get(sql, [levelId, nextOrderNum], (err, row) => { // 使用 params 数组
+    db.get(sql, params, (err, row) => {
+        if (err) {
+            console.error(`[Find Next Chapter] Database error searching for next chapter (Order ${nextOrderNum}, Level ${levelId}):`, err.message);
+            return res.status(500).json({ success: false, message: '查询下一章节失败' });
+        }
+
+        if (row) {
+            // 找到了下一章节
+            console.log(`[Find Next Chapter] Found next chapter: ID=${row.id}, Name=${row.name}`);
+            res.json({
+                success: true,
+                nextChapter: {
+                    id: row.id,
+                    name: row.name,
+                    order_num: nextOrderNum // 可以选择性地返回 order_num
+                }
+            });
+        } else {
+            // 未找到下一章节（可能是最后一关）
+            console.log(`[Find Next Chapter] No next chapter found for Order ${nextOrderNum}, Level ${levelId}.`);
+            res.status(404).json({ success: false, message: '未找到下一章节，可能已是最后一关' });
+        }
+    });
 });
 
 // HTTPS服务器配置

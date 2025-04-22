@@ -2,7 +2,7 @@
  * 切换显示的屏幕
  * @param {string} screenId - 要显示的屏幕ID
  */
-switchScreen(screenId) {
+function switchScreen(screenId) {
     // 隐藏所有屏幕
     document.querySelectorAll('.screen').forEach(screen => {
         screen.style.display = 'none';

@@ -518,7 +518,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         difficulty: chap.difficulty || 1
                     };
                 });
-                
+
+                // 添加这行调试
+                console.log(`loadSubchaptersForCategory: 处理后的级别 ${categoryId} 章节数据 (检查 locked 状态):`, subchapters[categoryId]);
+
                 // 更新分页状态
                 subchapterPagination.currentPage = 1; // 重置为第一页
                 subchapterPagination.update(subchapters[categoryId].length);
@@ -878,6 +881,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 设置事件监听器
     function setupEventListeners() {
+        console.log("setupEventListeners: 尝试获取 chapterGrid:", document.getElementById('chapterGrid'));
+
         // 主章节卡片点击事件
         document.getElementById('chapterGrid').addEventListener('click', function(e) {
             // 找到最近的卡片元素
@@ -918,6 +923,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // 添加点击效果
             addClickEffect(card);
         });
+
+        console.log("setupEventListeners: 尝试获取 subchapterGrid:", document.getElementById('subchapterGrid'));
 
         // 子章节卡片点击事件
         document.getElementById('subchapterGrid').addEventListener('click', function(e) {
@@ -1191,6 +1198,32 @@ document.addEventListener('DOMContentLoaded', function() {
     function animateDecoElements() {
         // 如果有装饰元素，可以在这里添加额外的动画效果
     }
+
+    // 渲染章节
+    async function renderChapters(levelId) {
+        const chapters = await loadChapters(levelId);
+        const progress = await ProgressManager.getChapterProgress(levelId);
+      
+        const container = document.querySelector('.chapters-container');
+        container.innerHTML = chapters.map(chapter => `
+          <div class="chapter-item ${chapter.order_num > progress.lastUnlocked ? 'locked' : ''}" 
+               data-order="${chapter.order_num}"
+               onclick="${chapter.order_num <= progress.lastUnlocked ? `startChapter('${chapter.id}')` : ''}">
+            <div class="chapter-icon">${getChapterIcon(chapter, progress)}</div>
+            <div class="chapter-info">
+              <div class="chapter-name">${chapter.name}</div>
+              ${progress.lastAccessed === chapter.order_num ? '<div class="last-played">上次游玩</div>' : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+    
+    // 获取章节图标
+    function getChapterIcon(chapter, progress) {
+        if (chapter.order_num > progress.lastUnlocked) return '🔒';
+        if (chapter.order_num === progress.lastAccessed) return '🎮';
+        return '📘';
+      }
 
     // 开始游戏
     function startGame(chapterId) {

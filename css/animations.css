@@ -372,3 +372,14 @@
 .progress-fill {
   animation: progressFill 1s ease-out;
 }
+
+/* 新增反速通检测 */
+@keyframes anti-speedrun {
+  0% { opacity: 1; }
+  50% { opacity: 0.98; }
+  100% { opacity: 1; }
+}
+
+.chapter-card {
+  animation: anti-speedrun 2s infinite;
+}

@@ -17,6 +17,25 @@ window.WordDataLoader = {
     },
     
     /**
+     * 获取包含认证Token的请求头
+     * 如果没有Token，则跳转到登录页
+     * @returns {object | null} 返回请求头对象，或者在未登录时返回null
+     */
+    _getAuthHeaders: function() {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.warn('WordDataLoader: 未找到 authToken，用户未登录或登录已过期，将跳转到登录页。');
+            // 直接跳转到登录页面
+            window.location.href = '页面.html'; // 假设登录页面是 页面.html
+            return null; // 返回null表示不应继续发送请求
+        }
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json' // 根据需要添加其他默认头
+        };
+    },
+    
+    /**
      * 获取所有词汇级别
      * @returns {Promise<Array>} 词汇级别数组
      */
@@ -52,15 +71,28 @@ window.WordDataLoader = {
     getChaptersByLevel: async function(levelId) {
         if (!levelId) {
             console.error('WordDataLoader.getChaptersByLevel: 未提供级别ID');
-        return [];
+            return [];
         }
+        
+        const headers = this._getAuthHeaders(); // 获取认证头
+        if (!headers) { // 如果未登录（已跳转），则直接返回
+            return [];
+        }
+        console.log('getChaptersByLevel: 读取到的 authToken:', localStorage.getItem('authToken'));
         
         try {
             console.log(`WordDataLoader: 开始获取级别${levelId}的章节`);
             const url = `${this.API_BASE_URL}${this.API_ENDPOINTS.LEVEL_CHAPTERS.replace('{id}', levelId)}`;
-            const response = await fetch(url);
+            const response = await fetch(url, { headers: headers });
             
             if (!response.ok) {
+                // 如果是 401 Unauthorized，可能是 Token 过期，也跳转登录
+                if (response.status === 401) {
+                    console.warn('WordDataLoader: 获取章节时收到 401 Unauthorized，Token 可能已过期，将跳转到登录页。');
+                    localStorage.removeItem('authToken'); // 清除可能无效的 Token
+                    window.location.href = '页面.html';
+                    return [];
+                }
                 throw new Error(`获取章节失败: ${response.status} ${response.statusText}`);
             }
             
@@ -1125,6 +1157,86 @@ window.WordDataLoader = {
             
         } catch (error) {
             console.error('处理自定义输入错误:', error);
+            return [];
+        }
+    },
+
+    /**
+     * 新增：获取特定章节的详细信息
+     * @param {string} chapterId - 章节ID (注意：这里传入的可能是原始章节名，需要与API对应)
+     * @returns {Promise<Object|null>} - 章节详情对象或null
+     */
+    async getChapterDetails(chapterId) {
+        if (!chapterId) {
+            console.error('WordDataLoader.getChapterDetails: chapterId is required.');
+            return null;
+        }
+        // 确保使用 encodeURIComponent 处理可能包含特殊字符的 chapterId
+        const apiUrl = `${this.API_BASE_URL}/api/chapters/${encodeURIComponent(chapterId)}`;
+        console.log(`WordDataLoader: Fetching details for chapter ${chapterId} from ${apiUrl}`);
+        try {
+            const response = await fetch(apiUrl, {
+                headers: this._getAuthHeaders() // 复用获取认证头的方法
+            });
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+            if (data.success && data.chapter) {
+                console.log(`WordDataLoader: Successfully fetched details for chapter ${chapterId}`);
+                return data.chapter; // 返回包含 order_num 的章节对象
+            } else {
+                console.warn(`WordDataLoader: API call successful but no chapter details found for ${chapterId}. Message: ${data.message}`);
+                return null;
+            }
+        } catch (error) {
+            console.error(`WordDataLoader: Error fetching chapter details for ${chapterId}:`, error);
+            return null;
+        }
+    },
+
+    /**
+     * 获取特定级别的所有章节列表
+     */
+    getChaptersByLevelList: async function(levelId) {
+        if (!levelId) {
+            console.error('WordDataLoader.getChaptersByLevelList: 未提供级别ID');
+            return [];
+        }
+        
+        const headers = this._getAuthHeaders(); // 获取认证头
+        if (!headers) { // 如果未登录（已跳转），则直接返回
+            return [];
+        }
+        console.log('getChaptersByLevelList: 读取到的 authToken:', localStorage.getItem('authToken'));
+        
+        try {
+            console.log(`WordDataLoader: 开始获取级别${levelId}的章节列表`);
+            const url = `${this.API_BASE_URL}${this.API_ENDPOINTS.LEVEL_CHAPTERS.replace('{id}', levelId)}`;
+            const response = await fetch(url, { headers: headers });
+            
+            if (!response.ok) {
+                // 如果是 401 Unauthorized，可能是 Token 过期，也跳转登录
+                if (response.status === 401) {
+                    console.warn('WordDataLoader: 获取章节列表时收到 401 Unauthorized，Token 可能已过期，将跳转到登录页。');
+                    localStorage.removeItem('authToken'); // 清除可能无效的 Token
+                    window.location.href = '页面.html';
+                    return [];
+                }
+                throw new Error(`获取章节列表失败: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || '获取章节列表失败');
+            }
+            
+            console.log(`WordDataLoader: 成功获取级别${levelId}的章节列表`, data.chapters);
+            return data.chapters || [];
+        } catch (error) {
+            console.error(`WordDataLoader.getChaptersByLevelList(${levelId}) 错误:`, error);
+            // 返回空数组，让调用者处理
             return [];
         }
     }
