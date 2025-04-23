@@ -2,7 +2,7 @@
  * 主页面入口文件
  * 负责初始化和协调各个模块
 de7783fd-94dc-4fcf-b57a-9fb7ad14c74a 
-*/
+ */
 
 // 导入依赖模块
 import { initTheme } from './theme.js';
@@ -80,6 +80,57 @@ function getPlayMode() {
 }
 
 /**
+ * 加载用户积分数据并更新UI
+ */
+async function loadUserPoints() {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.error('无法加载用户积分：未找到 authToken');
+        // Optionally update UI to show error or 0 points
+        const userScoreEl = document.getElementById('user-score');
+        if (userScoreEl) userScoreEl.textContent = 'N/A';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/user/points', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json' // Optional, but good practice
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`服务器错误: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.pointsData) {
+            const userScoreEl = document.getElementById('user-score');
+            if (userScoreEl) {
+                // Update the score display using total_points from the response
+                userScoreEl.textContent = data.pointsData.total_points !== null ? data.pointsData.total_points : 0;
+            } else {
+                console.error('未能找到ID为 user-score 的元素来更新积分');
+            }
+        } else {
+            console.error('获取用户积分失败:', data.message || '未知错误');
+            const userScoreEl = document.getElementById('user-score');
+            if (userScoreEl) userScoreEl.textContent = '加载失败';
+        }
+
+    } catch (error) {
+        console.error('加载用户积分时出错:', error);
+        showErrorAlert(`加载用户积分时出错: ${error.message}`);
+        const userScoreEl = document.getElementById('user-score');
+        if (userScoreEl) userScoreEl.textContent = '错误';
+    }
+}
+
+/**
  * 页面加载完成后初始化应用
  */
 document.addEventListener('DOMContentLoaded', async function() {
@@ -104,15 +155,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         // 注册Service Worker
         registerServiceWorker();
         
-        // 2. 加载用户数据
+        // 2. 加载用户基础数据 (包含更新部分UI)
         mark('load_data_start');
-        const userData = await loadUserData();
+        const userData = await loadUserData(); 
+        // No need to call updateUserInterface here if it only updates name/avatar/minutes now
+        // updateUserInterface will be called inside loadUserData if needed
+        // Or just update relevant parts directly after loadUserData
+        if (userData) {
+            // Update parts of UI not covered by loadUserPoints or other specific loaders
+            const userNameEl = document.getElementById('user-name');
+            const userMinutesEl = document.getElementById('user-minutes');
+            const userAvatarEl = document.getElementById('user-avatar');
+            if (userNameEl) userNameEl.textContent = userData.name;
+            if (userMinutesEl) userMinutesEl.textContent = `${userData.minutes}分钟`;
+            if (userAvatarEl && userData.avatar) userAvatarEl.src = userData.avatar;
+        } else {
+             console.warn("无法加载用户基础数据，某些UI可能未更新");
+        }
+        
+        // ---> 新增：加载用户积分数据 <--- 
+        await loadUserPoints();
+        // ---> 结束新增 <--- 
         
         // 3. 初始化界面组件
         mark('init_ui_start');
         initCalendar();
         initViewSwitcher();
         bindEventListeners();
+
+        // --- 新增：加载完成的单词统计 --- 
+        await loadAndDisplayCompletedWordCount();
+        // --- 结束新增 ---
   
         // 4. 尝试创建Web Worker
         initWorkers();
@@ -126,9 +199,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         // animatePageLoad();
 
         // 修改后的加载顺序
+        /* // 已移到前面
         if (userData) {
             updateUserInterface(userData);
         }
+        */
 
         await loadBadges();
 
@@ -305,18 +380,40 @@ function loadCalendarData(calendar) {
     // 获取API数据的函数
     mark('开始加载日历数据');
     
-    // 模拟API获取学习记录
-    simulateFetch('/api/activity/heatmap', {
+    // --- 修改：调用真实的后端 API --- 
+    // 获取存储的 token
+    const authToken = localStorage.getItem('authToken'); 
+    if (!authToken) {
+        console.error('无法加载日历数据：未找到 authToken');
+        // 可以选择显示登录提示或不加载日历
+        return; 
+    }
+
+    fetch('/api/activity/heatmap', { // 使用标准的 fetch
         method: 'GET',
-        credentials: 'include'
+        headers: {
+            'Authorization': `Bearer ${authToken}` // 添加 Authorization header
+        }
+        // credentials: 'include' // 如果使用 cookie-based session 且跨域，可能需要
     }).then(response => {
-        if (response) {
+        // 首先检查响应是否成功
+        if (!response.ok) {
+            // 如果状态码不是 2xx，抛出错误
+            return response.text().then(text => { 
+                throw new Error(`服务器错误: ${response.status} - ${text}`); 
+            });
+        }
+        return response.json(); // 解析 JSON 数据
+    })
+    .then(apiData => { // 处理解析后的 JSON 数据
+        // 确保 apiData 是预期的格式 { success: true, heatmapData: {...} }
+        if (apiData && apiData.success && apiData.heatmapData) {
+            const heatmapData = apiData.heatmapData;
             // 处理响应数据为热力图所需格式
             const calendarData = {};
             
-            // 处理数据
-            Object.keys(response).forEach(dateStr => {
-                calendarData[dateStr] = response[dateStr];
+            Object.keys(heatmapData).forEach(dateStr => {
+                calendarData[dateStr] = heatmapData[dateStr];
             });
             
             // 设置日历数据
@@ -324,9 +421,9 @@ function loadCalendarData(calendar) {
             
             // 计算并更新摘要信息
             const summary = {
-                activeDays: Object.values(response).filter(v => v > 0).length,
-                maxStreak: calculateMaxStreak(response),
-                totalWords: Object.values(response).reduce((sum, val) => sum + val, 0)
+                activeDays: Object.values(heatmapData).filter(v => v > 0).length,
+                maxStreak: calculateMaxStreak(heatmapData),
+                totalActiveDays: Object.values(heatmapData).filter(v => v > 0).length // 使用总活跃天数
             };
             
             // 更新热力图摘要信息
@@ -335,10 +432,14 @@ function loadCalendarData(calendar) {
             // 记录性能结束点
             measure('开始加载日历数据', '日历数据加载完成');
         } else {
-            console.error('获取学习记录失败', '未知错误');
+            // 处理 apiData.success 为 false 或数据格式不正确的情况
+            console.error('获取日历数据失败:', apiData ? apiData.message : '响应格式错误');
+            // 可以选择显示错误提示给用户
         }
     }).catch(error => {
         console.error('获取日历数据出错:', error);
+        // 显示错误提示给用户，例如使用 showErrorAlert
+        showErrorAlert(`加载日历数据时出错: ${error.message}`);
     });
 }
 
@@ -374,7 +475,18 @@ function updateHeatmapSummary(summary) {
     // 可以在此添加更多摘要信息的展示
     document.querySelector('#active-days .summary-value').textContent = summary.activeDays || '0';
     document.querySelector('#max-streak .summary-value').textContent = summary.maxStreak || '0';
-    document.querySelector('#total-count .summary-value').textContent = summary.totalWords || '0';
+
+/*
+    // 修改 total-count 对应的显示
+    const totalCountValueEl = document.querySelector('#total-count .summary-value');
+    const totalCountLabelEl = document.querySelector('#total-count .summary-label');
+    if (totalCountValueEl) {
+        totalCountValueEl.textContent = summary.totalActiveDays || '0'; // 显示总活跃天数
+    }
+    if (totalCountLabelEl) {
+        totalCountLabelEl.textContent = '总活跃天数'; // 修改标签文本
+    }
+*/
 }
 
 /**
@@ -1211,34 +1323,6 @@ async function simulateFetch(url, options = {}) {
                 unlocked: false
             }
         ];
-    } else if (url === '/api/activity/heatmap') {
-        // 生成过去90天的热力图数据
-        const data = {};
-        const today = new Date();
-        
-        for (let i = 0; i < 90; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            const dateString = date.toISOString().split('T')[0];
-            
-            // 随机活跃度 (0-5)
-            let activityLevel = Math.floor(Math.random() * 6);
-            
-            // 增加某些规律：周末学习较多，最近几天有学习记录
-            const dayOfWeek = date.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-                activityLevel = Math.min(5, activityLevel + 1);
-            }
-            
-            // 最近7天有学习记录
-            if (i < 7) {
-                activityLevel = Math.max(1, activityLevel);
-            }
-            
-            data[dateString] = activityLevel;
-        }
-        
-        return data;
     } else if (url.startsWith('/api/chapters/')) {
         // 生成模拟章节数据
         const categoryId = url.split('/').pop();
@@ -1315,3 +1399,55 @@ window.getGameMode = getGameMode;
 window.saveGameMode = saveGameMode;
 window.getPlayMode = getPlayMode;
 window.setPlayMode = setPlayMode;
+
+// --- 新增：加载并显示已完成单词总数 --- 
+async function loadAndDisplayCompletedWordCount() {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.error('无法加载单词统计：未找到 authToken');
+        // 可以选择在此处更新UI显示错误或0
+        updateCompletedWordCountDisplay(0, '无法加载'); 
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/user/stats/completed-word-count', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`服务器错误: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            updateCompletedWordCountDisplay(data.totalCompletedWords, '单词总量');
+        } else {
+            console.error('获取单词统计失败:', data.message);
+            updateCompletedWordCountDisplay(0, '加载失败');
+        }
+    } catch (error) {
+        console.error('加载单词统计出错:', error);
+        showErrorAlert(`加载单词统计时出错: ${error.message}`);
+        updateCompletedWordCountDisplay(0, '错误');
+    }
+}
+
+// --- 新增：更新单词总量显示的辅助函数 --- 
+function updateCompletedWordCountDisplay(count, label) {
+    const valueEl = document.querySelector('#total-count .summary-value');
+    const labelEl = document.querySelector('#total-count .summary-label');
+
+    if (valueEl) {
+        valueEl.textContent = count;
+    }
+    if (labelEl) {
+        labelEl.textContent = label;
+    }
+}
+// --- 结束新增 --- 

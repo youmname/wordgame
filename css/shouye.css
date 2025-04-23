@@ -1198,3 +1198,49 @@ body {
 .legend-color.level-4 {
   background-color: var(--calendar-level-4, #F591AF);
 }
+
+/* New container for title and score in the right panel */
+.panel-section-header {
+  display: flex; /* Arrange title and score horizontally */
+  justify-content: space-between; /* Push title left, score right */
+  align-items: center; /* Vertically align items */
+  margin-bottom: 12px; /* Keep original margin below title */
+  border-bottom: 1px solid var(--border-color); /* Apply border here */
+  padding-bottom: 6px; /* Keep padding for the border */
+}
+
+/* Remove border/padding from the h4 inside the new header */
+.panel-section-header h4 {
+  margin: 0 !important; /* Override existing h4 margin */
+  padding: 0 !important; /* Override existing h4 padding */
+  border: none !important; /* Remove existing h4 border */
+}
+
+/* Style the moved score bubble inside the new header */
+.panel-section-header .score-bubble {
+  background-color: var(--accent); /* Keep original style */
+  color: white;
+  padding: 4px 10px; /* Adjust padding if needed */
+  border-radius: 20px;
+  font-size: 13px; /* Adjust font size if needed */
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: none; /* Remove shadow if desired */
+  margin: 0; /* Remove any inherited margins */
+}
+
+/* Optionally hide the original user-stats container if it becomes empty */
+.user-profile .user-stats:empty {
+    display: none;
+}
+
+/* Ensure panel-section h4 outside the header keeps its style */
+.panel-section > h4 {
+  font-family: 'HanyiXiaomaiTi', 'Microsoft YaHei', cursive;
+  font-size: 18px;
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}

@@ -71,7 +71,7 @@ window.WordDataLoader = {
     getChaptersByLevel: async function(levelId) {
         if (!levelId) {
             console.error('WordDataLoader.getChaptersByLevel: 未提供级别ID');
-            return [];
+        return [];
         }
         
         const headers = this._getAuthHeaders(); // 获取认证头

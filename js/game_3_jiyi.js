@@ -2310,7 +2310,7 @@
         async loadWordData() {
             try {
                 console.log('开始加载单词数据...');
-
+                
                 // 解析URL参数
                 const urlParams = new URLSearchParams(window.location.search);
                 const chapterId = urlParams.get('chapter'); // 章节ID
@@ -2318,7 +2318,7 @@
                 const levelId = urlParams.get('category'); // 级别ID (从 level.html 传递过来)
                 this.currentLevelId = levelId; // 直接存储 levelId
                 this.currentChapterOrderNum = null; // 初始化 orderNum
-
+                
                 console.log('加载参数:', {
                     chapterId,
                     mode,
@@ -2341,7 +2341,7 @@
                     }
                 }
 
-
+                
                 // 检查WordDataLoader是否可用
                 if (typeof window.WordDataLoader !== 'undefined') {
                     // 如果是导入模式，直接获取导入的单词
@@ -2351,11 +2351,11 @@
                             // 调用getImportedWords而不需要章节ID
                             const words = await window.WordDataLoader.getImportedWords();
                             console.log(`成功获取导入的单词:`, words);
-
+                            
                             if (words && words.length > 0) {
                                 this.wordPairs = words;
                                 console.log(`获取到${words.length}个单词对`);
-
+                                
                                 // 打印单词示例
                                 if (words.length > 0) {
                                     console.log('单词示例:');
@@ -2374,16 +2374,16 @@
                     // 普通章节模式，需要chapter参数
                     else if (mode === 'normal' && chapterId) { // 确保 chapterId 存在
                         console.log(`使用WordDataLoader获取章节${chapterId}的单词数据...`);
-
+                        
                         try {
                             // 使用数据加载模块获取单词 - 使用新方法获取所有单词
                             const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
                             console.log(`成功获取章节${chapterId}的单词数据:`, words);
-
+                            
                             if (words && words.length > 0) {
                                 this.wordPairs = words;
                                 console.log(`获取到${words.length}个单词对`);
-
+                                
                                 // 打印单词示例
                                 if (words.length > 0) {
                                     console.log('单词示例:');
@@ -2426,7 +2426,7 @@
                 }
                 // 可以在这里添加额外的日志记录
                 console.log(`loadWordData 结束，最终单词对数量: ${this.totalPairs}`);
-             }
+            }
         },
         
         /**

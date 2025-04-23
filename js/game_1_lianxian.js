@@ -2804,11 +2804,8 @@
             this.combo++;
             this.maxCombo = Math.max(this.maxCombo, this.combo);
             
-            // 获取当前难度的分数设置
-            const difficultyConfig = WordConfig.DIFFICULTY[this.difficulty];
-            
-            // 计算得分
-            this.score += difficultyConfig.scoreMatch + (this.combo * difficultyConfig.scoreCombo);
+            // 不再每次匹配就增加分数，只记录连击次数
+            // this.score += difficultyConfig.scoreMatch + (this.combo * difficultyConfig.scoreCombo);
             
             // 更新UI
             this.updateUI();
@@ -2909,13 +2906,29 @@
             // 设置游戏结束标志
             this.isGameOver = true;
             
-            // 获取当前难度的分数设置
-            const difficultyConfig = WordConfig.DIFFICULTY[this.difficulty];
-            
-            // 计算时间奖励分数（仅在胜利时）
-            if (isWin && this.timeLeft > 0) {
-                const timeBonus = Math.floor(this.timeLeft * difficultyConfig.scoreTimeBonus);
-                this.score += timeBonus;
+            // 只在游戏胜利时计算最终得分
+            if (isWin) {
+                // 基础分 - 完成关卡固定10分
+                const baseScore = 10;
+                
+                // 计算连击奖励 (最多5分)
+                const comboBonus = Math.min(5, Math.floor(this.maxCombo / 2));
+                
+                // 计算时间奖励 (最多5分)
+                const timeBonus = Math.min(5, Math.floor(this.timeLeft / 30));
+                
+                // 最终分数 = 基础分 + 连击奖励 + 时间奖励
+                this.score = baseScore + comboBonus + timeBonus;
+                
+                // 记录各项得分详情，用于显示
+                this.scoreDetails = {
+                    baseScore,
+                    comboBonus,
+                    timeBonus,
+                    totalScore: this.score
+                };
+                
+                console.log('游戏得分详情:', this.scoreDetails);
             }
             
             // 设置结果数据
@@ -2923,8 +2936,22 @@
             document.getElementById('time-left').textContent = `${this.timeLeft}s`;
             document.getElementById('max-combo').textContent = this.maxCombo;
             
+            // 添加分数详情显示
+            const scoreDetailsElement = document.getElementById('score-details');
+            if (scoreDetailsElement && isWin && this.scoreDetails) {
+                scoreDetailsElement.innerHTML = `
+                    <div class="score-detail-item">基础分: ${this.scoreDetails.baseScore}</div>
+                    <div class="score-detail-item">连击奖励: +${this.scoreDetails.comboBonus}</div>
+                    <div class="score-detail-item">时间奖励: +${this.scoreDetails.timeBonus}</div>
+                    <div class="score-detail-total">总分: ${this.scoreDetails.totalScore}</div>
+                `;
+                scoreDetailsElement.style.display = 'block';
+            } else if (scoreDetailsElement) {
+                scoreDetailsElement.style.display = 'none';
+            }
+            
             // 根据得分设置星级
-            const maxScore = this.totalPairs * (difficultyConfig.scoreMatch + difficultyConfig.scoreCombo * 2);
+            const maxScore = 20; // 满分20分 (基础分10 + 连击奖励5 + 时间奖励5)
             const scorePercent = this.score / maxScore;
             
             const stars = document.querySelectorAll('.star');
@@ -2949,17 +2976,18 @@
             // 记录游戏结果
             this.saveGameResult(isWin);
 
-            // --- 新增：如果胜利，则更新进度 ---
+            // --- 在胜利且有关卡信息时才更新积分 ---
             if (isWin && this.currentLevelId && this.currentChapterOrderNum !== null && this.currentChapterOrderNum !== undefined) {
-                const authToken = localStorage.getItem('authToken'); // 假设 Token 存储在 localStorage
+                const authToken = localStorage.getItem('authToken');
 
                 if (!authToken) {
-                    console.warn('无法更新进度：未找到 authToken');
-                    return; // 没有 Token 无法更新
+                    console.warn('无法更新积分：未找到 authToken');
+                    return;
                 }
 
-                console.log(`准备更新进度: levelId=${this.currentLevelId}, completedOrderNum=${this.currentChapterOrderNum}`);
+                console.log(`准备更新积分: levelId=${this.currentLevelId}, completedOrderNum=${this.currentChapterOrderNum}, 获得积分=${this.score}`);
 
+                // 使用现有的 complete-chapter API 更新积分
                 fetch('/api/progress/complete-chapter', {
                     method: 'POST',
                     headers: {
@@ -2968,32 +2996,40 @@
                     },
                     body: JSON.stringify({
                         levelId: this.currentLevelId,
-                        completedOrderNum: this.currentChapterOrderNum
+                        completedOrderNum: this.currentChapterOrderNum,
+                        totalScore: this.score // 添加总分数参数
                     })
                 })
                 .then(response => {
                     if (!response.ok) {
-                        // 如果响应状态码不是 2xx，则抛出错误
                         return response.text().then(text => { 
                             throw new Error(`服务器错误: ${response.status} - ${text}`);
                         });
                     }
-                    return response.json(); // 解析 JSON
+                    return response.json();
                 })
                 .then(data => {
                     if (data.success) {
-                        console.log('用户进度更新成功！');
+                        console.log(`用户积分更新成功！获得积分: ${data.pointsEarned}`);
+                        
+                        // 如果API返回了获得的积分，更新分数详情显示
+                        if (scoreDetailsElement) {
+                            const totalPointsElement = document.createElement('div');
+                            totalPointsElement.className = 'score-detail-added';
+                            // 使用我们计算的总积分(this.score)而不是API返回的值
+                            totalPointsElement.textContent = `已加入总积分: +${this.score}`;
+                            scoreDetailsElement.appendChild(totalPointsElement);
+                        }
                     } else {
-                        console.error('更新用户进度失败:', data.message);
+                        console.error('更新用户积分失败:', data.message);
                     }
                 })
                 .catch(error => {
-                    console.error('调用进度更新接口时出错:', error);
+                    console.error('调用积分更新接口时出错:', error);
                 });
             } else if (isWin) {
-                console.log('胜利，但缺少 levelId 或 chapterOrderNum，跳过进度更新 (可能是随机模式或导入模式?)');
+                console.log('胜利，但缺少关卡信息，跳过积分更新 (可能是随机模式或导入模式)');
             }
-            // --- 结束新增代码 ---
         },
         
         /**

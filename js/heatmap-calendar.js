@@ -139,6 +139,7 @@ class HeatmapCalendar {
       this.summary.appendChild(summaryItem);
     });
     
+    /* // --- 注释掉：移除颜色图例的创建 ---
     // 颜色图例 - 修改为水平布局
     this.legend = document.createElement('div');
     this.legend.className = 'heatmap-legend horizontal';
@@ -158,12 +159,13 @@ class HeatmapCalendar {
       legendItem.appendChild(legendLabel);
       this.legend.appendChild(legendItem);
     }
+    */ // --- 结束注释 ---
     
     // 添加所有元素到容器
     this.container.appendChild(this.header);
     this.container.appendChild(this.body);
     this.container.appendChild(this.summary);
-    this.container.appendChild(this.legend);
+    // this.container.appendChild(this.legend); // --- 注释掉：不添加图例到容器 ---
   }
   
   /**

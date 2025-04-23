@@ -40,6 +40,53 @@
             font-family: 'PingFang SC', 'Quicksand', sans-serif;
         }
         
+        /* 新增：积分详情样式 */
+        .score-details-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin: 15px 0;
+            text-align: left;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .score-detail-item {
+            padding: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+        
+        .score-detail-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .score-detail-total {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.3);
+            font-weight: bold;
+            text-align: right;
+            color: #FFD700;
+        }
+        
+        .score-detail-added {
+            margin-top: 10px;
+            text-align: center;
+            color: #4CAF50;
+            font-weight: bold;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
         .modal-content {
             position: absolute;
             top: 50%;
@@ -176,12 +223,7 @@
                     <!-- <div class="level-badge">Lv.12</div> -->
                 </div>
                 <div class="user-info">
-                    
                     <h2 id="user-name">👑 学习达人</h2>
-                    <div class="user-stats">
-                        <div class="time-bubble">⏰ <span id="user-minutes">1200</span>分钟</div>
-                        <div class="score-bubble">✨ <span id="user-score">1280</span>积分</div>
-                    </div>
                 </div>
             </div>
         </nav>
@@ -245,7 +287,10 @@
         <aside class="right-panel">
             <div class="achievement-panel">
             <div class="panel-section">
-                <h4>🏆 成就徽章</h4>
+                <div class="panel-section-header"> 
+                    <h4>🏆 成就徽章</h4>
+                    <div class="score-bubble">✨ <span id="user-score">0</span> 积分</div> 
+                </div>
                 <div class="badge-wall">
                   <!-- 已解锁徽章 -->
                   <div class="badge unlocked" title="首次挑战">🥉</div>
@@ -534,5 +579,9 @@
             }
         });
     </script>
+    
+    添加在结果模态框中，max-combo的下面，stars上面
+    <div id="modal-temp-content"></div>
+    
 </body>
 </html>

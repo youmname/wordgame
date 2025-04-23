@@ -264,6 +264,41 @@ const initializeDatabase = () => {
         }
         console.log('UserChapterProgress表检查/创建成功');
     });
+
+    // --- 新增：创建 UserPoints 表 ---
+    const createUserPointsTable = `
+        CREATE TABLE IF NOT EXISTS UserPoints (
+            user_id INTEGER PRIMARY KEY,              -- 用户ID (关联 Users 表)
+            total_points INTEGER DEFAULT 0 NOT NULL,   -- 当前总积分
+            consecutive_login_days INTEGER DEFAULT 0 NOT NULL, -- 连续登录天数
+            max_consecutive_login_days INTEGER DEFAULT 0 NOT NULL, -- 历史最大连续登录天数 (新增)
+            total_login_days INTEGER DEFAULT 0 NOT NULL,       -- 总登录天数 (新增)
+            last_login_date DATE,                      -- 最后登录日期 (存储 YYYY-MM-DD 格式)
+            points_multiplier REAL DEFAULT 1.0 NOT NULL, -- 当前积分倍数 (REAL 用于存储小数)
+            completed_levels INTEGER DEFAULT 0 NOT NULL, -- 已完成关卡总数
+            FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
+        );
+    `;
+    db.run(createUserPointsTable, (err) => {
+        if (err) {
+            console.error('创建 UserPoints 表失败:', err);
+        } else {
+            console.log('UserPoints 表检查/创建成功');
+            // 创建索引
+            const createUserPointsIndex = `
+                CREATE INDEX IF NOT EXISTS idx_user_points_user_id ON UserPoints (user_id);
+            `;
+            db.run(createUserPointsIndex, (err) => {
+                if (err) {
+                    console.error('创建 UserPoints 表索引失败:', err);
+                } else {
+                    console.log('UserPoints 表索引创建/检查成功');
+                }
+            });
+        }
+    });
+    // --- 结束新增 UserPoints 表 ---
+
 };
 
 // 检查并创建管理员账号
@@ -409,7 +444,7 @@ const authenticateToken = (req, res, next) => {
             message: '需要提供认证 Token'
         });
     }
-
+    
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         console.log('[authenticateToken] JWT 验证通过，用户ID:', decoded.userId);
@@ -551,6 +586,110 @@ app.post('/api/login', (req, res) => {
                 { expiresIn: '24h' }
             );
             
+            // --- 新增：处理登录积分和连续登录 --- 
+            const userId = user.id; 
+            const todayDate = new Date().toISOString().split('T')[0]; // 获取今天的日期 'YYYY-MM-DD'
+
+            // 查询或创建用户的积分记录
+            const getUserPointsSql = 'SELECT * FROM UserPoints WHERE user_id = ?';
+
+            db.get(getUserPointsSql, [userId], (err, userPoints) => {
+                if (err) {
+                    console.error(`[Login Points] Error fetching UserPoints for user ${userId}:`, err.message);
+                    // 出错也继续登录，只记录错误
+                    return proceedWithLogin(token, user, res); // 修改：传递 res
+                }
+
+                let currentPoints = userPoints ? userPoints.total_points : 0;
+                let consecutiveDays = userPoints ? userPoints.consecutive_login_days : 0;
+                let maxConsecutiveDays = userPoints ? userPoints.max_consecutive_login_days : 0; // 新增: 获取最大连续天数
+                let totalLoginDays = userPoints ? userPoints.total_login_days : 0;             // 新增: 获取总登录天数
+                let lastLoginDate = userPoints ? userPoints.last_login_date : null;
+                let multiplier = userPoints ? userPoints.points_multiplier : 1.0;
+                let completedLevels = userPoints ? userPoints.completed_levels : 0; 
+
+                // 检查是否是新的一天登录
+                if (lastLoginDate !== todayDate) {
+                    console.log(`[Login Points] User ${userId} first login for today (${todayDate}). Last login: ${lastLoginDate}`);
+
+                    // --- 新增: 总登录天数 +1 ---
+                    totalLoginDays += 1;
+                    console.log(`[Login Points] User ${userId} total login days updated to: ${totalLoginDays}`);
+                    // --- 结束新增 --- 
+
+                    let daysDifference = 1; 
+                    if (lastLoginDate) {
+                        const lastDate = new Date(lastLoginDate);
+                        const today = new Date(todayDate);
+                        const diffTime = Math.abs(today - lastDate);
+                        daysDifference = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    }
+
+                    // 更新连续登录天数
+                    if (daysDifference === 1) {
+                        consecutiveDays += 1;
+                        console.log(`[Login Points] Consecutive login for user ${userId}. New streak: ${consecutiveDays}`);
+                    } else {
+                        consecutiveDays = 1; // 中断，重置为1
+                        console.log(`[Login Points] Login streak broken for user ${userId}. Resetting to 1.`);
+                    }
+
+                    // --- 新增: 更新最大连续登录天数 ---
+                    if (consecutiveDays > maxConsecutiveDays) {
+                        maxConsecutiveDays = consecutiveDays;
+                        console.log(`[Login Points] User ${userId} new max consecutive login days: ${maxConsecutiveDays}`);
+                    }
+                    // --- 结束新增 ---
+
+                    // --- 阶梯式积分倍数计算 (示例) ---
+                    if (consecutiveDays >= 30) { multiplier = 1.5; }
+                    else if (consecutiveDays >= 14) { multiplier = 1.3; }
+                    else if (consecutiveDays >= 7) { multiplier = 1.2; }
+                    else if (consecutiveDays >= 3) { multiplier = 1.1; }
+                    else { multiplier = 1.0; }
+                    console.log(`[Login Points] User ${userId} new multiplier: ${multiplier}`);
+                    // --- 结束倍数计算 ---
+
+                    // 增加登录积分
+                    currentPoints += 5;
+                    console.log(`[Login Points] Awarded 5 login points to user ${userId}. New total: ${currentPoints}`);
+
+                    // 更新数据库 (使用 INSERT ... ON CONFLICT, 添加新字段)
+                    const updateSql = `
+                        INSERT INTO UserPoints (
+                            user_id, total_points, consecutive_login_days, max_consecutive_login_days, 
+                            total_login_days, last_login_date, points_multiplier, completed_levels
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(user_id) DO UPDATE SET
+                            total_points = excluded.total_points,
+                            consecutive_login_days = excluded.consecutive_login_days,
+                            max_consecutive_login_days = excluded.max_consecutive_login_days, -- 更新最大值
+                            total_login_days = excluded.total_login_days,           -- 更新总数
+                            last_login_date = excluded.last_login_date,
+                            points_multiplier = excluded.points_multiplier,
+                            completed_levels = UserPoints.completed_levels 
+                    `;
+                    db.run(updateSql, [
+                        userId, currentPoints, consecutiveDays, maxConsecutiveDays, 
+                        totalLoginDays, todayDate, multiplier, completedLevels
+                    ], (updateErr) => {
+                        if (updateErr) {
+                            console.error(`[Login Points] Error updating UserPoints for user ${userId}:`, updateErr.message);
+                        }
+                        // 无论更新是否成功，都继续登录流程
+                        proceedWithLogin(token, user, res); 
+                    });
+
+                } else {
+                    console.log(`[Login Points] User ${userId} already logged in today (${todayDate}). No points logic run.`);
+                    // 今天已登录过，直接继续
+                    proceedWithLogin(token, user, res); 
+                }
+            });
+            // --- 结束新增逻辑 ---
+
+/*
             // 更新最后登录时间
             db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
             
@@ -564,12 +703,40 @@ app.post('/api/login', (req, res) => {
                     email: user.email
                 }
             });
+*/
         } catch (error) {
             console.error('密码验证错误:', error);
             res.status(500).json({ success: false, message: '服务器错误' });
         }
     });
 });
+
+// --- 新增：封装继续登录的逻辑 --- 
+function proceedWithLogin(token, user, res) {
+    // 确保响应只发送一次
+    if (res.headersSent) {
+        console.warn(`[Login] Attempted to send response twice for user ${user.id}.`);
+        return;
+    }
+    // 更新 users 表的 last_login (这个是原有的逻辑)
+    db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id], (err) => {
+        if (err) {
+            console.error(`[Login] Failed to update last_login for user ${user.id}:`, err.message);
+        }
+    });
+
+    res.json({
+        success: true,
+        token: token,
+        user: {
+            id: user.id,
+            username: user.username,
+            userType: user.user_type,
+            email: user.email
+        }
+    });
+}
+// --- 结束新增函数 ---
 
 // 修改密码
 app.post('/api/change-password', authenticateToken, async (req, res) => {
@@ -1355,7 +1522,7 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
         return new Promise((resolve, reject) => {
             // --- 修改 SQL 查询以包含 word_count --- 
             // const query = 'SELECT * FROM Chapters WHERE level_id = ? ORDER BY order_num'; 
-            const query = `
+    const query = `
                 SELECT 
                     c.*, 
                     (SELECT COUNT(*) FROM Words w WHERE w.chapter_id = c.id) as word_count
@@ -1365,10 +1532,10 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
                     c.level_id = ? 
                 ORDER BY 
                     c.order_num
-            `;
+    `;
             // --- 结束修改 ---
             db.all(query, [levelId], (err, chapters) => {
-                if (err) {
+        if (err) {
                     console.error(`[Get Chapters - Fetch Chapters] Failed for Level ${levelId}:`, err.message);
                     reject(err);
                 } else {
@@ -1405,8 +1572,8 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
                     db.get(firstLevelQuery, [], (err, row) => {
                         if (err) reject(err);
                         else resolve(row);
-                    });
                 });
+            });
 
                 if (!firstLevel || levelId !== firstLevel.id) {
                     console.log(`[Get Chapters - Guest] Access denied. Guest user trying to access non-first level (${levelId}).`);
@@ -1435,7 +1602,7 @@ app.get('/api/vocabulary-levels/:levelId/chapters', authenticateToken, (req, res
 
     // --- 执行 ---
     handleGuestAndProceed();
-});
+    });
 
 // 导入单词API
 app.post('/api/import-words', (req, res) => {
@@ -2517,9 +2684,9 @@ app.get('/api/progress', async (req, res) => {
 app.post('/api/progress/complete-chapter', authenticateToken, (req, res) => {
     console.log('[Complete Chapter - TRACE] Handler started.'); // <-- 新增日志
     const userId = req.user.id;
-    const { levelId, completedOrderNum } = req.body;
+    const { levelId, completedOrderNum, totalScore } = req.body;
 
-    console.log(`[Complete Chapter] Received request: User ${userId}, Level ${levelId}, Completed Order ${completedOrderNum}`);
+    console.log(`[Complete Chapter] Received request: User ${userId}, Level ${levelId}, Completed Order ${completedOrderNum}, Total Score ${totalScore}`);
 
     // 1. 参数验证
     if (!levelId || completedOrderNum === undefined || completedOrderNum === null) {
@@ -2566,10 +2733,75 @@ app.post('/api/progress/complete-chapter', authenticateToken, (req, res) => {
             }
 
             console.log(`[Complete Chapter] Successfully updated progress for User ${userId}, Level ${levelId}. Last accessed: ${completedNum}, Unlocked up to: ${nextOrderNum}.`);
-            // 避免在回调成功中再次发送响应，如果已经发送过
-            if (!res.headersSent) {
-               res.status(200).json({ success: true, message: '进度更新成功' });
+            
+            // --- 新增：处理通关积分和里程碑 --- 
+            if (this.changes > 0) { // 确保章节进度真的更新了
+                console.log(`[Complete Chapter Points] Awarding points for user ${userId}, level ${levelId}, chapter ${completedNum}`);
+
+                // 查询当前积分和倍数
+                const getUserPointsSql = 'SELECT * FROM UserPoints WHERE user_id = ?';
+                db.get(getUserPointsSql, [userId], (err, userPoints) => {
+                    if (err) {
+                        console.error(`[Complete Chapter Points] Error fetching UserPoints for user ${userId}:`, err.message);
+                        // 积分获取失败，但章节进度已更新，仍需返回成功，只记录错误
+                        if (!res.headersSent) {
+                             res.status(200).json({ success: true, message: '进度更新成功，但积分处理出错' });
+                        }
+                        return; 
+                    }
+
+                    // 如果用户还没有积分记录，使用默认值 (虽然登录时应该创建了)
+                    const currentPoints = userPoints ? userPoints.total_points : 0;
+                    const multiplier = userPoints ? userPoints.points_multiplier : 1.0;
+                    let completedLevels = userPoints ? userPoints.completed_levels : 0;
+
+                    // 计算获得积分 - 使用前端传递的总分，如果没有则使用默认的10分
+                    let pointsEarned;
+                    if (totalScore !== undefined && !isNaN(parseInt(totalScore))) {
+                        // 使用前端传递的总分
+                        pointsEarned = parseInt(totalScore);
+                        console.log(`[Complete Chapter Points] Using frontend total score: ${pointsEarned}`);
+                    } else {
+                        // 使用默认的10分作为基础分
+                        const basePoints = 10;
+                        pointsEarned = Math.floor(basePoints * multiplier);
+                        console.log(`[Complete Chapter Points] Using default score: basePoints=${basePoints}, multiplier=${multiplier}, pointsEarned=${pointsEarned}`);
+                    }
+                    
+                    const newTotalPoints = currentPoints + pointsEarned;
+                    completedLevels += 1; // 完成关卡数+1
+
+                    console.log(`[Complete Chapter Points] User ${userId}: Earned=${pointsEarned}, New Total=${newTotalPoints}, Completed Levels=${completedLevels}`);
+
+                    // 更新 UserPoints 表
+                    const updateSql = `
+                        UPDATE UserPoints
+                        SET total_points = ?, completed_levels = ?
+                        WHERE user_id = ?
+                    `;
+                    db.run(updateSql, [newTotalPoints, completedLevels, userId], (updateErr) => {
+                        if (updateErr) {
+                            console.error(`[Complete Chapter Points] Error updating UserPoints for user ${userId}:`, updateErr.message);
+                            // 更新积分失败，也发送成功响应，只记录错误
+                            if (!res.headersSent) {
+                                res.status(200).json({ success: true, message: '进度更新成功，但积分保存出错' });
+                            }
+                        } else {
+                            console.log(`[Complete Chapter Points] Successfully updated UserPoints for user ${userId}.`);
+                            // --- 发送最终成功响应 --- 
+                            if (!res.headersSent) {
+                                res.status(200).json({ success: true, message: '进度更新成功', pointsEarned: pointsEarned });
+                            }
+                        }
+                    });
+                });
+            } else {
+                 // UserChapterProgress 未更新，直接返回之前的成功响应
+                 if (!res.headersSent) {
+                     res.status(200).json({ success: true, message: '进度更新成功 (未变化)' });
+                 }
             }
+            // --- 结束积分处理逻辑 ---
         });
     } catch (syncError) { // <-- 添加 catch 块
         console.error('[Complete Chapter - TRACE] Synchronous error during db.run initiation:', syncError);
@@ -2578,6 +2810,9 @@ app.post('/api/progress/complete-chapter', authenticateToken, (req, res) => {
         }
     }
 });
+
+// --- 新增：里程碑奖励函数 ---
+// --- 结束新增函数 ---
 
 // 新增：查找下一章节API端点
 app.get('/api/chapters/find-next', authenticateToken, (req, res) => {
@@ -2639,6 +2874,161 @@ app.get('/api/chapters/find-next', authenticateToken, (req, res) => {
         }
     });
 });
+
+// --- 修改/新增：热力图数据接口，基于 UserPoints 推断登录 --- 
+app.get('/api/activity/heatmap', authenticateToken, (req, res) => {
+    try {
+        const userId = req.user.id;
+        const daysToQuery = 90; // 查询过去多少天的数据
+        console.log(`[Heatmap API v3] Request for user ${userId}, last ${daysToQuery} days.`);
+
+        const endDate = new Date(); // 今天
+
+        // 查询用户的积分信息，主要需要 consecutive_login_days 和 last_login_date
+        const getUserPointsSql = 'SELECT consecutive_login_days, last_login_date FROM UserPoints WHERE user_id = ?';
+
+        db.get(getUserPointsSql, [userId], (err, userPoints) => {
+            if (err) {
+                console.error(`[Heatmap API v3] Database error fetching UserPoints for user ${userId}:`, err.message);
+                return res.status(500).json({ success: false, message: '数据库查询错误' });
+            }
+
+            const consecutiveDays = userPoints ? userPoints.consecutive_login_days : 0;
+            const lastLoginDateStr = userPoints ? userPoints.last_login_date : null;
+
+            console.log(`[Heatmap API v3] User ${userId}: ConsecutiveDays=${consecutiveDays}, LastLoginDate=${lastLoginDateStr}`);
+
+            const heatmapData = {};
+            const todayStr = endDate.toISOString().split('T')[0];
+
+            // 生成过去 N 天的日期范围并初始化为 0
+            for (let i = 0; i < daysToQuery; i++) {
+                const date = new Date(endDate);
+                date.setDate(endDate.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                heatmapData[dateStr] = 0; 
+            }
+
+            // 根据连续登录天数和最后登录日期标记活跃天
+            if (lastLoginDateStr && consecutiveDays > 0) {
+                 // 确保最后登录日期在查询范围内
+                 if (heatmapData.hasOwnProperty(lastLoginDateStr)) {
+                    const lastLogin = new Date(lastLoginDateStr);
+                    // 从最后登录日期往前标记连续的天数
+                    for (let i = 0; i < consecutiveDays; i++) {
+                        const loginDate = new Date(lastLogin);
+                        loginDate.setDate(lastLogin.getDate() - i);
+                        const loginDateStrLoop = loginDate.toISOString().split('T')[0]; // 使用不同变量名避免覆盖
+                        // 确保这个推断出的日期也在我们的查询范围内
+                        if (heatmapData.hasOwnProperty(loginDateStrLoop)) {
+                            heatmapData[loginDateStrLoop] = 1; // 标记为活跃
+                        } else {
+                            // 如果推断出的日期超出了查询范围，就停止标记
+                            console.log(`[Heatmap API v3] Inferred date ${loginDateStrLoop} out of range for user ${userId}. Stopping marking.`);
+                            break;
+                        }
+                    }
+                 } else {
+                    console.log(`[Heatmap API v3] Last login date ${lastLoginDateStr} is outside the ${daysToQuery}-day query range for user ${userId}.`);
+                 }
+            }
+
+            console.log(`[Heatmap API v3] Generated heatmap data for user ${userId}.`);
+            res.json({ success: true, heatmapData: heatmapData });
+        });
+
+    } catch (error) {
+        console.error("[Heatmap API v3] Error:", error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+// --- 结束热力图接口 ---
+
+// --- 新增：获取用户积分状态接口 --- 
+app.get('/api/user/points', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    const sql = 'SELECT * FROM UserPoints WHERE user_id = ?';
+    db.get(sql, [userId], (err, row) => {
+        if (err) {
+            console.error(`[Get Points] Error fetching UserPoints for user ${userId}:`, err.message);
+            return res.status(500).json({ success: false, message: '查询用户积分信息失败' });
+        }
+
+        if (row) {
+            // 找到了记录，返回
+            console.log(`[Get Points] Found points data for user ${userId}:`, row);
+            // 确保返回所有字段，即使是 null 或 0
+            res.json({
+                success: true, 
+                pointsData: {
+                    user_id: row.user_id,
+                    total_points: row.total_points || 0,
+                    consecutive_login_days: row.consecutive_login_days || 0,
+                    max_consecutive_login_days: row.max_consecutive_login_days || 0,
+                    total_login_days: row.total_login_days || 0,
+                    last_login_date: row.last_login_date, // 可以是 null
+                    points_multiplier: row.points_multiplier || 1.0,
+                    completed_levels: row.completed_levels || 0
+                }
+            });
+        } else {
+            // 没有记录，返回默认值
+            console.log(`[Get Points] No points data found for user ${userId}. Returning default values.`);
+            res.json({
+                success: true,
+                pointsData: {
+                    user_id: userId,
+                    total_points: 0,
+                    consecutive_login_days: 0,
+                    max_consecutive_login_days: 0,
+                    total_login_days: 0,
+                    last_login_date: null,
+                    points_multiplier: 1.0,
+                    completed_levels: 0
+                }
+            });
+        }
+    });
+});
+// --- 结束新增接口 ---
+
+// --- 新增：获取用户已完成章节的总单词数 --- 
+app.get('/api/user/stats/completed-word-count', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    console.log(`[Stats API] Request for completed word count for user ${userId}`);
+
+    // SQL 查询：
+    // 1. 从 UserChapterProgress 获取用户每个 level 的 last_unlocked_order
+    // 2. JOIN Chapters 找到 order_num 小于 last_unlocked_order 的章节
+    // 3. LEFT JOIN Words 并 COUNT 单词数，按章节分组
+    // 4. 最后 SUM 所有已完成章节的单词数
+    const sql = `
+        SELECT SUM(word_counts.count) as total_completed_words
+        FROM (
+            SELECT COUNT(w.id) as count
+            FROM Chapters ch
+            JOIN UserChapterProgress ucp ON ch.level_id = ucp.level_id
+            LEFT JOIN Words w ON w.chapter_id = ch.id
+            WHERE ucp.user_id = ? 
+              AND ch.order_num < ucp.last_unlocked_order -- 关键：找到已完成的章节
+            GROUP BY ch.id
+        ) AS word_counts;
+    `;
+
+    db.get(sql, [userId], (err, row) => {
+        if (err) {
+            console.error(`[Stats API] Database error fetching completed word count for user ${userId}:`, err.message);
+            return res.status(500).json({ success: false, message: '查询单词统计失败' });
+        }
+
+        const totalCount = row ? row.total_completed_words : 0;
+        console.log(`[Stats API] User ${userId} has completed a total of ${totalCount} words.`);
+
+        res.json({ success: true, totalCompletedWords: totalCount });
+    });
+});
+// --- 结束新增接口 ---
 
 // HTTPS服务器配置
 const options = {

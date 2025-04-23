@@ -476,23 +476,73 @@ body {
 }
 
 .result-info {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .result-item {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin: 5px 0;
     font-size: 18px;
 }
 
 .result-value {
     font-weight: bold;
-    color: var(--accent-color);
+    color: var(--primary-color);
 }
 
+/* 积分详情样式 */
+.score-details-container {
+    background: rgba(74, 109, 167, 0.1);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin: 15px 0;
+    text-align: left;
+    font-size: 14px;
+    border: 1px solid rgba(74, 109, 167, 0.2);
+}
+
+.score-detail-item {
+    padding: 5px 0;
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+}
+
+.score-detail-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(74, 109, 167, 0.1);
+}
+
+.score-detail-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(74, 109, 167, 0.3);
+    font-weight: bold;
+    text-align: right;
+    color: var(--primary-color);
+}
+
+.score-detail-added {
+    margin-top: 10px;
+    text-align: center;
+    color: var(--success-color);
+    font-weight: bold;
+    background: rgba(40, 167, 69, 0.1);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+/* 星级评分 */
 .star-rating {
-    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
 }
 
 .star {

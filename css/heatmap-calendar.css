@@ -577,7 +577,7 @@
   border-top: 1px solid var(--border-color, #eee);
 }
 
-.summary-item {
+/* .summary-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -594,6 +594,35 @@
   color: var(--text-secondary, #666);
   margin-top: 4px;
 }
+
+*/
+.summary-item {
+  /* ... 可能存在的其他样式 ... */
+  padding-top: 15px; /* 增加上内边距，例如从 10px 增加到 15px */
+  padding-bottom: 15px; /* 增加下内边距 */
+  /* 确保 display 和对齐方式适合内容 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center; 
+  text-align: center; /* 文本居中 */
+}
+
+.summary-value {
+  /* ... 可能存在的其他样式 ... */
+  font-size: 1.5em; /* 尝试增大字体大小，例如从 1.5em 增大到 1.8em */
+  line-height: 1.2; /* 可能也需要调整行高 */
+  font-weight: 600;
+  color: var(--primary, #FFB3C1);
+}
+
+.summary-label {
+  /* ... 可能存在的其他样式 ... */
+  font-size: 0.8em; /* 相应地调整标签字体大小 */
+  margin-top: 5px; /* 可能需要调整与数字之间的间距 */
+  color: var(--text-secondary, #666);
+}
+
 
 /* 加载和空状态 */
 .calendar-container.loading .calendar-grid {
@@ -667,14 +696,13 @@
 
 .heatmap-summary.horizontal .summary-item {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  margin-right: 2px;
 }
 
 .heatmap-summary.horizontal .summary-value {
   font-weight: bold;
-  margin-right: 5px;
+  margin-bottom: 5px;
   color: var(--primary, #ed83a3);
 }
 
@@ -708,4 +736,10 @@
 .heatmap-legend.horizontal .legend-label {
   font-size: 12px;
   color: #666;
-} 
+}
+
+/* --- 新增：隐藏图例 --- */
+.heatmap-legend.horizontal {
+    display: none !important;
+}
+/* --- 结束隐藏图例 --- */ 
