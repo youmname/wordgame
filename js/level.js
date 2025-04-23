@@ -834,7 +834,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 星级难度
             const stars = '⭐'.repeat(chapter.difficulty);
-            
+            const chapterIcon = getChapterIcon(chapter, currentLevelProgressInfo);
             // 卡片内容
             card.innerHTML = `
                 <div class="deco-leaf" style="top: ${Math.random() * 60 + 20}%; left: ${Math.random() * 60 + 20}%">🍃</div>
@@ -843,10 +843,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <p class="difficulty" style="margin: 0;">${chapter.locked ? '加油💪' : '⭐⭐⭐'}</p>
                     <div class="lock-status" data-locked="${chapter.locked}">${chapter.locked ? '🔒' : '🥇'}</div>
+                    
                     <div class="chapter-completion-icon" style="pointer-events: none; margin-left: 8px;">${chapter.locked ? '✒️' : '🎉'}</div>
                 </div>
-                <div class="chapter-icon">${getChapterIcon(chapter, currentLevelProgressInfo)}</div>
+                <div class="chapter-icon">${chapterIcon}</div>
+                
+                
             `;
+
+            //<div class="chapter-icon">${getChapterIcon(chapter, currentLevelProgressInfo)}</div>
 
             // 如果章节锁定，添加锁定样式
             if (chapter.locked) {
@@ -1300,12 +1305,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return '👑'; // Crown icon (Completed and last accessed)
         }
         // 2. 已完成 (且非上次访问)
-        if (chapter.order_num < progress.lastAccessed) {
+        if (chapter.order_num < progress.lastUnlocked) {
             return '✅'; // Checkmark icon (Completed)
         }
         // 3. 可玩 (已解锁，非上次访问，非已完成) - 返回空字符串，不显示图标
         // return '📘'; // Book icon (Available to play)
-        return ''; // Return empty string for available state
+        return '📘'; // Return empty string for available state
     }
 
     // 开始游戏

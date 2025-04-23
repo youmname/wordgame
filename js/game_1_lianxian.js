@@ -2109,24 +2109,22 @@
                 // 让卡片淡入显示
                 setTimeout(() => {
                     unmatchedCards.forEach(card => {
-                        // 添加一次性事件监听器，等待动画完成
-                        const lastCard = unmatchedCards[unmatchedCards.length - 1];
-                        if (card === lastCard) {
-                            const animEndHandler = () => {
-                                // 触发洗牌事件
-                                if (window.WordUtils && window.WordUtils.EventSystem) {
-                                    window.WordUtils.EventSystem.emit('board:shuffled');
-                                }
-                                // 取消洗牌状态
-                                this.isShuffling = false;
-                                // 移除事件监听器
-                                card.removeEventListener('animationend', animEndHandler);
-                            };
-                            card.addEventListener('animationend', animEndHandler);
-                        }
                         // 移除类以触发动画
                         card.classList.remove('shuffling');
                     });
+                    
+                    // ---- 修改：使用固定延迟重置状态 ----
+                    // 设置一个略长于动画时间的延迟 (例如 1000ms)
+                    setTimeout(() => {
+                        // 触发洗牌完成事件
+                        if (window.WordUtils && window.WordUtils.EventSystem) {
+                            window.WordUtils.EventSystem.emit('board:shuffled');
+                        }
+                        // 取消洗牌状态
+                        this.isShuffling = false;
+                        console.log("洗牌动画完成，isShuffling 设置为 false");
+                    }, 500); // 假设动画总时长小于1秒
+                    // ---- 结束修改 ----
                 }, 200);
             }, 600);
         },

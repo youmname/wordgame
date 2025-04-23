@@ -664,3 +664,22 @@ body {
         min-width: 50px;
     }
 }
+
+.chapter-card.locked {
+  filter: grayscale(80%); /* 让卡片变灰，80% 灰度 */
+  opacity: 0.6;         /* 让卡片半透明 */
+  cursor: not-allowed;  /* 鼠标悬停时显示禁止图标 */
+  /* 可选：移除或减弱锁定卡片的悬停效果 */
+  /* transform: none !important; */ 
+  /* box-shadow: none !important; */
+}
+
+/* 可选：让锁定卡片内部的元素也稍微暗淡一点 */
+.chapter-card.locked > * {
+    opacity: 0.8; 
+}
+
+/* 可选：确保右上角的锁图标本身不太受影响，或者单独设置样式 */
+.chapter-card.locked .chapter-icon {
+    opacity: 1; /* 或者根据需要调整 */
+}
