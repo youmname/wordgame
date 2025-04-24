@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>智能翻页时钟</title>
+    <!-- 引入 FlipClock 库的 CSS -->
+    <link rel="stylesheet" href="css/flipclock.css"> 
+    <link rel="stylesheet" href="css/flip-clock.css">
+    <!-- 移除我们自己的 CSS 链接，因为时钟样式由 flipclock.css 提供 -->
+    <!-- 引入 jQuery (FlipClock 依赖) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部日期 -->
+        <div id="date" class="date"></div>
+        
+        <!-- 翻页时钟容器 (库将在此创建内容) -->
+        <div class="flip-clock-container">
+            <!-- 这个 div 将被 FlipClock 库填充 -->
+        </div>
+
+        <!-- 模式控制 (暂时保留 HTML, JS 逻辑后续添加) -->
+        <div class="controls">
+            <select id="displaySelector" disabled>
+                <option value="realtime">实时时钟</option>
+                <option value="custom">自定义时间</option>
+                <option value="countdown">倒计时</option>
+            </select>
+            
+            <div id="customTimeControls" class="hidden">
+                <input id="customTime" type="text" placeholder="HH:MM:SS" pattern="\d{2}:\d{2}:\d{2}">
+                <button id="setCustomTime" disabled>设置</button>
+            </div>
+        </div>
+
+        <!-- 用户语录 -->
+        <div class="motto-controls">
+            <input id="customMotto" type="text" placeholder="输入你的心情语录...">
+            <button id="setCustomMotto">更新</button>
+        </div>
+        <div id="motto" class="motto">我爱你</div>
+    </div>
+    
+    <!-- 引入 FlipClock 库的 JS -->
+    <script src="js/flipclock.js"></script>
+    <!-- 引入我们自己的 JS (用于初始化库和处理自定义功能) -->
+    <script src="js/flip-clock.js"></script>
+</body>
+</html>
