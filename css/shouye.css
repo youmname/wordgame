@@ -613,11 +613,9 @@ body {
   background-size: 200% 100%;
   animation: gradientFlow 2s linear infinite;
   border-radius: 4px;
-  width: 70%; /* 默认值，会被JS更新 */
-  /* transition: width 0.5s ease; */
-}
-.progress-fill {
-  transition: width 0.5s ease 0.3s; /* 添加0.3s延迟 */
+  width: var(--progress-percent);
+  min-width: 0;
+  transition: width 0.5s ease;
 }
 
 [data-hidden] .progress-fill {
@@ -749,77 +747,206 @@ body {
 /* 徽章墙 */
 .badge-wall {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 18px;
-  background-color: var(--bg-secondary);
-  border-radius: 12px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-  margin-bottom: 24px;
-  max-height: 280px;
-  overflow-y: auto;
-  /* 添加滚动条样式 */
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary) var(--bg-tertiary);
-}
-
-.badge-wall::-webkit-scrollbar {
-  width: 6px;
-}
-
-.badge-wall::-webkit-scrollbar-track {
-  background: var(--bg-tertiary);
-  border-radius: 10px;
-}
-
-.badge-wall::-webkit-scrollbar-thumb {
-  background-color: var(--primary);
-  border-radius: 10px;
+  /* grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); */ /* Previous responsive columns */
+  grid-template-columns: repeat(3, 1fr); /* Force 3 columns */
+  gap: 25px; /* Adjust gap for 3 columns */
+  padding: 20px;
+  max-width: 300px; /* Add max-width to control container size */
+  margin: 0 auto; /* Center the container */
+  /* background-color: #f9f9f9; */
+  border-radius: 8px;
+  min-height: 100px; 
 }
 
 .badge-item {
-  display: flex;
-  flex-direction: column;
+  width: 40px;  /* May need slight adjustment */
+  height: 40px; /* May need slight adjustment */
+  border-radius: 50%; /* Make it circular */
+  padding: 0; /* Remove padding */
+  display: flex; /* Use flex for centering icon */
   align-items: center;
-  padding: 10px;
-  border-radius: 10px;
-  transition: transform 0.3s, background-color 0.3s;
+  justify-content: center;
+  background-color: transparent; /* Set background to transparent */
+  cursor: pointer;
+  transition: transform 0.2s ease; /* Only transition transform */
+  overflow: visible; /* Allow shadow to be visible */
 }
 
-.badge-item:hover {
-  background-color: var(--bg-hover);
-  transform: translateY(-5px) scale(1.05);
+.badge-item:hover .badge-icon { /* Apply hover effect to icon */
+    transform: translateY(-4px) scale(1.05);
+    /* box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); */ /* Remove standard shadow enhancement */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1), /* Keep subtle base shadow */
+                0 0 15px 5px rgba(var(--primary-rgb), 0.5); /* Add glow effect */
+}
+
+/* Add active state glow */
+.badge-item:active .badge-icon {
+    transform: translateY(-2px) scale(1.02); /* Slightly less lift than hover */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), /* Keep subtle base shadow */
+                0 0 20px 8px rgba(var(--primary-rgb), 0.7); /* Stronger glow effect */
 }
 
 .badge-icon {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  margin-bottom: 6px;
+    width: 100%;  /* Icon container fills the circle */
+    height: 100%; /* Icon container fills the circle */
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    margin-bottom: 0; /* Remove margin */
+    border-radius: 50%; /* Ensure container is round */
+    overflow: hidden; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Apply base shadow here */
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* Add transition for hover */
 }
 
-.badge-name {
-  font-size: 12px;
-  color: var(--text-secondary);
+/* Style for locked badge images */
+.badge-item.locked .badge-icon img {
+    filter: grayscale(100%);
+    opacity: 0.3;
+}
+
+/* Updated fallback style: simple, low-opacity background */
+.badge-icon:not(:has(img)) { /* Style container if img fails/not present */
+     background-color: rgba(233, 233, 233, 0.5); /* Semi-transparent light grey */
+     /* Remove text styles */
+     /* font-size: 1.8em; */ 
+     /* font-weight: bold; */
+     opacity: 1; /* Let background-color handle transparency */
+     display: flex; 
+     align-items: center;
+     justify-content: center;
+     box-shadow: none; /* Remove shadow from fallback container */
+}
+
+/* Disable/modify hover/active effect for locked items */
+.badge-item.locked:hover .badge-icon,
+.badge-item.locked:active .badge-icon {
+    transform: none; /* Prevent lifting */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Keep original shadow, no glow */
+}
+
+.badge-icon img {
+  width: 100%;   /* Make image fill container width */
+  height: 100%;  /* Make image fill container height */
+  object-fit: cover; /* Fill container, crop if necessary */
+  display: block;     
+}
+
+.badge-title {
+  display: none; /* Hide the title */
+}
+
+/* Fallback '?' text style inside badge-icon if image fails */
+.badge-icon span.fallback-icon { /* Assuming JS adds this class/span */
+  font-size: 2em;
+  color: #ccc;
+  font-weight: bold;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  z-index: 1000; /* Ensure modal is on top */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5); /* Dim background */
+  display: flex; /* Use flexbox for centering */
+  align-items: center; /* Vertical center */
+  justify-content: center; /* Horizontal center */
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  position: relative;
+  width: 90%;
+  max-width: 400px; /* Limit max width */
   text-align: center;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  animation: fadeInScale 0.3s ease-out;
 }
 
-/* 响应式调整 */
-@media (max-width: 768px) {
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #aaa;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close-btn:hover,
+.modal-close-btn:focus {
+  color: #333;
+  text-decoration: none;
+}
+
+/* Badge Detail Specific Styles */
+.badge-detail-content {
+  /* Add any specific styles for badge detail if needed */
+}
+
+.badge-detail-icon-large {
+  font-size: 5em; /* Even larger icon for detail view */
+  margin-bottom: 15px;
+  color: var(--primary-color); /* Use active color */
+}
+
+.badge-detail-title {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.badge-detail-description {
+  font-size: 1em;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Animation for Modal - Simplified to Fade In */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    /* transform: scale(0.95); */ /* Removed scale transform */
+  }
+  to {
+    opacity: 1;
+    /* transform: scale(1); */ /* Removed scale transform */
+  }
+}
+
+/* Existing Modal Styles (if any, check for conflicts) */
+/* ... ensure no conflicting styles for .modal, .modal-content ... */
+
+
+/* Responsive adjustments if needed */
+@media (max-width: 600px) {
   .badge-wall {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 10px;
   }
-  
-  #calendar-days {
-    gap: 2px;
+  .badge-icon {
+    font-size: 2.5em;
   }
-  
-  .calendar-day .date-label {
-    font-size: 8px;
+  .modal-content {
+    width: 95%;
+    padding: 20px;
+  }
+  .badge-detail-icon-large {
+    font-size: 4em;
+  }
+  .badge-detail-title {
+    font-size: 1.3em;
   }
 }
 

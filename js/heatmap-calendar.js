@@ -110,7 +110,8 @@ class HeatmapCalendar {
     this.body.appendChild(this.weekdaysRow);
     this.body.appendChild(this.daysGrid);
     
-    // 热力图摘要 - 修改为水平布局
+    // --- 注释掉：移除热力图摘要的创建 --- 
+    /*
     this.summary = document.createElement('div');
     this.summary.className = 'heatmap-summary horizontal';
     
@@ -138,33 +139,15 @@ class HeatmapCalendar {
       summaryItem.appendChild(label);
       this.summary.appendChild(summaryItem);
     });
+    */
+    // --- 结束注释 --- 
     
-    /* // --- 注释掉：移除颜色图例的创建 ---
-    // 颜色图例 - 修改为水平布局
-    this.legend = document.createElement('div');
-    this.legend.className = 'heatmap-legend horizontal';
-    
-    const legendLabels = ['无', '少', '中', '多', '非常多'];
-    for (let i = 0; i < this.options.levels; i++) {
-      const legendItem = document.createElement('div');
-      legendItem.className = 'legend-item';
-      
-      const legendColor = document.createElement('div');
-      legendColor.className = `legend-color level-${i}`;
-      
-      const legendLabel = document.createElement('span');
-      legendLabel.textContent = legendLabels[i];
-      
-      legendItem.appendChild(legendColor);
-      legendItem.appendChild(legendLabel);
-      this.legend.appendChild(legendItem);
-    }
-    */ // --- 结束注释 ---
+    /* // --- 注释掉：移除颜色图例的创建 --- ... */ 
     
     // 添加所有元素到容器
     this.container.appendChild(this.header);
     this.container.appendChild(this.body);
-    this.container.appendChild(this.summary);
+    // this.container.appendChild(this.summary); // --- 注释掉：不添加摘要到容器 ---
     // this.container.appendChild(this.legend); // --- 注释掉：不添加图例到容器 ---
   }
   
@@ -174,14 +157,13 @@ class HeatmapCalendar {
    */
   setData(data) {
     this.data = data || {};
-    this.updateStats();
+    // this.updateStats(); // --- 注释掉：不再需要更新统计摘要 ---
     this.render();
     return this;
   }
   
-  /**
-   * 更新统计数据
-   */
+  // --- 注释掉：移除 updateStats 函数 --- 
+  /*
   updateStats() {
     if (!this.data) return;
     
@@ -209,6 +191,8 @@ class HeatmapCalendar {
     const totalCount = Object.values(this.data).reduce((sum, val) => sum + val, 0);
     document.querySelector('#total-count .summary-value').textContent = totalCount;
   }
+  */
+  // --- 结束注释 --- 
   
   /**
    * 渲染日历

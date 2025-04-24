@@ -2345,7 +2345,8 @@
             
             // 根据难度设置游戏参数
             this.setDifficulty(this.difficulty);
-            
+            this.initialTime = this.timeLeft; // 新增：保存初始时间，用于计算时间奖励
+
             // 加载单词数据（异步）
             this.loadWordData().then(() => {
                 // 更新UI
@@ -2873,30 +2874,83 @@
             // 设置游戏结束标志
             this.isGameOver = true;
             
-            // 获取当前难度的分数设置
+            // --- 修改开始：应用新的积分计算逻辑 ---
+            let baseScore = 0;
+            let timeBonus = 0;
+            let comboBonus = 0;
+            this.totalScore = 0; // 初始化 totalScore
+
+            // 获取当前难度的分数设置 (可能不再需要，但保留以防万一)
             const difficultyConfig = WordConfig.DIFFICULTY[this.difficulty];
-            
-            // 计算时间奖励分数（仅在胜利时）
-            if (isWin && this.timeLeft > 0) {
-                const timeBonus = Math.floor(this.timeLeft * difficultyConfig.scoreTimeBonus);
-                this.score += timeBonus;
+
+            // 计算分数（仅在胜利时）
+            if (isWin) {
+                // 移除旧的时间奖励计算
+                // if (this.timeLeft > 0) {
+                //     const timeBonusOriginal = Math.floor(this.timeLeft * difficultyConfig.scoreTimeBonus);
+                //     this.score += timeBonusOriginal; // 注释掉旧的计算
+                // }
+
+                baseScore = 10;
+                // 计算时间奖励 (最多5分)
+                timeBonus = this.initialTime > 0 ? Math.min(5, Math.floor((this.timeLeft / this.initialTime) * 5)) : 0;
+                 // 确保 timeBonus 不为负数
+                timeBonus = Math.max(0, timeBonus);
+                // 计算连击奖励 (最多5分, 假设每5连击奖励1分)
+                comboBonus = Math.min(5, Math.floor(this.maxCombo / 5));
+                // 计算总得分
+                this.totalScore = baseScore + timeBonus + comboBonus;
+                // 更新最终显示的 score 为计算出的总得分
+                this.score = this.totalScore;
+                console.log(`[配对游戏 - 积分计算] 基础分: ${baseScore}, 时间奖励: ${timeBonus}, 连击奖励: ${comboBonus}, 总得分: ${this.totalScore}`);
+
+            } else {
+                // 失败时，积分为0
+                this.totalScore = 0;
+                this.score = 0; // 确保界面显示为0
             }
+            // --- 修改结束 ---
             
             // 设置结果数据
-            document.getElementById('final-score').textContent = this.score;
+            document.getElementById('final-score').textContent = this.score; // 使用更新后的 score (即 totalScore)
             document.getElementById('time-left').textContent = `${this.timeLeft}s`;
             document.getElementById('max-combo').textContent = this.maxCombo;
-            
-            // 根据得分设置星级
-            const maxScore = this.totalPairs * (difficultyConfig.scoreMatch + difficultyConfig.scoreCombo * 2);
-            const scorePercent = this.score / maxScore;
-            
+
+            // --- 修改：更新弹窗中的积分明细 (使用 innerHTML) ---
+            const scoreDetailsElement = document.getElementById('score-details');
+            if (scoreDetailsElement && isWin) {
+                 // 使用 scoreDetails 对象存储分数，方便引用
+                this.scoreDetails = {
+                    baseScore,
+                    timeBonus,
+                    comboBonus,
+                    totalScore: this.totalScore
+                };
+                scoreDetailsElement.innerHTML = `
+                    <div class="score-detail-item">基础分: ${this.scoreDetails.baseScore}</div>
+                    <div class="score-detail-item">时间奖励: +${this.scoreDetails.timeBonus}</div>
+                    <div class="score-detail-item">连击奖励: +${this.scoreDetails.comboBonus}</div>
+                    <div class="score-detail-total">总分: ${this.scoreDetails.totalScore}</div>
+                `;
+                scoreDetailsElement.style.display = 'block'; // 确保容器可见
+            } else if (scoreDetailsElement) {
+                 // 失败时隐藏详情
+                scoreDetailsElement.innerHTML = ''; // 清空内容
+                scoreDetailsElement.style.display = 'none';
+            }
+            // --- 修改结束 ---
+
+            // --- 修改：根据新的 totalScore 和上限(20) 计算星级 --- 
+            const maxPossibleScore = 20; // 新的总分上限是 10 + 5 + 5 = 20
+            const scorePercent = maxPossibleScore > 0 ? (this.score / maxPossibleScore) : 0; // 使用新的上限计算百分比
+
             const stars = document.querySelectorAll('.star');
             stars.forEach(star => star.classList.remove('active'));
             
-            if (scorePercent >= 0.3) stars[0].classList.add('active');
-            if (scorePercent >= 0.6) stars[1].classList.add('active');
-            if (scorePercent >= 0.8) stars[2].classList.add('active');
+            if (scorePercent >= 0.3) stars[0].classList.add('active'); // 30% -> 1星 (6分)
+            if (scorePercent >= 0.6) stars[1].classList.add('active'); // 60% -> 2星 (12分)
+            if (scorePercent >= 0.8) stars[2].classList.add('active'); // 80% -> 3星 (16分)
+            // --- 修改结束 ---
             
             // 播放结果音效
             if (window.WordSoundManager) {
@@ -2910,10 +2964,10 @@
                     isWin ? '恭喜通关！' : '游戏结束';
             }, 500);
             
-            // 记录游戏结果
+            // 记录游戏结果（已经在上次编辑中添加了 calculatedTotalScore）
             this.saveGameResult(isWin);
-
-            // --- 新增：如果胜利，则更新进度 ---
+            
+            // --- 修改：更新进度部分，确保传递 totalScore ---
             if (isWin && this.currentLevelId && this.currentChapterOrderNum !== null && this.currentChapterOrderNum !== undefined) {
                 const authToken = localStorage.getItem('authToken'); // 假设 Token 存储在 localStorage
 
@@ -2932,7 +2986,8 @@
                     },
                     body: JSON.stringify({
                         levelId: this.currentLevelId,
-                        completedOrderNum: this.currentChapterOrderNum
+                        completedOrderNum: this.currentChapterOrderNum,
+                        totalScore: this.totalScore // <--- 确认传递计算好的总分
                     })
                 })
                 .then(response => {
@@ -2947,6 +3002,15 @@
                 .then(data => {
                     if (data.success) {
                         console.log('用户进度更新成功！');
+                        // --- 修改：在 fetch 成功后追加"已加入总积分" ---
+                        if (scoreDetailsElement && isWin) { // 确保元素存在且是胜利状态
+                            const totalPointsElement = document.createElement('div');
+                            totalPointsElement.className = 'score-detail-added';
+                            // 使用我们计算的总积分(this.totalScore)
+                            totalPointsElement.textContent = `已加入总积分: +${this.totalScore}`;
+                            scoreDetailsElement.appendChild(totalPointsElement);
+                        }
+                        // --- 修改结束 ---
                     } else {
                         console.error('更新用户进度失败:', data.message);
                     }
@@ -2968,12 +3032,13 @@
             // 这里可以实现保存游戏结果到服务器或本地存储的逻辑
             console.log('游戏结束', {
                 isWin: isWin,
-                score: this.score,
+                score: this.score, // 这里显示的是最终的 totalScore
                 timeLeft: this.timeLeft,
                 maxCombo: this.maxCombo,
                 matchedPairs: this.matchedPairs,
                 totalPairs: this.totalPairs,
-                difficulty: this.difficulty
+                difficulty: this.difficulty,
+                calculatedTotalScore: this.totalScore // 添加明确的 calculatedTotalScore 记录
             });
         },
         

@@ -292,33 +292,7 @@
                     <div class="score-bubble">✨ <span id="user-score">0</span> 积分</div> 
                 </div>
                 <div class="badge-wall">
-                  <!-- 已解锁徽章 -->
-                  <div class="badge unlocked" title="首次挑战">🥉</div>
-                  <div class="badge unlocked" title="连续学习3天">⏱️</div>
-                  <div class="badge unlocked" title="掌握100个单词">📚</div>
-                  <div class="badge unlocked" title="速度之星">⚡</div>
-                  <div class="badge unlocked" title="完美记忆">🧠</div>
-                  
-                  <!-- 新增徽章 -->
-                  <div class="badge unlocked" title="单词猎人">🎯</div>
-                  <div class="badge unlocked" title="早起学习者">🌅</div>
-                  <div class="badge unlocked" title="夜间学习者">🌙</div>
-                  <div class="badge unlocked" title="周末学霸">📊</div>
-                  <div class="badge unlocked" title="词汇大师初级">🎓</div>
-                  
-                  <!-- 部分解锁徽章 -->
-                  <div class="badge unlocked" title="连胜10场">🏆</div>
-                  <div class="badge unlocked" title="全勤一周">📅</div>
-                  
-                  <!-- 未解锁徽章 -->
-                  <div class="badge locked" title="全勤一月(未解锁)">🔒</div>
-                  <div class="badge locked" title="词汇大师中级(未解锁)">🔒</div>
-                  <div class="badge locked" title="词汇大师高级(未解锁)">🔒</div>
-                  <div class="badge locked" title="极速模式大师(未解锁)">🔒</div>
-                  <div class="badge locked" title="拼图模式大师(未解锁)">🔒</div>
-                  <div class="badge locked" title="生存模式大师(未解锁)">🔒</div>
-                  <div class="badge locked" title="学习传奇(未解锁)">🔒</div>
-                  <div class="badge locked" title="终极成就(未解锁)">🔒</div>
+                 
                 </div>
             </div>
             
@@ -583,5 +557,14 @@
     添加在结果模态框中，max-combo的下面，stars上面
     <div id="modal-temp-content"></div>
     
+    <!-- Badge Detail Modal -->
+    <div id="badge-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content badge-detail-content">
+            <button class="modal-close-btn" id="close-badge-detail-btn">&times;</button>
+            <div class="badge-detail-icon-large" id="badge-detail-icon"></div>
+            <h3 class="badge-detail-title" id="badge-detail-title"></h3>
+            <p class="badge-detail-description" id="badge-detail-description"></p>
+        </div>
+    </div>
 </body>
 </html>

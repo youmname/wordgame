@@ -3030,6 +3030,26 @@ app.get('/api/user/stats/completed-word-count', authenticateToken, (req, res) =>
 });
 // --- 结束新增接口 ---
 
+// --- 新增：获取数据库中总单词数接口 --- 
+app.get('/api/stats/total-word-count', (req, res) => {
+    console.log(`[Stats API] Request for total word count in the database.`);
+
+    const sql = `SELECT COUNT(*) as total FROM Words`;
+
+    db.get(sql, [], (err, row) => {
+        if (err) {
+            console.error(`[Stats API] Database error fetching total word count:`, err.message);
+            return res.status(500).json({ success: false, message: '查询总单词数失败' });
+        }
+
+        const totalCount = row ? row.total : 0;
+        console.log(`[Stats API] Total words in database: ${totalCount}`);
+
+        res.json({ success: true, totalWords: totalCount });
+    });
+});
+// --- 结束新增接口 --- 
+
 // HTTPS服务器配置
 const options = {
     // 读取SSL证书文件

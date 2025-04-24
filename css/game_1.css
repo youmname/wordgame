@@ -307,6 +307,57 @@ body {
     }
 }
 
+
+/* --- 新增：从 game_1.css 复制积分详情样式 --- */
+.score-details-container {
+    background: rgba(74, 109, 167, 0.1);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin: 15px 0; /* 调整 margin 以匹配 .result-info */
+    text-align: left;
+    font-size: 14px;
+    border: 1px solid rgba(74, 109, 167, 0.2);
+}
+
+.score-detail-item {
+    padding: 5px 0;
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    color: var(--dark-color); /* 确保文字颜色 */
+}
+
+/* .score-detail-item:not(:last-child)::after { 
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(74, 109, 167, 0.1);
+} */
+/* 暂时注释掉分隔线，如果需要再取消注释 */
+
+.score-detail-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(74, 109, 167, 0.3);
+    font-weight: bold;
+    text-align: right;
+    color: var(--primary-color);
+}
+
+.score-detail-added {
+    margin-top: 10px;
+    text-align: center;
+    color: var(--success-color);
+    font-weight: bold;
+    background: rgba(40, 167, 69, 0.1);
+    padding: 5px;
+    border-radius: 4px;
+}
+/* --- 新增结束 --- */
+
 /* 单词卡片和含义卡片的不同样式 */
 .card[data-type="word"] .card-front {
     background-color: #e6f7ff !important; /* 浅蓝色背景 */

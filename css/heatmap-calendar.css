@@ -568,7 +568,8 @@
 .calendar-day.level-3 { background-color: var(--calendar-level-3, #F8B0C8); }
 .calendar-day.level-4 { background-color: var(--calendar-level-4, #F591AF); } 
 
-/* 日历总结区域 */
+/* --- 注释掉摘要区域样式 --- */
+/*
 .calendar-summary {
   display: flex;
   justify-content: space-around;
@@ -577,52 +578,30 @@
   border-top: 1px solid var(--border-color, #eee);
 }
 
-/* .summary-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.summary-value {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--primary, #FFB3C1);
-}
-
-.summary-label {
-  font-size: 13px;
-  color: var(--text-secondary, #666);
-  margin-top: 4px;
-}
-
-*/
 .summary-item {
-  /* ... 可能存在的其他样式 ... */
-  padding-top: 15px; /* 增加上内边距，例如从 10px 增加到 15px */
-  padding-bottom: 15px; /* 增加下内边距 */
-  /* 确保 display 和对齐方式适合内容 */
+  padding-top: 15px; 
+  padding-bottom: 15px; 
   display: flex;
   flex-direction: column;
   justify-content: center; 
   align-items: center; 
-  text-align: center; /* 文本居中 */
+  text-align: center; 
 }
 
 .summary-value {
-  /* ... 可能存在的其他样式 ... */
-  font-size: 1.5em; /* 尝试增大字体大小，例如从 1.5em 增大到 1.8em */
-  line-height: 1.2; /* 可能也需要调整行高 */
+  font-size: 1.5em; 
+  line-height: 1.2; 
   font-weight: 600;
   color: var(--primary, #FFB3C1);
 }
 
 .summary-label {
-  /* ... 可能存在的其他样式 ... */
-  font-size: 0.8em; /* 相应地调整标签字体大小 */
-  margin-top: 5px; /* 可能需要调整与数字之间的间距 */
+  font-size: 0.8em; 
+  margin-top: 5px; 
   color: var(--text-secondary, #666);
 }
-
+*/
+/* --- 结束注释 --- */
 
 /* 加载和空状态 */
 .calendar-container.loading .calendar-grid {
@@ -682,7 +661,8 @@
   font-weight: 500;
 }
 
-/* 水平摘要布局 */
+/* --- 注释掉水平摘要布局样式 --- */
+/*
 .heatmap-summary.horizontal {
   display: flex;
   flex-direction: row;
@@ -709,6 +689,8 @@
 .heatmap-summary.horizontal .summary-label {
   color: #3a3030;
 }
+*/
+/* --- 结束注释 --- */
 
 /* 水平图例布局 */
 .heatmap-legend.horizontal {

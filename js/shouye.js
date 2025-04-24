@@ -18,6 +18,118 @@ let progressWorker = null;
 let particleManager = null;
 let soundManager = null;
 
+// --- 新增：新的徽章配置 ---
+const badgesConfig = [
+    // --- 单词量徽章 ---
+    {
+        id: 'word_100',         // 唯一ID
+        name: '百词斩',
+        description: '累计掌握 100 个单词，初窥门径！',
+        icon: '📖',
+        criteria: 'words',      // 解锁标准类型 ('words', 'streak', 'points')
+        threshold: 100          // 解锁阈值
+    },
+    {
+        id: 'word_500',
+        name: '五百词霸',
+        description: '累计掌握 500 个单词，小有所成！',
+        icon: '📚',
+        criteria: 'words',
+        threshold: 500
+    },
+    {
+        id: 'word_1000',
+        name: '千词通',
+        description: '累计掌握 1000 个单词，渐入佳境！',
+        icon: '🎓',
+        criteria: 'words',
+        threshold: 1000
+    },
+     {
+        id: 'word_5000',
+        name: '万卷通晓',
+        description: '累计掌握 5000 个单词，学识渊博！',
+        icon: '🌟',
+        criteria: 'words',
+        threshold: 5000
+    },
+    // --- 连续打卡天数徽章 ---
+    {
+        id: 'days_3',
+        name: '小试牛刀',
+        description: '连续打卡 3 天，好习惯的开始！',
+        icon: '🥉',
+        criteria: 'streak',
+        threshold: 3
+    },
+    {
+        id: 'days_7',
+        name: '持之以恒',
+        description: '连续打卡 7 天，坚持就是胜利！',
+        icon: '📅',
+        criteria: 'streak',
+        threshold: 7
+    },
+    {
+        id: 'days_30',
+        name: '月度学霸',
+        description: '连续打卡 30 天，毅力惊人！',
+        icon: '🏆',
+        criteria: 'streak',
+        threshold: 30
+    },
+    {
+        id: 'days_100',
+        name: '百日筑基',
+        description: '连续打卡 100 天，学无止境！',
+        icon: '💯',
+        criteria: 'streak',
+        threshold: 100
+    },
+    // --- 积分徽章 ---
+    {
+        id: 'points_1000',
+        name: '积分新星',
+        description: '累计获得 1000 积分，崭露头角！',
+        icon: '✨',
+        criteria: 'points',
+        threshold: 1000
+    },
+    {
+        id: 'points_5000',
+        name: '积分达人',
+        description: '累计获得 5000 积分，实力不凡！',
+        icon: '🌟',
+        criteria: 'points',
+        threshold: 5000
+    },
+    {
+        id: 'points_10000',
+        name: '积分王者',
+        description: '累计获得 10000 积分，登峰造极！',
+        icon: '👑',
+        criteria: 'points',
+        threshold: 10000
+    },
+     {
+        id: 'points_50000',
+        name: '荣誉殿堂',
+        description: '累计获得 50000 积分，无上荣耀！',
+        icon: '💎',
+        criteria: 'points',
+        threshold: 50000
+    },
+];
+// --- 新增结束 ---
+
+// --- 新增：存储用户统计数据的全局变量（或使用状态管理） ---
+let userStats = {
+    words: null,
+    streak: null,
+    points: null
+};
+// --- 新增结束 ---
+
 /**
  * 保存游戏模式到localStorage
  * @param {string} mode 游戏模式
@@ -110,12 +222,18 @@ async function loadUserPoints() {
 
         if (data.success && data.pointsData) {
             const userScoreEl = document.getElementById('user-score');
+            const userPoints = data.pointsData.total_points !== null ? data.pointsData.total_points : 0;
             if (userScoreEl) {
                 // Update the score display using total_points from the response
-                userScoreEl.textContent = data.pointsData.total_points !== null ? data.pointsData.total_points : 0;
+                userScoreEl.textContent = userPoints;
             } else {
                 console.error('未能找到ID为 user-score 的元素来更新积分');
             }
+            // ---> 添加这一行，将获取的积分存入全局 userStats <--- 
+            userStats.points = userPoints;
+            
+            // 下面这行可以保留（用于积分获取后的即时更新）或移除，因为 DOMContentLoaded 最后会统一更新
+            // updateBadgesBasedOnStats({ points: userPoints }); // Optional: keep for immediate update
         } else {
             console.error('获取用户积分失败:', data.message || '未知错误');
             const userScoreEl = document.getElementById('user-score');
@@ -155,27 +273,86 @@ document.addEventListener('DOMContentLoaded', async function() {
         // 注册Service Worker
         registerServiceWorker();
         
-        // 2. 加载用户基础数据 (包含更新部分UI)
+        // 2. 加载用户基础数据和统计数据
         mark('load_data_start');
-        const userData = await loadUserData(); 
-        // No need to call updateUserInterface here if it only updates name/avatar/minutes now
-        // updateUserInterface will be called inside loadUserData if needed
-        // Or just update relevant parts directly after loadUserData
-        if (userData) {
-            // Update parts of UI not covered by loadUserPoints or other specific loaders
-            const userNameEl = document.getElementById('user-name');
-            const userMinutesEl = document.getElementById('user-minutes');
-            const userAvatarEl = document.getElementById('user-avatar');
-            if (userNameEl) userNameEl.textContent = userData.name;
-            if (userMinutesEl) userMinutesEl.textContent = `${userData.minutes}分钟`;
-            if (userAvatarEl && userData.avatar) userAvatarEl.src = userData.avatar;
+        // 注意：调整加载顺序，确保所有需要的统计数据加载完毕后再更新徽章
+        const userDataPromise = loadUserData(); // 基础数据
+        const userPointsPromise = loadUserPoints(); // 积分
+        const completedWordsPromise = loadAndDisplayCompletedWordCount(); // 单词数
+        const calendarDataPromise = loadCalendarData(heatmapCalendar); // 加载日历数据以获取 streak
+        const totalWordsPromise = loadTotalWordCount(); // <-- 添加：调用获取总单词数的函数
+        
+        // 等待所有数据加载完成
+        const [, , , , totalWordsResult] = await Promise.all([ // Destructure results
+            userDataPromise, 
+            userPointsPromise, 
+            completedWordsPromise, 
+            calendarDataPromise,
+            totalWordsPromise // Wait for total words count
+        ]);
+
+        console.log('所有初始数据加载完成，最终 userStats:', userStats);
+        console.log('获取到的总单词数结果:', totalWordsResult); 
+
+        // 假设 totalWordsResult 结构为 { success: true, totalWords: N } 或 null/undefined on error
+        const totalWordsInDB = (totalWordsResult && totalWordsResult.success) ? totalWordsResult.totalWords : null;
+        console.log('解析后的数据库总单词数:', totalWordsInDB);
+
+        // --- 在所有数据加载后，统一更新 UI --- 
+        // 更新徽章墙 (这个位置是正确的)
+        updateBadgesBasedOnStats(userStats); 
+        
+        // --- 更新 "已掌握单词" 模块 --- 
+        const currentWords = userStats.words !== null ? userStats.words : 0;
+        // const wordBadges = badgesConfig.filter(b => b.criteria === 'words').sort((a, b) => a.threshold - b.threshold);
+        
+        // 使用从后端获取的总单词数作为目标
+        let wordSuffix = "";
+        let masteryProgressMax = 1000; // Default if total count fails
+
+        if (totalWordsInDB !== null && totalWordsInDB > 0) {
+            wordSuffix = `/ ${totalWordsInDB}`;
+            masteryProgressMax = totalWordsInDB;
         } else {
-             console.warn("无法加载用户基础数据，某些UI可能未更新");
+             console.warn('未能获取有效的总单词数，进度条和目标将使用默认值或当前值。');
+             // Fallback: Use current words as max if total count is unavailable?
+             wordSuffix = ''; // Or maybe show '/ ?'
+             masteryProgressMax = Math.max(currentWords, 1000); // Ensure max is at least current or 1000
+        }
+
+        updateStatValue('.stats-container .data-module:nth-child(2)', currentWords, wordSuffix);
+        // Add detailed logging before updating the progress bar
+        console.log(`[Progress Update] Updating mastery-progress: currentWords=${currentWords}, masteryProgressMax=${masteryProgressMax}`);
+        updateProgressBar('mastery-progress', currentWords, masteryProgressMax);
+        // --- 结束 "已掌握单词" 更新 ---
+        
+        // --- 更新 "连续学习" 模块 (保持动态目标) ---
+        const currentStreak = userStats.streak !== null ? userStats.streak : 0;
+        const streakBadges = badgesConfig.filter(b => b.criteria === 'streak').sort((a, b) => a.threshold - b.threshold);
+        
+        let nextStreakGoal = null;
+        let highestStreakGoal = 0;
+
+        if (streakBadges.length > 0) {
+            highestStreakGoal = streakBadges[streakBadges.length - 1].threshold;
+            for (const badge of streakBadges) {
+                if (currentStreak < badge.threshold) {
+                    nextStreakGoal = badge.threshold;
+                    break;
+                }
+            }
+        } else {
+            highestStreakGoal = Math.max(7, currentStreak); // Default base goal for streak
         }
         
-        // ---> 新增：加载用户积分数据 <--- 
-        await loadUserPoints();
-        // ---> 结束新增 <--- 
+        let streakProgressMax = highestStreakGoal; // Default to highest goal
+        if(nextStreakGoal !== null) {
+            streakProgressMax = nextStreakGoal; // Scale to next goal if one exists
+        }
+
+        updateStatValue('.stats-container .data-module:nth-child(1)', currentStreak, '天 🔥');
+        updateProgressBar('streak-progress', currentStreak, streakProgressMax);
+        // --- 结束 "连续学习" 更新 ---
         
         // 3. 初始化界面组件
         mark('init_ui_start');
@@ -183,10 +360,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         initViewSwitcher();
         bindEventListeners();
 
-        // --- 新增：加载完成的单词统计 --- 
-        await loadAndDisplayCompletedWordCount();
-        // --- 结束新增 ---
-  
         // 4. 尝试创建Web Worker
         initWorkers();
         
@@ -197,15 +370,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // // 应用初始化动画
         // animatePageLoad();
-
-        // 修改后的加载顺序
-        /* // 已移到前面
-        if (userData) {
-            updateUserInterface(userData);
-        }
-        */
-
-        await loadBadges();
 
         // 最后统一显示
         requestAnimationFrame(() => {
@@ -302,8 +466,10 @@ async function loadUserData() {
 }
 
 /**
- * 加载徽章数据
+ * 加载徽章数据 - 这个函数现在不再需要从API加载，改为基于用户统计更新
+ * 我们保留函数名，但修改其逻辑，或者创建一个新函数 updateBadgesBasedOnStats
  */
+/* // 旧的 loadBadges 函数，将被替换或移除
 async function loadBadges() {
     try {
         const badges = await simulateFetch('/api/badges', {
@@ -317,6 +483,7 @@ async function loadBadges() {
         console.error('加载徽章数据失败:', error);
     }
 }
+*/
 
 /**
  * 初始化热力图日历
@@ -409,25 +576,33 @@ function loadCalendarData(calendar) {
         // 确保 apiData 是预期的格式 { success: true, heatmapData: {...} }
         if (apiData && apiData.success && apiData.heatmapData) {
             const heatmapData = apiData.heatmapData;
-            // 处理响应数据为热力图所需格式
+            // **设置日历数据应该在这里**
             const calendarData = {};
-            
             Object.keys(heatmapData).forEach(dateStr => {
                 calendarData[dateStr] = heatmapData[dateStr];
             });
+            if (calendar) { // 确保 calendar 实例存在
+                 calendar.setData(calendarData);
+            }
             
-            // 设置日历数据
-            calendar.setData(calendarData);
+            // ---> 计算 streak 并更新 userStats <--- 
+            const currentStreak = calculateMaxStreak(heatmapData);
+            userStats.streak = currentStreak;
+            // updateBadgesBasedOnStats(userStats); // No longer strictly needed here as it runs later
             
+            // --- Remove summary calculation and update --- 
+            /*
             // 计算并更新摘要信息
             const summary = {
                 activeDays: Object.values(heatmapData).filter(v => v > 0).length,
-                maxStreak: calculateMaxStreak(heatmapData),
+                maxStreak: currentStreak,
                 totalActiveDays: Object.values(heatmapData).filter(v => v > 0).length // 使用总活跃天数
             };
             
             // 更新热力图摘要信息
             updateHeatmapSummary(summary);
+            */
+            // --- End remove summary --- 
             
             // 记录性能结束点
             measure('开始加载日历数据', '日历数据加载完成');
@@ -463,30 +638,6 @@ function calculateMaxStreak(data) {
     }
     
     return maxStreak;
-}
-
-/**
- * 更新热力图摘要信息
- * @param {Object} summary 摘要数据
- */
-function updateHeatmapSummary(summary) {
-    if (!summary) return;
-    
-    // 可以在此添加更多摘要信息的展示
-    document.querySelector('#active-days .summary-value').textContent = summary.activeDays || '0';
-    document.querySelector('#max-streak .summary-value').textContent = summary.maxStreak || '0';
-
-/*
-    // 修改 total-count 对应的显示
-    const totalCountValueEl = document.querySelector('#total-count .summary-value');
-    const totalCountLabelEl = document.querySelector('#total-count .summary-label');
-    if (totalCountValueEl) {
-        totalCountValueEl.textContent = summary.totalActiveDays || '0'; // 显示总活跃天数
-    }
-    if (totalCountLabelEl) {
-        totalCountLabelEl.textContent = '总活跃天数'; // 修改标签文本
-    }
-*/
 }
 
 /**
@@ -856,15 +1007,32 @@ function updateUserInterface(userData) {
  */
 function updateProgressBar(id, value, max) {
     const progressBar = document.getElementById(id);
-    if (!progressBar) return;
+    if (!progressBar) {
+        console.warn(`进度条未找到: #${id}`);
+        return;
+    }
     
-    const percentage = Math.min(100, Math.round((value / max) * 100));
+    // 确保 max 大于 0 以避免除零错误
+    if (max === null || max === undefined || max <= 0) {
+        console.warn(`进度条 #${id} 的最大值无效: ${max}，将设置为 100%`);
+        max = value; // Or set a default max like 1? Let's use value itself to make it 100% if max is invalid.
+        if (max <= 0) max = 1; // Prevent division by zero if value is also 0
+    }
+
+    // 计算百分比，确保 value 不会超过 max (视觉上最多 100%)
+    const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+    console.log(`更新进度条 #${id}: value=${value}, max=${max}, percentage=${percentage.toFixed(2)}%`);
+
     const progressFill = progressBar.querySelector('.progress-fill');
-    
-    // if (progressFill) {
-    //     // 使用CSS变量实现更好的动画
-    //     progressBar.style.setProperty('--progress-percent', `${percentage}%`);
-    // }
+    if (progressFill) {
+        // 直接设置 CSS 变量，让 CSS transition 处理动画
+        progressBar.style.setProperty('--progress-percent', `${percentage}%`);
+    } else {
+        console.warn(`进度条填充元素未找到: #${id} .progress-fill`);
+    }
+
+    // --- 移除复杂的 requestAnimationFrame 逻辑 --- 
+    /*
      // 添加初始化标记
      if (!progressBar.dataset.initialized) {
         progressBar.style.setProperty('--progress-percent', '0%');
@@ -881,7 +1049,7 @@ function updateProgressBar(id, value, max) {
             progressBar.style.setProperty('--progress-percent', `${percentage}%`);
         });
     });
-
+    */
 }
 
 // js/shouye.js
@@ -950,20 +1118,49 @@ function updateBadgeWall(badges) {
 }
 
 /**
- * 显示徽章详情
+ * 显示徽章详情 - 实现新的模态框逻辑
  */
-function showBadgeDetail(badge) {
-    // 播放点击音效
-    soundManager.play('click');
+function showBadgeDetail(badgeData) { 
+    // 播放点击音效 (假设 soundManager 已初始化)
+    if (soundManager) soundManager.play('click');
     
-    // 显示徽章详情
-    showModal(badge.name, `
-        <div class="badge-detail">
-            <div class="badge-icon large">${badge.icon}</div>
-            <p>${badge.description}</p>
-            <p class="badge-date">获得于: ${formatDate(badge.unlockedDate)}</p>
-        </div>
-    `);
+    const modal = document.getElementById('badge-detail-modal');
+    const iconEl = document.getElementById('badge-detail-icon');
+    const titleEl = document.getElementById('badge-detail-title');
+    const descEl = document.getElementById('badge-detail-description');
+    const closeBtn = document.getElementById('close-badge-detail-btn');
+
+    if (!modal || !iconEl || !titleEl || !descEl || !closeBtn) {
+        console.error('徽章详情模态框元素未找到!');
+        return;
+    }
+
+    // 填充内容
+    iconEl.textContent = badgeData.icon;
+    titleEl.textContent = badgeData.name;
+    descEl.textContent = badgeData.description;
+
+    // 定义关闭函数
+    const closeModal = () => {
+        modal.style.display = 'none';
+        // 移除事件监听器，避免内存泄漏
+        closeBtn.removeEventListener('click', closeModal);
+        modal.removeEventListener('click', closeModalOutside);
+    };
+
+    // 定义点击外部关闭函数
+    const closeModalOutside = (event) => {
+        if (event.target === modal) { // 仅当点击背景遮罩时关闭
+            closeModal();
+        }
+    };
+
+    // 添加事件监听器
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', closeModalOutside); 
+
+    // 显示模态框
+    modal.style.display = 'flex'; // 使用 flex 居中
 }
 
 /**
@@ -1406,7 +1603,7 @@ async function loadAndDisplayCompletedWordCount() {
     if (!authToken) {
         console.error('无法加载单词统计：未找到 authToken');
         // 可以选择在此处更新UI显示错误或0
-        updateCompletedWordCountDisplay(0, '无法加载'); 
+        // updateCompletedWordCountDisplay(0, '无法加载'); 
         return;
     }
 
@@ -1426,28 +1623,178 @@ async function loadAndDisplayCompletedWordCount() {
         const data = await response.json();
 
         if (data.success) {
-            updateCompletedWordCountDisplay(data.totalCompletedWords, '单词总量');
+            userStats.words = data.totalCompletedWords; // <--- 更新 userStats (Keep this for badges)
+            // updateCompletedWordCountDisplay(data.totalCompletedWords, '单词总量'); // <-- Remove this call
+            // updateBadgesBasedOnStats(userStats); // Optional: keep for immediate update
         } else {
             console.error('获取单词统计失败:', data.message);
-            updateCompletedWordCountDisplay(0, '加载失败');
+            // updateCompletedWordCountDisplay(0, '加载失败'); // <-- Remove this call
         }
     } catch (error) {
         console.error('加载单词统计出错:', error);
         showErrorAlert(`加载单词统计时出错: ${error.message}`);
-        updateCompletedWordCountDisplay(0, '错误');
+        // updateCompletedWordCountDisplay(0, '错误'); // <-- Remove this call
     }
 }
 
-// --- 新增：更新单词总量显示的辅助函数 --- 
-function updateCompletedWordCountDisplay(count, label) {
-    const valueEl = document.querySelector('#total-count .summary-value');
-    const labelEl = document.querySelector('#total-count .summary-label');
+// --- 新增：根据用户统计数据更新徽章状态 --- 
+function updateBadgesBasedOnStats(stats) {
+    console.log("Updating badges based on stats:", stats);
+    const badgeWall = document.querySelector('.badge-wall');
+    if (!badgeWall) return;
+    
+    badgeWall.innerHTML = ''; // 清空现有徽章
+    
+    badgesConfig.forEach(badge => {
+        let isUnlocked = false;
+        let currentValue = 0;
+        
+        // 检查用户统计数据是否满足徽章条件
+        switch (badge.criteria) {
+            case 'words':
+                currentValue = stats.words !== null ? stats.words : 0;
+                isUnlocked = currentValue >= badge.threshold;
+                break;
+            case 'streak':
+                currentValue = stats.streak !== null ? stats.streak : 0;
+                isUnlocked = currentValue >= badge.threshold;
+                break;
+            case 'points':
+                currentValue = stats.points !== null ? stats.points : 0;
+                isUnlocked = currentValue >= badge.threshold;
+                break;
+        }
+        
+        // 创建徽章元素
+        const badgeElement = document.createElement('div');
+        // Add 'unlocked' class based on the condition
+        badgeElement.className = `badge-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+        badgeElement.title = `${badge.name} (${isUnlocked ? '已解锁' : `需 ${badge.threshold} ${getCriteriaUnit(badge.criteria)}`})`; // 添加更详细的 title
+        
+        // --- 修改开始: 使用图片 --- 
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'badge-icon';
+        
+        const imgElement = document.createElement('img');
+        const imgBaseName = badge.id; // Use badge ID as base for image name
+        // **修改：始终加载彩色图片路径**
+        imgElement.src = `assets/badges/${imgBaseName}.png`; 
+        imgElement.alt = badge.name;
+        // Handle image loading errors (still useful if the color image is missing)
+        imgElement.onerror = () => {
+            console.warn(`图片加载失败: ${imgElement.src}`);
+            // Fallback: CSS now handles the visual style for the empty container
+            // iconContainer.textContent = '?'; // Remove this line
+            // iconContainer.style.fontSize = '1.5em'; // Remove this line
+            // iconContainer.style.color = '#ccc'; // Remove this line
+        };
 
+        iconContainer.appendChild(imgElement);
+        // --- 修改结束 --- 
+
+        const titleElement = document.createElement('div');
+        titleElement.className = 'badge-title';
+        titleElement.textContent = badge.name;
+
+        badgeElement.appendChild(iconContainer);
+        badgeElement.appendChild(titleElement);
+        
+        // 为已解锁的徽章添加点击事件 (保持不变)
+        if (isUnlocked) {
+            badgeElement.addEventListener('click', () => {
+                showBadgeDetail(badge); // 传递徽章配置数据
+            });
+        } else {
+             // Optionally make locked badges non-clickable or show a message
+             badgeElement.style.cursor = 'not-allowed';
+        }
+        
+        badgeWall.appendChild(badgeElement);
+    });
+}
+
+// 辅助函数：获取标准单位
+function getCriteriaUnit(criteria) {
+    switch(criteria) {
+        case 'words': return '单词';
+        case 'streak': return '连续打卡';
+        case 'points': return '积分';
+        default: return '';
+    }
+}
+// --- 新增结束 ---
+
+/**
+ * 更新统计模块的文本显示
+ * @param {string} moduleSelector - 统计模块的 CSS 选择器 (e.g., '.data-module:nth-child(1)')
+ * @param {string|number} value - 要显示的值
+ * @param {string} [suffix=''] - 值的后缀 (e.g., '天 🔥', ' / 1000')
+ */
+function updateStatValue(moduleSelector, value, suffix = '') {
+    const valueEl = document.querySelector(`${moduleSelector} .data-value`);
     if (valueEl) {
-        valueEl.textContent = count;
-    }
-    if (labelEl) {
-        labelEl.textContent = label;
+        // 清空原始内容，避免重复添加后缀
+        valueEl.innerHTML = ''; 
+        // 直接设置文本内容
+        valueEl.textContent = value;
+        // 如果有后缀，可以添加 span 或直接拼接，这里简单拼接
+        if (suffix) {
+             // 尝试移除旧的后缀 span (如果存在)
+             const oldSuffix = valueEl.querySelector('.suffix-span');
+             if(oldSuffix) oldSuffix.remove();
+
+             // 创建新的 span 添加后缀 (更灵活控制样式)
+             const suffixSpan = document.createElement('span');
+             suffixSpan.className = 'suffix-span'; // Add class for potential styling
+             // 注意：如果后缀包含 HTML (如 🔥)，需要用 innerHTML
+             if (suffix.includes('<') || suffix.includes('&')) { 
+                 suffixSpan.innerHTML = ` ${suffix}`; // Add space before suffix
+             } else {
+                 suffixSpan.textContent = ` ${suffix}`; // Add space before suffix
+             }
+             valueEl.appendChild(suffixSpan);
+        } 
+    } else {
+        console.warn(`更新统计值失败：找不到元素 ${moduleSelector} .data-value`);
     }
 }
-// --- 结束新增 --- 
+
+/**
+ * 【模拟/需要后端实现】加载数据库中的总单词数量
+ * @returns {Promise<Object|null>} Promise resolves with { success: true, totalWords: N } or null on error
+ */
+async function loadTotalWordCount() {
+    console.log('调用接口获取总单词数...');
+    // **注意：后端需要实现 /api/stats/total-word-count 接口**
+    const endpoint = '/api/stats/total-word-count'; 
+    try {
+        const response = await fetch(endpoint, {
+            method: 'GET',
+            // 可能需要认证? 如果是公开统计数据则不需要
+            // headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        });
+
+        if (!response.ok) {
+            // Handle HTTP errors (4xx, 5xx)
+            const errorText = await response.text();
+            console.error(`获取总单词数失败 (${response.status}): ${errorText}`);
+            throw new Error(`服务器错误: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data && data.success && typeof data.totalWords === 'number') {
+            console.log('成功获取总单词数:', data.totalWords);
+            return data; // 返回 { success: true, totalWords: N }
+        } else {
+            // Handle cases where response is ok but data is invalid
+            console.error('获取总单词数失败：无效的响应数据', data);
+            return { success: false, message: '无效的响应数据' }; // Return failure object
+        }
+    } catch (error) {
+        console.error('加载总单词数时出错:', error);
+        // Optionally show an alert to the user
+        // showErrorAlert(`加载总单词统计时出错: ${error.message}`);
+        return null; // Return null to indicate failure
+    }
+}
