@@ -1,4 +1,14 @@
 /* Extracted from FlipClock source/example */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* width: 100vw; */
+    background: #000;
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif; /* Set base font for consistency */
+}
 
 body .flip-clock-wrapper ul li a div div.inn, body .flip-clock-small-wrapper ul li a div div.inn {
     color: #CCCCCC;
@@ -60,15 +70,23 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     clear: both;
 }
 
-/*
-.flip-clock-wrapper.clearfix {
-    *zoom: 1; 
-}
-*/
+
 
 .flip-clock-wrapper {
     font: normal 11px "Helvetica Neue", Helvetica, sans-serif;
-    -webkit-user-select: none;
+    -webkit-user-select: none;  /* 禁止用户选择文本 */
+    -moz-user-select: none;     /* Firefox */
+    -ms-user-select: none;     /* IE/Edge */
+    user-select: none;         /* 标准属性 */
+    width: 100vw;
+    margin: 0;
+    padding: 30px 0; 
+    /* 居中 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
 }
 
 .flip-clock-wrapper .flip-clock-meridium {
@@ -81,13 +99,7 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     color: #313333;
 }
 
-.flip-clock-wrapper {
-    text-align: center;
-    position: relative;
-    /* width: 100%; */ /* Let the container control the width */
-    /* margin: 1em; */ /* Let the container control the margin */
-    display: inline-block; /* Changed from wrapper to make it shrink-wrap */
-}
+
 
 /* Removed :before/:after clearfix as it might interfere */
 
@@ -96,11 +108,11 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     position: relative;
     float: left;
     margin: 8px; /* Slightly increased margin for bigger size */
-    width: 150px;  /* User intended width */
+    width: 180px;  /* User intended width */
     height: 200px; /* User intended height */
     font-size: 160px; /* Base font-size for potential em usage below, approx */
     font-weight: bold;
-    line-height: 190px; /* Adjusted line-height for 200px height */
+    line-height: 200px; /* Adjusted line-height for 200px height */
     border-radius: 10px; /* Slightly larger radius */
     background: #000;
 }
@@ -166,7 +178,7 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     z-index: 5;
     width: 100%;
     height: 1px;
-    background-color: #000;
+    background-color: #4c4949;
 }
 
 .flip-clock-wrapper ul li a div.down {
@@ -740,4 +752,175 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     -webkit-animation: hide 0.5s 0.3s linear both;
     -moz-animation: hide 0.5s 0.3s linear both;
     animation: hide 0.5s 0.2s linear both; /* Original delay was 0.3s */
+}
+
+#date {
+    font-size: clamp(1.1em, 2.2vw, 1.5em); /* Adjusted size slightly */
+    text-align: center;
+    margin-bottom: 4vh;
+    color: #fff; /* Changed to white */
+    text-shadow: none;
+    font-weight: 500; /* Increased font weight (e.g., 500 or 600) */
+    position: relative;
+}
+
+/* Adjust .flip-clock-container font-size to control overall clock scale */
+.flip-clock-container {
+    font-size: 13vw; /* Keep the size */
+    line-height: 1;
+    width: auto;
+    max-width: 95%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 0; /* Reset top margin */
+    margin-bottom: 5vh; /* Increased bottom margin */
+    text-align: center;
+}
+
+/* Controls and Motto section */
+.controls-motto-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: auto; /* Adjust width as needed */
+    max-width: 80%;
+    margin-top: 0; /* Reset top margin */
+}
+
+.controls,
+.motto-controls { /* Re-add .motto-controls */
+    margin-top: 2vh;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px 12px;
+    width: auto;
+    max-width: 100%;
+    /* background-color: rgba(25, 25, 25, 0.6); */ /* REMOVED background color */
+    border-radius: 6px;
+}
+
+/* Restore styles for elements inside the controls */
+.controls select,
+.controls input[type="text"],
+.controls input[type="number"]
+/* REMOVE .motto-controls input[type="text"] selector */
+/* ,.motto-controls input[type="text"] */
+{
+    padding: 6px 10px;
+    border: 1px solid #333;
+    background-color: #111;
+    color: #ccc; /* Reset number input color if needed */
+    border-radius: 4px; /* Reset number input radius if needed */
+    font-size: clamp(0.75em, 1.8vw, 0.9em);
+}
+
+/* Re-apply specific number input styles */
+.controls input[type="number"] {
+    padding: 8px 12px;
+    color: #fff; /* CHANGED back to white */
+    border-radius: 30px;
+    width: clamp(60px, 9vw, 70px);
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+.controls select {
+     min-width: 150px;
+     /* Add rounded styles */
+     border-radius: 30px; /* Match other controls */
+     padding: 8px 25px 8px 15px; /* Adjust padding: Right padding for arrow space */
+     border: 1px solid #333;
+     background-color: #111;
+     color: #ccc;
+     font-size: clamp(0.75em, 1.8vw, 0.9em);
+     cursor: pointer;
+     /* Hide default arrow */
+     appearance: none;
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     /* Custom arrow using background image (SVG) */
+     background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23cccccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+     background-repeat: no-repeat;
+     background-position: right 10px center; /* Position arrow */
+     /* background-size: 12px; */ /* Arrow size - commented out as it might conflict */
+}
+
+/* Adjust controls button style specifically */
+.controls button {
+     cursor: pointer;
+     transition: background-color 0.3s ease;
+     border-radius: 30px;
+     padding: 8px 15px;
+     /* Inherit general input/button styles from above if applicable */
+     background-color: #282828; /* Re-apply specific button color */
+     color: #eee; /* Re-apply specific button color */
+     border: none;
+     font-size: clamp(0.75em, 1.8vw, 0.9em);
+}
+.controls button:hover {
+    background-color: #444;
+}
+
+/* Style the new background selector like the mode selector */
+#backgroundSelector {
+     min-width: 120px; /* Adjust width as needed */
+     border-radius: 30px;
+     padding: 8px 25px 8px 15px;
+     border: 1px solid #333;
+     background-color: #111;
+     color: #ccc;
+     font-size: clamp(0.75em, 1.8vw, 0.9em);
+     cursor: pointer;
+     appearance: none;
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23cccccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+     background-repeat: no-repeat;
+     background-position: right 10px center;
+     background-size: 12px;
+}
+
+/* Restore #customTimeControls display style */
+#customTimeControls {
+    display: flex; /* Keep using flex for alignment */
+    align-items: center;
+    gap: 8px;
+    /* display: none; is handled inline in HTML for initial state */
+}
+
+
+#motto {
+    margin-top: 3vh;
+    font-size: clamp(1.4em, 3.5vw, 2.2em);
+    font-style: normal;
+    color: #fff;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+    min-height: 1.2em;
+    text-align: center;
+    width: 85%;
+    max-width: 700px;
+    line-height: 1.4;
+    cursor: text;
+    letter-spacing: 1px; /* Adjusted letter spacing slightly */
+    /* Changed font to standard system UI fonts */
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+/* Remove focus outline on editable motto */
+#motto[contenteditable="true"]:focus {
+    outline: none;
+    /* Optional: Add a subtle visual cue during editing */
+    /* background-color: rgba(255, 255, 255, 0.05); */
+}
+
+
+/* Style for the time unit labels */
+.time-unit {
+    color: #aaa; /* Set label color */
+    font-size: clamp(0.7em, 1.5vw, 0.85em); /* Adjust size */
+    margin-left: -5px; /* Pull closer to input */
+    margin-right: 8px; /* Space before next input/button */
 } 

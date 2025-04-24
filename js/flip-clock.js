@@ -352,7 +352,7 @@ var FlipClock;
 		 * The name of the clock face class in use
 		 */
 
-		clockFace: 'HourlyCounter',
+		clockFace: 'TwentyFourHourClock',
 
 		/**
 		 * The name of the default clock face class to use if the defined
@@ -2155,51 +2155,216 @@ $(document).ready(function() {
     // 获取 DOM 元素
     const dateDisplay = $('#date');
     const mottoDisplay = $('#motto');
-    const customMottoInput = $('#customMotto');
-    const setCustomMottoBtn = $('#setCustomMotto');
     const clockContainer = $('.flip-clock-container');
+    const displaySelector = $('#displaySelector');
+    const customTimeControls = $('#customTimeControls');
+    const customHoursInput = $('#customHours');
+    const customMinutesInput = $('#customMinutes');
+    const setCustomTimeBtn = $('#setCustomTime');
+    const backgroundUploadInput = $('#backgroundUpload');
+    const backgroundSelector = $('#backgroundSelector');
+    const fullscreenBtn = $('#fullscreenBtn'); // Selector for fullscreen button
 
-    // 初始化 FlipClock
-    var clock = clockContainer.FlipClock({
-        clockFace: 'HourlyCounter', // 使用 时:分:秒 格式
-        // clockFace: 'TwentyFourHourClock', // 或者 24小时制
-        language: 'zh-cn' // 尝试使用中文 (需要库或扩展支持)
-                           // 如果中文无效，库会回退到英文
+    let clock; 
+    let currentMode = 'realtime';
+    let countdownInterval;
+
+    // --- Clock Initialization Function ---
+    function initializeClock(mode, initialTime = 0) {
+        if (clock) {
+            // If a clock instance exists, stop and clear its interval
+            clock.stop();
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            // Destroy or remove the old clock elements if the library supports it
+            // or simply empty the container
+            clockContainer.empty();
+            clock = null;
+        }
+
+        let clockOptions = { language: 'zh-cn', autoStart: true };
+        let faceType = 'TwentyFourHourClock';
+        let startTime = initialTime;
+        let isCountdown = false;
+
+        if (mode === 'realtime') {
+            faceType = 'TwentyFourHourClock';
+            startTime = 0;
+        } else if (mode.startsWith('countdown-') || mode === 'custom-countdown') {
+            if (mode !== 'custom-countdown') {
+                 const minutes = parseInt(mode.split('-')[1], 10);
+                 startTime = minutes * 60;
+            } else {
+                startTime = initialTime;
+                if (startTime <= 0) {
+                    alert("请输入有效的倒计时时间！");
+                    return;
+                }
+            }
+            faceType = (startTime >= 3600) ? 'HourlyCounter' : 'MinuteCounter'; 
+            isCountdown = true;
+            clockOptions.autoStart = false;
+        }
+
+        clockOptions.clockFace = faceType;
+
+        clock = clockContainer.FlipClock(startTime, clockOptions);
+
+        if (isCountdown) {
+            clock.setCountdown(true);
+            clock.setTime(startTime); 
+            clock.start();
+        }
+    }
+
+    // --- Event Listener for Mode Change ---
+    displaySelector.on('change', function() {
+        const selectedMode = $(this).val();
+        currentMode = selectedMode;
+
+        if (selectedMode === 'custom-countdown') {
+            customTimeControls.show();
+            if (clock) {
+                clock.stop();
+             }
+        } else {
+            customTimeControls.hide();
+            initializeClock(selectedMode);
+        }
     });
-    
-    // --- 日期更新 --- (这段逻辑保留)
+
+    // --- Event Listener for Custom Countdown Start Button ---
+    setCustomTimeBtn.on('click', function() {
+        const hours = parseInt(customHoursInput.val()) || 0;
+        const minutes = parseInt(customMinutesInput.val()) || 0;
+        let totalSeconds = 0;
+
+        if (hours < 0 || minutes < 0) {
+             alert("小时和分钟不能为负数！");
+             return;
+        }
+        
+        totalSeconds = (hours * 3600) + (minutes * 60);
+
+        if (totalSeconds > 0) {
+             currentMode = 'custom-countdown';
+             initializeClock(currentMode, totalSeconds);
+        } else {
+             alert("倒计时总时间必须大于 0 秒！");
+        }
+    });
+
+    // --- Background Image Handling ---
+    function applyBackground(imageDataUrl) {
+        $('body').css({
+            'background-image': imageDataUrl ? `url(${imageDataUrl})` : 'none',
+            'background-size': 'cover',
+            'background-position': 'center',
+            'background-repeat': 'no-repeat'
+        });
+    }
+
+    backgroundSelector.on('change', function(event) {
+        const selectedValue = $(this).val();
+        if (selectedValue === 'upload') {
+            backgroundUploadInput.trigger('click');
+            const savedBg = localStorage.getItem('customBackground');
+            $(this).val(savedBg ? 'upload' : 'default'); 
+        } else if (selectedValue === 'default') {
+            applyBackground(null);
+            localStorage.removeItem('customBackground');
+        }
+    });
+
+    backgroundUploadInput.on('change', function(event) {
+        const file = event.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageDataUrl = e.target.result;
+                applyBackground(imageDataUrl);
+                try {
+                    localStorage.setItem('customBackground', imageDataUrl);
+                    backgroundSelector.val('upload');
+                } catch (error) {
+                    console.error("Error saving background to localStorage:", error);
+                    backgroundSelector.val('default');
+                }
+            };
+            reader.onerror = function(error) {
+                 console.error("Error reading file:", error);
+                 alert("读取文件时出错。");
+                 backgroundSelector.val('default');
+            };
+            reader.readAsDataURL(file);
+        } else if (file) {
+             alert("请选择一个有效的图片文件。");
+             backgroundSelector.val('default');
+        }
+        $(this).val(''); 
+    });
+
+    // --- Fullscreen Handling ---
+    function toggleFullScreen() {
+        if (!document.fullscreenElement &&    // Standard
+            !document.mozFullScreenElement && // Firefox
+            !document.webkitFullscreenElement && // Chrome, Safari and Opera
+            !document.msFullscreenElement ) {  // IE/Edge
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
+                document.documentElement.mozRequestFullScreen();
+            } else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+                document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+            } else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
+                document.documentElement.msRequestFullscreen();
+            }
+            fullscreenBtn.text("退出全屏"); // Update button text
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) { /* Firefox */
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { /* IE/Edge */
+                document.msExitFullscreen();
+            }
+             fullscreenBtn.text("全屏"); // Update button text
+        }
+    }
+
+    fullscreenBtn.on('click', toggleFullScreen);
+
+    // Optional: Update button text if exiting fullscreen via Esc key
+    $(document).on('fullscreenchange webkitfullscreenchange mozfullscreenchange MSFullscreenChange', function() {
+        if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            fullscreenBtn.text("全屏");
+        }
+    });
+
+    // --- Initial Setup ---
+    initializeClock('realtime');
+    customTimeControls.hide();
+
+    // Load background from localStorage on startup
+    const savedBackground = localStorage.getItem('customBackground');
+    if (savedBackground) {
+        applyBackground(savedBackground);
+        backgroundSelector.val('upload');
+    } else {
+        backgroundSelector.val('default');
+    }
+
+    // --- Date Update --- 
     function updateDate() {
         const now = new Date();
         const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
         dateDisplay.text(now.toLocaleDateString('zh-CN', options));
     }
-    updateDate(); // 初始加载时更新一次
-    setInterval(updateDate, 60000); // 每分钟检查一次日期变化
+    updateDate();
+    setInterval(updateDate, 60000);
 
-    // --- 座右铭更新 --- (这段逻辑保留)
-    function setCustomMotto() {
-        mottoDisplay.text(customMottoInput.val());
-        // 可选：将座右铭保存到 localStorage
-        // localStorage.setItem('motto', customMottoInput.val());
-    }
-    
-    // 可选：从 localStorage 加载座右铭
-    // const savedMotto = localStorage.getItem('motto');
-    // if (savedMotto) {
-    //     customMottoInput.val(savedMotto);
-    //     mottoDisplay.text(savedMotto);
-    // }
-    
-    setCustomMottoBtn.on('click', setCustomMotto);
-
-    // --- 模式切换 和 自定义时间 (暂时移除/禁用) ---
-    // const displaySelector = $('#displaySelector');
-    // const customTimeControls = $('#customTimeControls');
-    // const customTimeInput = $('#customTime');
-    // const setCustomTimeBtn = $('#setCustomTime');
-    // displaySelector.on('change', handleDisplayChange);
-    // setCustomTimeBtn.on('click', setCustomTime);
-    // function handleDisplayChange() { ... }
-    // function setCustomTime() { ... }
-    // console.log("FlipClock Initialized");
 }); 

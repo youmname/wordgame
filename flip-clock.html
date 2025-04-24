@@ -20,26 +20,45 @@
             <!-- 这个 div 将被 FlipClock 库填充 -->
         </div>
 
-        <!-- 模式控制 (暂时保留 HTML, JS 逻辑后续添加) -->
+        <!-- 模式控制 -->
         <div class="controls">
-            <select id="displaySelector" disabled>
+            <!-- Mode Selector -->
+            <select id="displaySelector">
                 <option value="realtime">实时时钟</option>
-                <option value="custom">自定义时间</option>
-                <option value="countdown">倒计时</option>
+                <option value="custom-countdown">自定义倒计时</option>
+                <option value="countdown-20">倒计时 (20分钟)</option>
+                <option value="countdown-25">倒计时 (25分钟)</option>
+                <option value="countdown-45">倒计时 (45分钟)</option>
             </select>
-            
-            <div id="customTimeControls" class="hidden">
-                <input id="customTime" type="text" placeholder="HH:MM:SS" pattern="\d{2}:\d{2}:\d{2}">
-                <button id="setCustomTime" disabled>设置</button>
+
+            <!-- Custom Countdown Controls (Hidden initially) -->
+            <div id="customTimeControls" style="display: none;">
+                <input id="customHours" type="number" min="0" style="width: 80px;">
+                <span class="time-unit">小时</span>
+                <input id="customMinutes" type="number" min="0" max="59" style="width: 80px;">
+                <span class="time-unit">分钟</span>
+                <button id="setCustomTime">开始倒计时</button>
             </div>
+
+            <!-- Background Selector -->
+            <select id="backgroundSelector">
+                 <option value="default">默认背景</option>
+                 <option value="upload">上传背景</option>
+            </select>
+            <input type="file" id="backgroundUpload" accept="image/*" style="display: none;">
+
+            <!-- Fullscreen Button -->
+            <button id="fullscreenBtn">全屏</button>
+
         </div>
 
-        <!-- 用户语录 -->
-        <div class="motto-controls">
-            <input id="customMotto" type="text" placeholder="输入你的心情语录...">
-            <button id="setCustomMotto">更新</button>
+        <!-- Controls and Motto Container -->
+        <div class="controls-motto-container">
+           
+
+            <!-- 用户语录 -->
+            <div id="motto" class="motto" contenteditable="true">保持专注，不负时光</div>
         </div>
-        <div id="motto" class="motto">我爱你</div>
     </div>
     
     <!-- 引入 FlipClock 库的 JS -->
