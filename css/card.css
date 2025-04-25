@@ -338,8 +338,19 @@ body {
   height: 100vh; /* 限制高度以启用滚动 */
   box-sizing: border-box; /* 包含 padding */
   /* margin-left 由JS控制或移除 */
-  padding: 30px 40px; /* 内边距 */
+  padding: 20px 30px; /* 统一内边距 */
   overflow: hidden; /* 防止主区域滚动 */
+}
+
+/* 新增：卡片和侧边导航的容器 */
+.card-display-area {
+    flex-grow: 1; /* 占据 card-main 的剩余垂直空间 */
+    display: flex;
+    align-items: center; /* 垂直居中按钮和卡片区域 */
+    justify-content: center; /* 水平居中（按钮+卡片）整体 */
+    gap: 20px; /* 按钮和卡片之间的间距 */
+    padding: 10px 0; /* 上下留一些空隙 */
+    overflow: hidden; /* 隐藏此区域的溢出 */
 }
 
 /* 移除边距调整，JS控制或Flexbox处理 */
@@ -348,24 +359,48 @@ body {
 } */
 
 /* 顶部控制栏 */
-.top-controls {
-    display: flex;
-    /* justify-content: flex-end; */ /* 移除或注释 */
-    justify-content: space-between; /* <-- 让两组按钮分布在行两端 */
-    align-items: center;  /* <-- 垂直居中 */
-    margin-bottom: 20px;
-    padding: 0 10px; /* 可以恢复或调整左右内边距 */
-    flex-shrink: 0; 
+/* .top-controls { ... } */ /* 移除单独规则，合并到下方 */
+
+/* 新增：统一的顶部控制栏样式 */
+.top-controls,
+.top-controls-minimalist {
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* 左侧(auto), 中间空白(1fr), 右侧按钮(auto) */
+    align-items: center; /* 垂直居中 Grid 项 */
+    gap: 20px; /* 列之间的间距 */
+    height: 60px; /* 固定高度 */
+    min-height: 60px; /* 新增：强制最小高度 */
+    padding: 0 20px; /* 左右内边距 (可以调整) */
+    margin-bottom: 20px; /* 与下方内容的间距 */
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--border-color); 
+    background-color: var(--bg-light); 
 }
 
-/* 确保 .action-buttons 保持 flex 布局 */
-.action-buttons {
-    display: flex;
+/* 定位内部元素到 Grid 列 */
+.top-controls .content-toggles { /* 仅完整模式有 */
+    grid-column: 1; 
+    display: flex; 
+    gap: 12px;
+}
+
+/* 统一设置左右按钮组的定位和内部布局 */
+.top-controls .action-buttons, 
+.top-controls-minimalist .action-buttons {
+    grid-column: 3; /* 都放在第三列 */
+    display: flex; 
     gap: 15px; 
-    /* 不需要 justify-content: flex-end，因为父级 align-items: flex-end */
+    align-items: center; /* 确保按钮内部元素垂直居中 */
+    justify-content: flex-end; /* 让按钮组内部靠右 (可选) */
 }
 
-/* 微调 action-btn 基础样式以适应 select */
+/* .top-controls-minimalist { ... } */ /* 移除单独规则，已合并 */
+/* .top-controls-minimalist .action-buttons { ... } */ /* 移除单独规则，已合并 */
+
+/* 移除旧的 .action-buttons 独立布局规则 (如果存在) */
+/* .action-buttons { ... } */
+
+/* 微调 action-btn 基础样式 (移除可能冲突的布局属性) */
 .action-btn {
     padding: 10px 15px; /* 调整内边距 */
     border: none;
@@ -381,8 +416,10 @@ body {
     transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     appearance: none; /* 移除 select 默认样式 */
     text-align: center;
-    height: 38px; /* 设定一个固定高度 */
-    box-sizing: border-box; /* 统一 box-sizing */
+    text-decoration: none; /* <-- 新增：移除链接下划线 */
+    /* height: 38px; */ /* 高度由父级 Grid 或自身内容决定，或者可以保留 */
+    /* box-sizing: border-box; */
+    /* 确保没有 grid-column 等属性 */
 }
 .action-btn:hover {
     background-color: #dee2e6;
@@ -422,11 +459,22 @@ body {
     flex-grow: 1; /* 占据中间主要空间 */
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* <-- 改为顶部对齐 */
+    align-items: flex-start; /* <-- 改回 flex-start，让卡片顶部对齐 */
     /* perspective: 1000px; */ /* 透视效果移到卡片本身或按需保留 */
     /* overflow: hidden; */ /* <-- 移除隐藏 */
     overflow-y: auto; /* <-- 添加垂直滚动 */
     padding: 20px 0; /* 上下留些间距 */
+    /* 新增：限制最大宽度，防止 flex-grow 无限扩大 */
+    max-width: 700px; /* 与 .word-card 一致或稍大 */
+    width: 100%; /* 尝试占满允许的最大宽度 */
+    /* 新增：确保 wrapper 本身不滚动，让内部滚动 */
+    height: 100%; /* 尝试占满父容器高度 */
+    /* 新增：隐藏滚动条 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE/Edge */
+}
+.word-card-wrapper::-webkit-scrollbar { /* WebKit (Chrome, Safari, Edge) */
+    display: none;
 }
 
 /* 添加这个规则，用于调试 */
@@ -437,8 +485,9 @@ body {
 
 .word-card {
   width: 100%;
-  max-width: 700px; 
-  /* min-height: 400px; */ /* <-- 移除最小高度 */
+  max-width: 550px; /* <-- 改为 550px，使其更窄 */
+  min-width: 400px;  /* <-- 新增：最小宽度 */
+  min-height: 580px; /* <-- 新增：最小高度 */
   background: linear-gradient(135deg, var(--bg-white) 0%, #fdfbfb 100%); 
   border-radius: 24px; 
   box-shadow: var(--card-shadow);
@@ -448,8 +497,6 @@ body {
   position: relative; /* 确保伪元素定位正确 */
   /* overflow: hidden; */ /* <-- 移除隐藏 */
   border: 2px solid transparent; /* 添加透明边框占位，防止切换时跳动 */
-  margin-top: 20px; /* 可选：给顶部加点边距 */
-  margin-bottom: 20px; /* 可选：给底部加点边距，防止滚动条太贴底 */
   perspective: 1000px; /* 如果需要翻转效果，放在这里 */
 }
 
@@ -459,41 +506,96 @@ body {
 }
 
 /* --- 添加从生成器复制的卡片样式 --- */
-.word-card.elegant { background: linear-gradient(to bottom, #ffffff, #f7f9fc); border: 2px solid #b0bec5; }
-.word-card.elegant::before { content: '✎'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #b0bec5; opacity: 0.7; }
+.word-card.elegant,
+.minimalist-card-content.elegant {
+     background: linear-gradient(to bottom, #ffffff, #f7f9fc); border: 2px solid #b0bec5; 
+}
+.word-card.elegant::before,
+.minimalist-card-content.elegant::before {
+     content: '✎'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #b0bec5; opacity: 0.7; 
+}
 
-.word-card.simple { background: #ffffff; border: 1px solid #ecf0f1; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+.word-card.simple,
+.minimalist-card-content.simple {
+     background: #ffffff; border: 1px solid #ecf0f1; box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
 
-.word-card.classic { background: #fef9e7; border: 2px dashed #d4a017; }
-.word-card.classic::after { content: '📖'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #d4a017; opacity: 0.8; }
+.word-card.classic,
+.minimalist-card-content.classic {
+     background: #fef9e7; border: 2px dashed #d4a017; 
+}
+.word-card.classic::after,
+.minimalist-card-content.classic::after {
+     content: '📖'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #d4a017; opacity: 0.8; 
+}
 
-.word-card.modern { background: linear-gradient(135deg, #e6ecef, #ffffff); border: 2px solid #00b4d8; }
-.word-card.modern::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, #00b4d8, #90e0ef); }
+.word-card.modern,
+.minimalist-card-content.modern {
+     background: linear-gradient(135deg, #e6ecef, #ffffff); border: 2px solid #00b4d8; 
+}
+.word-card.modern::before,
+.minimalist-card-content.modern::before {
+     content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, #00b4d8, #90e0ef); 
+}
 
 /* 注意：需要确保背景图片路径正确或移除data URL */
-.word-card.vintage { background: #fdf6e9 url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAB5JREFUCB1jYGBgYGBgYGBgYGBgYGBgYGBgYGBgAAAD6QBPm5WvPQAAAABJRU5ErkJggg=='); border: 2px solid #8d5524; }
-.word-card.vintage::after { content: '🖋️'; position: absolute; top: 10px; right: 10px; font-size: 20px; color: #8d5524; opacity: 0.9; }
+.word-card.vintage,
+.minimalist-card-content.vintage {
+     background: #fdf6e9 url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAB5JREFUCB1jYGBgYGBgYGBgYGBgYGBgYGBgYGBgAAAD6QBPm5WvPQAAAABJRU5ErkJggg=='); border: 2px solid #8d5524; 
+}
+.word-card.vintage::after,
+.minimalist-card-content.vintage::after {
+     content: '🖋️'; position: absolute; top: 10px; right: 10px; font-size: 20px; color: #8d5524; opacity: 0.9; 
+}
 
-.word-card.nature { background: linear-gradient(to bottom, #f0fff0, #ffffff); border: 2px solid #7cba7c; }
-.word-card.nature::before { content: '🌿'; position: absolute; bottom: 10px; left: 10px; font-size: 20px; color: #7cba7c; }
+.word-card.nature,
+.minimalist-card-content.nature {
+     background: linear-gradient(to bottom, #f0fff0, #ffffff); border: 2px solid #7cba7c; 
+}
+.word-card.nature::before,
+.minimalist-card-content.nature::before {
+     content: '🌿'; position: absolute; bottom: 10px; left: 10px; font-size: 20px; color: #7cba7c; 
+}
 
-.word-card.dreamy { background: linear-gradient(120deg, #f3e5f5, #ffffff); border: 2px solid #ab47bc; }
-.word-card.dreamy::after { content: '🌌'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #ab47bc; opacity: 0.8; }
+.word-card.dreamy,
+.minimalist-card-content.dreamy {
+     background: linear-gradient(120deg, #f3e5f5, #ffffff); border: 2px solid #ab47bc; 
+}
+.word-card.dreamy::after,
+.minimalist-card-content.dreamy::after {
+     content: '🌌'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #ab47bc; opacity: 0.8; 
+}
 
-.word-card.sunset { background: linear-gradient(to bottom right, #fff3e0, #ffe0b2); border: 2px solid #ffa726; }
-.word-card.sunset::before { content: '🌇'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #ffa726; }
+.word-card.sunset,
+.minimalist-card-content.sunset {
+     background: linear-gradient(to bottom right, #fff3e0, #ffe0b2); border: 2px solid #ffa726; 
+}
+.word-card.sunset::before,
+.minimalist-card-content.sunset::before {
+     content: '🌇'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #ffa726; 
+}
 
-.word-card.monochrome { background: #ffffff; border: 2px solid #37474f; }
+.word-card.monochrome,
+.minimalist-card-content.monochrome {
+     background: #ffffff; border: 2px solid #37474f; 
+}
 .word-card.monochrome .card-header, .word-card.monochrome .definition { color: #37474f; } /* 调整选择器 */
 .word-card.monochrome .phonetic, .word-card.monochrome .sentence { color: #78909c; } /* 调整选择器 */
 .word-card.monochrome .card-line { border-color: #b0bec5; }
 .word-card.monochrome .highlight { background-color: rgba(55, 71, 79, 0.1); color: #37474f; }
 
-.word-card.ocean { background: linear-gradient(to bottom, #e3f2fd, #bbdefb); border: 2px solid #42a5f5; }
-.word-card.ocean::after { content: '🌊'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #1e88e5; }
+.word-card.ocean,
+.minimalist-card-content.ocean {
+     background: linear-gradient(to bottom, #e3f2fd, #bbdefb); border: 2px solid #42a5f5; 
+}
+.word-card.ocean::after,
+.minimalist-card-content.ocean::after {
+     content: '🌊'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #1e88e5; 
+}
 
 /* 自定义背景样式 (JS会设置 background-image) */
-.word-card.custom {
+.word-card.custom, 
+.minimalist-card-content.custom {
     border: 2px solid var(--primary-color); /* 给个默认边框 */
     background-size: cover; 
     background-position: center;
@@ -508,6 +610,9 @@ body {
 .card-content {
     position: relative; 
     z-index: 1; /* 确保内容在伪元素之上 */
+    flex-grow: 1; /* <-- 新增：让 card-content 填充 word-card */
+    display: flex; /* <-- 新增：设为 flex 容器 */
+    flex-direction: column; /* <-- 新增：列方向 */
 }
 
 .card-header {
@@ -549,8 +654,12 @@ body {
 }
 
 .card-body {
-    text-align: left; /* 改为左对齐可能更适合多段信息 */
+    text-align: left; /* <-- 恢复：文本左对齐 */
     padding: 0 30px 30px 30px; /* 调整内边距 */
+    flex-grow: 1; /* <-- 新增：占据剩余空间 */
+    display: flex; /* <-- 新增：设为 flex 容器 */
+    flex-direction: column; /* <-- 新增：列方向 */
+    justify-content: center; /* <-- 新增：垂直居中内部元素 */
 }
 
 .definition {
@@ -565,70 +674,122 @@ body {
 .morphology-title, 
 .note-title,
 .sentence-title {
-    font-size: 0.9rem;
-    color: var(--text-light);
-    margin-top: 20px; /* 与上一段的间距 */
-    margin-bottom: 5px; /* 与内容间距 */
+    /* font-size: 0.9rem; */ /* 保持原大小 */
+    /* color: var(--text-light); */ /* 移除旧颜色 */
+    color: var(--primary-color); /* <-- 使用主题蓝色 */
+    margin-top: 25px; /* <-- 增加与上一部分的间距 */
+    margin-bottom: 8px; /* <-- 调整与内容区域的间距 */
     display: none; /* 默认隐藏，由 JS 控制显示 */
-    font-weight: bold; /* 加粗标题 */
+    font-weight: 500; /* <-- 稍微加粗 */
+    /* font-weight: bold; */ /* 移除旧加粗 */
+    padding-left: 5px; /* 轻微左缩进 */
 }
 
 /* 新增：内容样式 */
 .phrase,
 .morphology,
-.note {
+.note,
+.sentence {
     font-size: 1rem;
     color: var(--text-dark);
     line-height: 1.6;
     margin-bottom: 15px;
     display: none; /* 默认隐藏，由 JS 控制显示 */
-     white-space: pre-wrap; /* 保留换行符 */
+    white-space: pre-wrap; /* 保留换行符 */
+
+    /* --- 新增样式 --- */
+    background-color: #f8f9fa; /* 浅灰色背景 */
+    border-radius: 8px; /* 圆角 */
+    padding: 15px 15px 15px 25px; /* 内边距 (左侧留给竖条) */
+    position: relative; /* 用于伪元素定位 */
+    overflow: hidden; /* 确保伪元素不溢出圆角 */
 }
 
+/* --- 新增：左侧竖条 (使用 ::before) --- */
+.phrase::before,
+.morphology::before,
+.note::before,
+.sentence::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px; /* 竖条宽度 */
+    border-top-left-radius: 8px;    /* 左上圆角 */
+    border-bottom-left-radius: 8px; /* 左下圆角 */
+}
+
+/* --- 为不同区域设置不同颜色 --- */
+.phrase::before {
+    background-color: #2ecc71; /* 绿色 (常用短语) */
+}
+
+.sentence::before {
+    background-color: #f1c40f; /* 黄色 (例句) */
+}
+
+.morphology::before {
+    background-color: var(--primary-color); /* 主题蓝 (词形变化) */
+}
+
+.note::before {
+    background-color: #8e44ad; /* 紫色 (注释) */
+}
+
+/* 移除旧的 .sentence 独立样式 (如果只调整边距等) */
 .sentence {
-    font-size: 1rem;
-    color: var(--text-light);
-    line-height: 1.7;
-     margin-bottom: 0; /* 例句通常是最后，移除下边距 */
-     display: none; /* 默认隐藏，由 JS 控制显示 */
+    /* font-size: 1rem; */
+    /* color: var(--text-light); */ /* 颜色统一为 --text-dark */
+    /* line-height: 1.7; */
+    /* margin-bottom: 0; */ /* 保持 15px 间距 */
+    /* display: none; */ 
 }
 
 /* 如果需要，调整高亮样式 */
-.sentence .highlight {
-    color: var(--primary-color);
+/* .sentence .highlight { */ /* <-- 注释掉旧规则 */
+/*    color: var(--primary-color);
     font-weight: 500;
     background-color: rgba(74, 144, 226, 0.1);
     padding: 2px 5px;
     border-radius: 4px;
+*/
     /* 注意：JS 中已移除静态高亮，未来可动态添加 */
+/* } */
+
+/* 新增：更高优先级且更醒目的高亮样式 (仅用于完整模式) */
+.mode-full .sentence .highlight {
+    /* color: red; */ /* <-- 注释掉测试颜色 */
+    /* font-weight: bold; */ /* <-- 注释掉测试加粗 */
+    /* background-color: yellow; */ /* <-- 注释掉测试背景 */
+    /* padding: 1px 3px; */
+    /* border-radius: 3px; */
+    
+    /* 恢复之前的样式 */
+    color: var(--primary-color); 
+    font-weight: 500; /* 或 bold，根据需要调整 */
+    background-color: rgba(74, 144, 226, 0.1); /* 淡蓝色背景 */
+    padding: 2px 5px;
+    border-radius: 4px;
 }
 
 /* 新导航控件 */
+/* 
 .card-navigation {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 15px 0; /* 稍微减小垂直 padding */
-  margin-top: 15px; /* 与卡片的间距 */
-  /* background-color: rgba(255, 255, 255, 0.8); */ /* 移到 .frosted */
-  background-color: var(--bg-white); /* 默认不透明白色背景 */
-  border-radius: 30px; /* 圆角 */
+  padding: 15px 0; 
+  margin-top: 15px; 
+  background-color: var(--bg-white); 
+  border-radius: 30px; 
   box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  width: fit-content; /* 宽度自适应内容 */
+  width: fit-content; 
   margin-left: auto;
-  margin-right: auto; /* 水平居中 */
-  /* backdrop-filter: blur(5px); */ /* 移到 .frosted */
-  flex-shrink: 0; /* 防止被压缩 */
-  transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease; /* 添加 backdrop-filter 过渡 */
+  margin-right: auto; 
+  flex-shrink: 0; 
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease; 
 }
-
-/* 新增 .frosted 类 */
-/* 
-.card-navigation.frosted {
-    background-color: rgba(255, 255, 255, 0.8); 
-    backdrop-filter: blur(5px); 
-    -webkit-backdrop-filter: blur(5px); 
-} 
 */
 
 .nav-arrow {
@@ -644,7 +805,8 @@ body {
   color: white;
   box-shadow: 0 4px 10px rgba(102, 166, 255, 0.4);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  margin: 0 15px; /* 按钮与点的间距 */
+  /* margin: 0 15px; */ /* <-- 移除旧的左右 margin */
+  flex-shrink: 0; /* 防止按钮被压缩 */
 }
 .nav-arrow svg {
     width: 22px;
@@ -673,27 +835,25 @@ body {
     box-shadow: none;
 }
 
+/* 移除导航点样式 */
+/* 
 .nav-dots {
   display: flex;
-  gap: 10px; /* 点之间的间距 */
+  gap: 10px; 
 }
 
 .dot {
-  width: 8px; /* 点的尺寸 */
+  width: 8px; 
   height: 8px;
   border-radius: 50%;
-  background-color: #d8d8d8; /* 非激活状态颜色 (图片中的灰色) */
+  background-color: #d8d8d8; 
   transition: background-color 0.3s ease;
 }
 
 .dot.active {
-  background-color: var(--gradient-start); /* 激活状态颜色 (图片中的粉色) */
+  background-color: var(--gradient-start); 
 }
-
-/* 移除旧按钮样式 (如果需要) */
-/* .btn-prev, .btn-next, .right-group {
-    display: none; 
-} */
+*/
 
 /* 响应式设计：小屏幕下的行为调整 */
 @media (max-width: 768px) {
@@ -1072,4 +1232,203 @@ body {
     min-width: 30px; 
     text-align: right;
     font-family: 'Quicksand', sans-serif; /* 使用数字友好字体 */
+}
+
+/* --- 模式控制 --- */
+.mode-container {
+    flex-grow: 1; /* 占据剩余空间 */
+    display: flex; /* 使用 flex 布局方便内部 main 元素 */
+    height: 100vh; /* 限制高度 */
+    overflow: hidden; /* 隐藏容器溢出 */
+}
+
+/* 默认显示完整模式，隐藏极简模式 */
+.mode-minimalist {
+    display: none;
+}
+.mode-full {
+    display: flex; /* 或者 block，取决于你的主布局需求 */
+}
+
+/* 当 body 有 show-minimalist 类时，反转显隐 */
+body.show-minimalist .mode-full {
+    display: none;
+}
+body.show-minimalist .mode-minimalist {
+    display: flex; /* 或者 block */
+}
+
+/* --- 模式切换按钮样式 --- */
+.mode-switcher {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    overflow: hidden; /* 保证内部按钮圆角 */
+}
+
+.mode-btn {
+    padding: 8px 15px;
+    border: none;
+    background-color: var(--bg-white);
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    height: 38px; 
+    box-sizing: border-box;
+}
+
+.mode-btn.active {
+    background-color: var(--primary-color);
+    color: var(--bg-white);
+}
+
+.mode-btn:not(.active):hover {
+    background-color: #f0f0f0;
+}
+
+/* --- 极简模式特定样式 --- */
+.card-main-minimalist {
+    padding: 20px 30px; /* 与 .card-main 统一内边距 */
+    display: flex; /* 确保是 flex 容器 */
+    flex-direction: column; /* 让顶栏和卡片内容垂直排列 */
+    height: 100vh; /* 与 .card-main 统一 */
+    box-sizing: border-box;
+}
+
+.minimalist-card-wrapper {
+    flex-grow: 1; /* 占据父容器剩余垂直空间 */
+    display: flex;
+    align-items: center; /* 垂直居中卡片 */
+    justify-content: center; /* 水平居中卡片 */
+    overflow-y: auto; /* 如果卡片过高，允许滚动 */
+    padding: 20px 0; /* 在卡片上下添加一些间距 (与 word-card-wrapper 一致) */
+    /* 新增：隐藏滚动条 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE/Edge */
+}
+.minimalist-card-wrapper::-webkit-scrollbar { /* WebKit (Chrome, Safari, Edge) */
+    display: none;
+}
+
+.minimalist-card-content {
+    /* 恢复基础样式 */
+    background-color: var(--bg-white);
+    padding: 40px 50px; /* 内边距 - 注意：这个内边距可能需要调整以适应flex布局 */
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    width: 400px;  /* 固定宽度 */
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden; /* 保持 hidden，让内部 wrapper 滚动 */
+    text-align: center; /* 内部 header 文本居中 */
+
+    /* 应用 Flex 列布局 */
+    display: flex;
+    flex-direction: column;
+    /* 移除固定高度 */
+    height: 580px;
+}
+
+/* 新增：极简模式 Header 样式 */
+.minimalist-card-header {
+    position: relative; /* 为了喇叭按钮定位 */
+    text-align: center; /* 内部文本居中 */
+    padding-bottom: 15px; /* 底部内边距 */
+    margin-bottom: 15px; /* 与下方释义间距 */
+    border-bottom: 1px solid var(--border-color); /* 分割线 */
+    flex-shrink: 0; /* 防止被压缩 */
+}
+/* 注意：喇叭按钮 .audio-btn 的现有样式应该可以直接应用 */
+
+/* 新增：极简模式释义包裹容器样式 */
+.minimalist-definition-wrapper {
+    flex-grow: 1; /* 占据剩余垂直空间 */
+    display: flex;
+    align-items: center; /* 垂直居中 */
+    justify-content: center; /* 水平居中 */
+    padding: 10px 0; /* 上下留点空隙 */
+    overflow-y: auto; /* 如果释义过长，允许内部滚动 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE/Edge */
+}
+.minimalist-definition-wrapper::-webkit-scrollbar {
+    display: none; /* WebKit */
+}
+
+/* 极简模式下的元素样式 */
+.word-minimalist {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0 0 10px 0;
+}
+
+.phonetic-minimalist {
+    font-size: 1.1rem;
+    color: var(--text-light);
+    display: block; /* 独占一行 */
+    /* margin-bottom: 15px; */ /* 间距由 header padding 控制 */
+}
+
+.definition-minimalist {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    line-height: 1.6;
+    text-align: center; /* 确保文本居中 */
+}
+
+/* 如果极简模式也需要磨砂效果 */
+.minimalist-card-content::before {
+    content: ''; 
+    position: absolute; 
+    inset: 0; 
+    z-index: 0; 
+    border-radius: inherit;
+    background-color: transparent;
+    backdrop-filter: none;
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+    pointer-events: none; 
+}
+.minimalist-card-content.frosted::before {
+    background-color: rgba(255, 255, 255, 0.1); /* 或其他透明度 */
+    backdrop-filter: blur(var(--card-frost-blur));
+    -webkit-backdrop-filter: blur(var(--card-frost-blur));
+}
+/* 确保极简内容在伪元素之上 */
+.minimalist-card-content > * { 
+    position: relative; 
+    z-index: 1; 
+}
+
+/* 新增：默认隐藏极简模式的附加内容 */
+.phrase-title-minimalist,
+.phrase-minimalist,
+.morphology-title-minimalist,
+.morphology-minimalist,
+.note-title-minimalist,
+.note-minimalist,
+.sentence-title-minimalist,
+.sentence-minimalist {
+    display: none; 
+}
+
+/* 确保 color picker 等通用控件样式能应用于两个模式 */
+.color-picker-btn { /* ... */ }
+.frost-control-wrapper { /* ... */ }
+/* ... */
+
+
+
+/* 响应式调整 (如果需要，为极简模式添加特定调整) */
+@media (max-width: 768px) {
+    /* ... */
+    .minimalist-card-content {
+        padding: 30px 20px;
+        max-width: 95%;
+    }
+    .word-minimalist { font-size: 2rem; }
+    .phonetic-minimalist { font-size: 1rem; }
+    .definition-minimalist { font-size: 1rem; }
 }

@@ -48,118 +48,221 @@
         </div>
     </nav>
 
-    <!-- 主内容区 -->
-    <main class="card-main">
-      <!-- 顶部控制栏 -->
-      <div class="top-controls">
-          <!-- 新增：内容显示开关 (移到这里) -->
-          <div class="content-toggles">
-              <button class="toggle-chip active" data-controls="phrase">
-                  <span class="toggle-icon">✓</span> 短语
-              </button>
-              <button class="toggle-chip active" data-controls="sentence">
-                  <span class="toggle-icon">✓</span> 例句
-              </button>
-              <button class="toggle-chip active" data-controls="morphology">
-                  <span class="toggle-icon">✓</span> 词形
-              </button>
-              <button class="toggle-chip active" data-controls="note">
-                  <span class="toggle-icon">✓</span> 注释
-              </button>
-          </div>
-          
-          <!-- 现有动作按钮 -->
-          <div class="action-buttons">
-              <button class="action-btn btn-save">💡 <span>极简模式</span></button>
-              <div class="style-selector-wrapper">
-                  <select id="card-style-select" class="action-btn">
-                      <option value="default">默认样式</option> <!-- 添加一个默认选项 -->
-                      <option value="elegant">优雅艺术</option>
-                      <option value="simple">简约风格</option>
-                      <option value="classic">经典风格</option>
-                      <option value="modern">现代科技</option>
-                      <option value="vintage">复古书卷</option>
-                      <option value="nature">自然清新</option>
-                      <option value="dreamy">梦幻紫罗兰</option>
-                      <option value="sunset">温暖日落</option>
-                      <option value="monochrome">极简黑白</option>
-                      <option value="ocean">海洋深蓝</option>
-                      <option value="custom">自定义背景...</option> 
-                  </select>
-                  <input type="file" id="custom-bg-input" accept="image/*" style="display:none;">
-              </div>
-              
-              <!-- 新增：颜色选择器按钮 -->
-              <div class="color-picker-btn" title="选择主要文字颜色">
-                  <label for="text-dark-picker">主色:</label>
-                  <input type="color" id="text-dark-picker" value="#2c3e50">
-              </div>
-              <div class="color-picker-btn" title="选择次要文字颜色">
-                  <label for="text-light-picker">次色:</label>
-                  <input type="color" id="text-light-picker" value="#7f8c8d">
-              </div>
-              
-              <!-- 恢复：包裹磨砂控制 -->
-              <div class="frost-control-wrapper">
-                  <button class="toggle-chip frosted-toggle" data-target=".word-card" title="切换/调整卡片背景磨砂效果"> <!-- 初始可以没有 active -->
-                      <span class="toggle-icon"></span> <!-- 初始空图标 --> 磨砂
+    <!-- 新增：完整模式容器 -->
+    <div class="mode-container mode-full"> 
+        <main class="card-main">
+          <!-- 顶部控制栏 (完整模式) -->
+          <div class="top-controls">
+              <!-- 左侧内容显示开关 -->
+              <div class="content-toggles" id="content-toggles-full">
+                  <button class="toggle-chip active" data-controls="phrase">
+                      <span class="toggle-icon">✓</span> 短语
                   </button>
-                  <!-- 磨砂程度滑块弹出层 (默认隐藏) -->
-                  <div class="frost-slider-popup"> 
-                      <label for="frost-blur-slider">模糊度:</label>
-                      <input type="range" id="frost-blur-slider" min="0" max="20" step="1" value="0"> <!-- 初始值为 0, 范围调整 -->
-                      <span class="blur-value-display">0px</span> 
+                  <button class="toggle-chip active" data-controls="sentence">
+                      <span class="toggle-icon">✓</span> 例句
+                  </button>
+                  <button class="toggle-chip active" data-controls="morphology">
+                      <span class="toggle-icon">✓</span> 词形
+                  </button>
+                  <button class="toggle-chip active" data-controls="note">
+                      <span class="toggle-icon">✓</span> 注释
+                  </button>
+              </div>
+              
+              <!-- 右侧动作按钮 (完整模式) -->
+              <div class="action-buttons">
+                  <!-- 新增：返回首页按钮 -->
+                  <a href="shouye.html" class="action-btn btn-home" title="返回首页">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354l-6-6zM2.5 7.707V14H6v-4a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4h3.5V7.707L8 2.207l-5.5 5.5z"/>
+                          <path d="M4.5 14V9.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5V14H4.5z"/>
+                      </svg>
+                      <span>首页</span> 
+                  </a>
+                  <!-- 模式切换按钮 -->
+                  <div class="mode-switcher">
+                      <button class="mode-btn active" data-mode="full">完整</button>
+                      <button class="mode-btn" data-mode="minimalist">极简</button>
+                  </div>
+                  <!-- 其他按钮 -->
+                  <div class="style-selector-wrapper">
+                      <select id="card-style-select-full" class="action-btn card-style-select">
+                          <option value="default">默认样式</option>
+                          <option value="elegant">优雅艺术</option>
+                          <option value="simple">简约风格</option>
+                          <option value="classic">经典风格</option>
+                          <option value="modern">现代科技</option>
+                          <option value="vintage">复古书卷</option>
+                          <option value="nature">自然清新</option>
+                          <option value="dreamy">梦幻紫罗兰</option>
+                          <option value="sunset">温暖日落</option>
+                          <option value="monochrome">极简黑白</option>
+                          <option value="ocean">海洋深蓝</option>
+                          <option value="custom">自定义背景...</option>
+                      </select>
+                      <input type="file" id="custom-bg-input-full" class="custom-bg-input" accept="image/*" style="display:none;">
+                  </div>
+                  <div class="color-picker-btn" title="选择主要文字颜色">
+                      <label for="text-dark-picker-full">主色:</label>
+                      <input type="color" id="text-dark-picker-full" class="text-dark-picker" value="#2c3e50">
+                  </div>
+                  <div class="color-picker-btn" title="选择次要文字颜色">
+                      <label for="text-light-picker-full">次色:</label>
+                      <input type="color" id="text-light-picker-full" class="text-light-picker" value="#7f8c8d">
+                  </div>
+                  <div class="frost-control-wrapper">
+                      <button class="toggle-chip frosted-toggle" data-target=".mode-full .word-card" title="切换/调整卡片背景磨砂效果">
+                          <span class="toggle-icon"></span> 磨砂
+                      </button>
+                      <div class="frost-slider-popup">
+                          <label for="frost-blur-slider-full">模糊度:</label>
+                          <input type="range" id="frost-blur-slider-full" class="frost-blur-slider" min="0" max="20" step="1" value="0">
+                          <span class="blur-value-display">0px</span>
+                      </div>
                   </div>
               </div>
           </div>
-      </div>
+    
+          <!-- NEW: Area for card and side navigation -->
+          <div class="card-display-area"> 
+              <!-- Previous Button (Moved here) -->
+              <button class="nav-arrow prev">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+              </button>
 
-      <!-- 单词卡片 -->
-      <div class="word-card-wrapper">
-          <div class="word-card">
-            <div class="card-content">
-                <div class="card-header">
-                  <h2 class="word">Perseverance</h2>
-                  <span class="phonetic">/ˌpɜːrsəˈvɪrəns/</span>
-                  <button class="audio-btn">🔊</button>
-                </div>
-                <div class="card-body">
-                  <p class="definition">这里显示释义</p>
-                  <!-- 新增：显示短语 -->
-                  <p class="phrase-title"><strong>常用短语:</strong></p>
-                  <p class="phrase">这里显示短语</p> 
-                  <!-- 新增：显示词形 -->
-                  <p class="morphology-title"><strong>词形变化:</strong></p>
-                  <p class="morphology">这里显示词形变化</p>
-                  <!-- 新增：显示注释 -->
-                  <p class="note-title"><strong>补充注释:</strong></p>
-                  <p class="note">这里显示注释</p>
-                  <!-- 例句 -->
-                  <div class="sentence-title"><strong>例句:</strong></div>
-                  <div class="sentence">Success is the result of perfection, hard work, learning from failure, loyalty, and <span class="highlight">perseverance</span>.</div>
-                </div>
-            </div>
+              <!-- Original Word Card Wrapper -->
+              <div class="word-card-wrapper">
+                  <div class="word-card">
+                    <div class="card-content">
+                        <div class="card-header">
+                          <h2 class="word">Perseverance</h2>
+                          <span class="phonetic">/ˌpɜːrsəˈvɪrəns/</span>
+                          <button class="audio-btn">🔊</button>
+                        </div>
+                        <div class="card-body">
+                          <p class="definition">这里显示释义</p>
+                          <!-- 新增：显示短语 -->
+                          <p class="phrase-title"><strong>常用短语:</strong></p>
+                          <p class="phrase">这里显示短语</p> 
+                          <!-- 新增：显示词形 -->
+                          <p class="morphology-title"><strong>词形变化:</strong></p>
+                          <p class="morphology">这里显示词形变化</p>
+                          <!-- 新增：显示注释 -->
+                          <p class="note-title"><strong>补充注释:</strong></p>
+                          <p class="note">这里显示注释</p>
+                          <!-- 例句 -->
+                          <div class="sentence-title"><strong>例句:</strong></div>
+                          <div class="sentence">Success is the result of perfection, hard work, learning from failure, loyalty, and <span class="highlight">perseverance</span>.</div>
+                        </div>
+                    </div>
+                  </div>
+              </div>
+
+              <!-- Next Button (Moved here) -->
+              <button class="nav-arrow next">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+              </button>
           </div>
-      </div>
+        </main>
+    </div>
 
-      <!-- 新的导航控件 -->
-      <div class="card-navigation">
-        <button class="nav-arrow prev">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-        </button>
-        <div class="nav-dots">
-          <span class="dot active"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-        </div>
-        <button class="nav-arrow next">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-        </button>
-      </div>
-    </main>
+    <!-- 新增：极简模式容器 (移除内联 style) -->
+    <div class="mode-container mode-minimalist"> 
+        <main class="card-main card-main-minimalist"> <!-- 可以用新 class 方便样式控制 -->
+            <!-- 顶部控制栏 (极简模式 - 复制并修改 ID/选择器) -->
+            <div class="top-controls top-controls-minimalist">
+                 <!-- 右侧动作按钮 (极简模式) -->
+                 <div class="action-buttons">
+                    <!-- 新增：返回首页按钮 -->
+                    <a href="shouye.html" class="action-btn btn-home" title="返回首页">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354l-6-6zM2.5 7.707V14H6v-4a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4h3.5V7.707L8 2.207l-5.5 5.5z"/>
+                            <path d="M4.5 14V9.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5V14H4.5z"/>
+                        </svg>
+                        <span>首页</span>
+                    </a>
+                    <!-- 模式切换按钮 -->
+                    <div class="mode-switcher">
+                        <button class="mode-btn" data-mode="full">完整</button>
+                        <button class="mode-btn active" data-mode="minimalist">极简</button>
+                    </div>
+                    <!-- 其他按钮 (复制并修改 ID) -->
+                    <div class="style-selector-wrapper">
+                        <select id="card-style-select-minimalist" class="action-btn card-style-select">
+                            <option value="default">默认样式</option>
+                            <option value="elegant">优雅艺术</option>
+                            <option value="simple">简约风格</option>
+                            <option value="classic">经典风格</option>
+                            <option value="modern">现代科技</option>
+                            <option value="vintage">复古书卷</option>
+                            <option value="nature">自然清新</option>
+                            <option value="dreamy">梦幻紫罗兰</option>
+                            <option value="sunset">温暖日落</option>
+                            <option value="monochrome">极简黑白</option>
+                            <option value="ocean">海洋深蓝</option>
+                            <option value="custom">自定义背景...</option>
+                        </select>
+                        <input type="file" id="custom-bg-input-minimalist" class="custom-bg-input" accept="image/*" style="display:none;">
+                    </div>
+                    <div class="color-picker-btn" title="选择主要文字颜色">
+                        <label for="text-dark-picker-minimalist">主色:</label>
+                        <input type="color" id="text-dark-picker-minimalist" class="text-dark-picker" value="#2c3e50">
+                    </div>
+                    <div class="color-picker-btn" title="选择次要文字颜色">
+                        <label for="text-light-picker-minimalist">次色:</label>
+                        <input type="color" id="text-light-picker-minimalist" class="text-light-picker" value="#7f8c8d">
+                    </div>
+                    <div class="frost-control-wrapper">
+                        <button class="toggle-chip frosted-toggle" data-target=".mode-minimalist .minimalist-card-content" title="切换/调整卡片背景磨砂效果">
+                            <span class="toggle-icon"></span> 磨砂
+                        </button>
+                        <div class="frost-slider-popup">
+                            <label for="frost-blur-slider-minimalist">模糊度:</label>
+                            <input type="range" id="frost-blur-slider-minimalist" class="frost-blur-slider" min="0" max="20" step="1" value="0">
+                            <span class="blur-value-display">0px</span>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- NEW: Wrap minimalist card and add nav arrows -->
+            <div class="card-display-area">
+                <!-- Previous Button (Minimalist) -->
+                <button class="nav-arrow prev">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+
+                <!-- Original Minimalist Card Wrapper -->
+                <div class="minimalist-card-wrapper"> 
+                    <!-- Minimalist card content remains here -->
+                    <div class="minimalist-card-content">
+                        <!-- ... minimalist card header ... -->
+                        <div class="minimalist-card-header">
+                            <h2 class="word-minimalist">Word</h2>
+                            <span class="phonetic-minimalist">/phonetic/</span>
+                            <button class="audio-btn">🔊</button> 
+                        </div>
+                        <!-- ... minimalist definition wrapper ... -->
+                        <div class="minimalist-definition-wrapper">
+                            <p class="definition-minimalist">Definition</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Button (Minimalist) -->
+                <button class="nav-arrow next">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                </button>
+            </div>
+            <!-- END: New wrapper and nav arrows -->
+            
+            <!-- Minimalist mode usually doesn't need bottom navigation -->
+
+        </main>
+    </div>
 </div>
 
-<!-- 引入外部 JavaScript, 添加 defer 属性 -->
+<!-- 引入外部 JavaScript -->
 <script src="js/data-loader.js" defer></script> 
 <script src="js/card.js" defer></script> 
 

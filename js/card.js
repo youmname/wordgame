@@ -61,27 +61,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentWordData = null; // <-- 新增：存储当前单词数据
     let currentWordList = []; // 新增：存储当前单词列表
     let currentWordIndex = 0; // 新增：存储当前单词索引
+    let currentMode = 'full'; // 新增：追踪当前模式 ('full' 或 'minimalist')
 
     // --- 更新导航点 --- (定义提前)
-    function updateNavigationDots() {
-         const dotsContainer = document.querySelector('.nav-dots'); 
-         if (!dotsContainer) return;
-         const dots = dotsContainer.querySelectorAll('.dot');
-         dots.forEach((dot, index) => {
-             dot.classList.toggle('active', index === currentWordIndex); // 使用全局 currentWordIndex
-         });
-    }
+    // function updateNavigationDots() {
+    //      const dotsContainer = document.querySelector('.nav-dots'); 
+    //      if (!dotsContainer) return;
+    //      const dots = dotsContainer.querySelectorAll('.dot');
+    //      dots.forEach((dot, index) => {
+    //          dot.classList.toggle('active', index === currentWordIndex); // 使用全局 currentWordIndex
+    //      });
+    // }
 
     // --- 更新导航按钮状态 --- (定义提前)
     function updateNavButtonStates() {
-        const prevButton = document.querySelector('.nav-arrow.prev');
-        const nextButton = document.querySelector('.nav-arrow.next');
-        if (!prevButton || !nextButton) return;
+        // 使用 querySelectorAll 获取所有匹配的按钮
+        const prevButtons = document.querySelectorAll('.nav-arrow.prev'); 
+        const nextButtons = document.querySelectorAll('.nav-arrow.next');
+        
+        // if (!prevButton || !nextButton) return; // 旧的检查移除
+        if (prevButtons.length === 0 && nextButtons.length === 0) {
+            console.warn("[Nav Buttons] No navigation buttons found to update state.");
+            return;
+        } 
+
         const isPrevDisabled = currentWordIndex <= 0; // 使用全局 currentWordIndex
         const isNextDisabled = currentWordIndex >= currentWordList.length - 1; // 使用全局 currentWordList
-        prevButton.classList.toggle('disabled', isPrevDisabled);
-        nextButton.classList.toggle('disabled', isNextDisabled);
-        console.log(`[Nav Buttons] State: Idx=${currentWordIndex}, Total=${currentWordList.length}, Prev=${isPrevDisabled?'Dis':'En'}, Next=${isNextDisabled?'Dis':'En'}`);
+
+        // 遍历并更新所有按钮
+        prevButtons.forEach(button => button.classList.toggle('disabled', isPrevDisabled));
+        nextButtons.forEach(button => button.classList.toggle('disabled', isNextDisabled));
+
+        console.log(`[Nav Buttons] State Updated: Idx=${currentWordIndex}, Total=${currentWordList.length}, Prev=${isPrevDisabled?'Dis':'En'}, Next=${isNextDisabled?'Dis':'En'} (Applied to ${prevButtons.length} prev, ${nextButtons.length} next buttons)`);
     }
 
     // --- 加载并填充级别 ---
@@ -414,88 +425,109 @@ document.addEventListener('DOMContentLoaded', async () => {
        // sidebar.classList.add('collapsed'); 
     }
 
-    // --- 新增：卡片样式更新函数 ---
+    // --- 新增：卡片样式更新函数 --- (增加日志)
     function applyCardStyle() {
-        if (!wordCard || !styleSelect) {
-            console.error('[Card Style - Debug] applyCardStyle: wordCard or styleSelect not found.');
-            return;
+        console.log(`[Apply Style Debug] Function called. Current mode: ${currentMode}`); // 新日志
+        const activeModeContainerSelector = currentMode === 'full' ? '.mode-full' : '.mode-minimalist';
+        const activeCardSelector = currentMode === 'full' ? '.word-card' : '.minimalist-card-content';
+        const activeCardElement = document.querySelector(`${activeModeContainerSelector} ${activeCardSelector}`);
+        // 使用正确的 select ID 获取当前模式的 select
+        const selectId = currentMode === 'full' ? 'card-style-select-full' : 'card-style-select-minimalist'; 
+        const activeStyleSelect = document.getElementById(selectId);
+        
+        if (!activeCardElement || !activeStyleSelect) { 
+            console.error(`[Apply Style Debug] Active elements not found. Card: ${!!activeCardElement}, Select: ${!!activeStyleSelect} (using ID: ${selectId})`); // 增强日志
+            return; 
         }
-        const selectedStyle = styleSelect.value;
-        console.log(`[Card Style - Debug] applyCardStyle called. Selected style: ${selectedStyle}`);
+        const selectedStyle = activeStyleSelect.value; // 从当前模式的 select 获取值
+        console.log(`[Apply Style Debug] Active Card Element:`, activeCardElement); // 新日志
+        console.log(`[Apply Style Debug] Selected Style from #${selectId}: ${selectedStyle}`); // 新日志
 
+        console.log(`[Apply Style Debug] Classes BEFORE removal: ${activeCardElement.className}`); // 新日志
         // 移除所有可能的旧样式类
         const stylesToRemove = ['default', 'elegant', 'simple', 'classic', 'modern', 'vintage', 'nature', 'dreamy', 'sunset', 'monochrome', 'ocean', 'custom'];
-        wordCard.classList.remove(...stylesToRemove);
-        console.log('[Card Style - Debug] Removed old style classes:', stylesToRemove.join(', '));
-        console.log('[Card Style - Debug] wordCard classes after remove:', wordCard.className);
+        activeCardElement.classList.remove(...stylesToRemove);
+        console.log(`[Apply Style Debug] Classes AFTER removal: ${activeCardElement.className}`); // 新日志
+        // console.log('[Card Style - Debug] Removed old style classes:', stylesToRemove.join(', '));
+        // console.log('[Card Style - Debug] wordCard classes after remove:', activeCardElement.className);
 
         // 清除可能的内联背景图片
-        wordCard.style.backgroundImage = '';
-        console.log('[Card Style - Debug] Cleared inline background image.');
+        activeCardElement.style.backgroundImage = '';
+        // console.log('[Card Style - Debug] Cleared inline background image.');
 
         currentCardStyle = selectedStyle; // 更新当前样式记录
 
         if (selectedStyle === 'custom') {
-            wordCard.classList.add('custom');
-            console.log('[Card Style - Debug] Added class: custom');
+            activeCardElement.classList.add('custom');
+            console.log(`[Apply Style Debug] Adding class: custom`); // 新日志
             if (customBgDataUrl) {
-                wordCard.style.backgroundImage = `url(${customBgDataUrl})`;
-                console.log('[Card Style - Debug] Applied custom background image.');
+                activeCardElement.style.backgroundImage = `url(${customBgDataUrl})`;
+                // console.log('[Card Style - Debug] Applied custom background image.');
             } else {
-                console.log('[Card Style - Debug] Custom style selected, but no customBgDataUrl available yet.');
+                // console.log('[Card Style - Debug] Custom style selected, but no customBgDataUrl available yet.');
             }
         } else if (selectedStyle && selectedStyle !== 'default') { // 确保不是空值且不是 default (default 没有特定类)
              // 'default' 样式不需要添加特定类，因为它依赖基础 .word-card 样式
-            wordCard.classList.add(selectedStyle);
-             console.log(`[Card Style - Debug] Added class: ${selectedStyle}`);
+            activeCardElement.classList.add(selectedStyle);
+             console.log(`[Apply Style Debug] Adding class: ${selectedStyle}`); // 新日志
+             // console.log(`[Card Style - Debug] Added class: ${selectedStyle}`);
         } else {
              // 应用默认样式 (移除其他类后就是默认)
-             console.log('[Card Style - Debug] Applying default style (no specific class added).');
+             console.log(`[Apply Style Debug] Applying default style (no specific class added).`); // 新日志
+             // console.log('[Card Style - Debug] Applying default style (no specific class added).');
         }
-         console.log('[Card Style - Debug] Final wordCard classes:', wordCard.className);
-         console.log('[Card Style - Debug] Final wordCard background image:', wordCard.style.backgroundImage);
+         // console.log('[Card Style - Debug] Final wordCard classes:', activeCardElement.className);
+         // console.log('[Card Style - Debug] Final wordCard background image:', activeCardElement.style.backgroundImage);
+         console.log(`[Apply Style Debug] Final classes AFTER applying '${selectedStyle}': ${activeCardElement.className}`); // 新日志
     }
 
     // --- 新增：处理样式选择变化 ---
     function setupStyleSelector() {
-        if (styleSelect) {
-            console.log('[Card Style - Debug] Setting up style select listener...'); // <--- 添加日志
-            styleSelect.addEventListener('change', () => {
-                const selectedValue = styleSelect.value;
-                 console.log(`[Card Style - Debug] Style select changed. New value: ${selectedValue}`); // <--- 添加日志
+        const styleSelects = document.querySelectorAll('.card-style-select'); // 获取所有模式的 select
+        const customBgInputs = document.querySelectorAll('.custom-bg-input');
+
+        styleSelects.forEach(select => {
+            select.addEventListener('change', () => {
+                const selectedValue = select.value;
+                currentCardStyle = selectedValue; // 更新全局状态
+                // 同步另一个 select 的值
+                styleSelects.forEach(otherSelect => { if (otherSelect !== select) otherSelect.value = selectedValue; });
+
                 if (selectedValue === 'custom') {
-                    console.log('[Card Style - Debug] Custom style selected, triggering file input click...'); // <--- 添加日志
-                    customBgInput?.click();
+                    // 触发对应的文件输入
+                    const inputId = select.id.replace('card-style-select', 'custom-bg-input'); // 正确逻辑: 替换完整前缀
+                    console.log(`[Style Select Debug] Custom selected on '${select.id}'. Attempting to click input '${inputId}'`); // 添加日志
+                    const inputElement = document.getElementById(inputId);
+                    if (inputElement) {
+                         console.log(`[Style Select Debug] Found input element:`, inputElement); // 添加日志
+                         inputElement.click(); // Simulate click
+                         console.log(`[Style Select Debug] Simulated click on input '${inputId}'.`); // 添加日志
+                    } else {
+                         console.error(`[Style Select Debug] Could not find input element with ID: '${inputId}'`); // 添加错误日志
+                    }
                 } else {
-                     console.log('[Card Style - Debug] Preset style selected, applying style...'); // <--- 添加日志
-                    applyCardStyle();
+                    applyCardStyle(); // 应用样式到当前激活的卡片
                 }
             });
-            console.log('[Card Style - Debug] Style select listener attached.'); // <--- 添加日志
-        } else {
-             console.error('[Card Page] Style select element (#card-style-select) not found.');
-        }
-         if (customBgInput) {
-             console.log('[Card Style - Debug] Setting up custom background input listener...'); // <--- 添加日志
-             customBgInput.addEventListener('change', (event) => {
-                 console.log('[Card Style - Debug] Custom background input changed.'); // <--- 添加日志
+        });
+
+        customBgInputs.forEach(input => {
+            input.addEventListener('change', (event) => {
                  const file = event.target.files?.[0];
                  if (file) {
-                     console.log('[Card Style - Debug] File selected:', file.name, file.type); // <--- 添加日志
                      const reader = new FileReader();
                      reader.onload = (e) => {
                          customBgDataUrl = e.target?.result;
-                         console.log('[Card Style - Debug] Custom background loaded (FileReader onload). Data URL length:', customBgDataUrl?.length); // <--- 添加日志
-                         // 确保下拉菜单也选中 custom
-                         styleSelect.value = 'custom';
-                         // 应用自定义背景
-                         applyCardStyle();
+                         currentCardStyle = 'custom'; // 确保状态是 custom
+                         // 同步所有 select 为 custom
+                         styleSelects.forEach(s => s.value = 'custom');
+                         applyCardStyle(); // 应用背景到当前激活卡片
                      };
                      reader.onerror = (e) => {
                           console.error('[Card Style - Debug] Error reading file:', e);
                           alert('读取背景图片失败！');
                           // 重置回之前的样式或默认样式
-                          styleSelect.value = currentCardStyle !== 'custom' ? currentCardStyle : 'default';
+                          styleSelects.forEach(s => s.value = currentCardStyle !== 'custom' ? currentCardStyle : 'default');
                           applyCardStyle();
                      };
                      reader.readAsDataURL(file);
@@ -503,29 +535,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                       console.log('[Card Style - Debug] No file selected (input change event fired, but no file).'); // <--- 添加日志
                       // 用户可能取消了文件选择，恢复下拉菜单选项
                       if (currentCardStyle === 'custom') { // 只有当前是自定义才需要恢复
-                           styleSelect.value = 'default'; // 或者恢复到上一个非自定义样式
+                           styleSelects.forEach(s => s.value = 'default'); // 或者恢复到上一个非自定义样式
                            applyCardStyle();
                       }
                  }
                   // 清空 input 的值，允许用户再次选择相同文件
-                  customBgInput.value = '';
+                  input.value = '';
              });
-             console.log('[Card Style - Debug] Custom background input listener attached.'); // <--- 添加日志
-        } else {
-             console.error('[Card Page] Custom background input (#custom-bg-input) not found.');
-        }
+        });
+        console.log('[Style Selectors] Listeners attached for both modes.');
     }
 
-    // --- 新增：更新所有可选区域可见性的函数 ---
+    // --- 新增：更新所有可选区域可见性的函数 --- (只处理完整模式)
     function updateAllOptionalSectionsVisibility() {
-        if (!wordCard || !currentWordData) { 
+        // 只在完整模式下执行
+        if (currentMode !== 'full') return;
+        
+        const fullModeCard = document.querySelector('.mode-full .word-card');
+        if (!fullModeCard || !currentWordData) { 
             // 如果卡片或当前单词数据不存在，隐藏所有可选区域
             const sections = ['phrase', 'morphology', 'note', 'sentence'];
             sections.forEach(key => {
                 const titleSelector = `.${key === 'sentence' ? 'sentence' : key}-title`;
                 const contentSelector = `.${key === 'sentence' ? 'sentence' : key}`;
-                const titleElem = wordCard?.querySelector(titleSelector);
-                const contentElem = wordCard?.querySelector(contentSelector);
+                const titleElem = fullModeCard?.querySelector(titleSelector);
+                const contentElem = fullModeCard?.querySelector(contentSelector);
                 if(titleElem) titleElem.style.display = 'none';
                 if(contentElem) contentElem.style.display = 'none';
             });
@@ -533,11 +567,12 @@ document.addEventListener('DOMContentLoaded', async () => {
          } 
 
         const updateSectionVisibility = (sectionKey, dataField) => {
-            const toggleButton = document.querySelector(`.toggle-chip[data-controls="${sectionKey}"]`);
+            // 使用完整模式的开关选择器
+            const toggleButton = document.querySelector(`#content-toggles-full .toggle-chip[data-controls="${sectionKey}"]`);
             const titleSelector = `.${sectionKey === 'sentence' ? 'sentence' : sectionKey}-title`;
             const contentSelector = `.${sectionKey === 'sentence' ? 'sentence' : sectionKey}`;
-            const titleElement = wordCard.querySelector(titleSelector);
-            const contentElement = wordCard.querySelector(contentSelector);
+            const titleElement = fullModeCard.querySelector(titleSelector);
+            const contentElement = fullModeCard.querySelector(contentSelector);
             if (!toggleButton || !titleElement || !contentElement) { return; }
             const hasData = currentWordData && !!currentWordData[dataField];
             const isActive = toggleButton.classList.contains('active');
@@ -549,6 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSectionVisibility('morphology', 'morphology');
         updateSectionVisibility('note', 'note');
         updateSectionVisibility('sentence', 'example'); 
+        console.log('[Visibility Update] Updated sections for full mode.');
     }
 
     // --- 建议：创建一个辅助函数来处理文本格式化 ---
@@ -600,8 +636,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log(`[Load Words - Check 2] currentWordList assigned. Length: ${currentWordList.length}`);
 
                 // --- 生成导航点 --- 
-                const dotsContainer = document.querySelector('.nav-dots');
-                if (dotsContainer) { /* ... 生成点 ... */ }
+                // const dotsContainer = document.querySelector('.nav-dots');
+                // if (dotsContainer) { /* ... 生成点 ... */ }
                 // -----------------
 
                 if (currentWordList.length > 0) {
@@ -614,7 +650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     definitionDisplay.textContent = '该章节无单词数据';
                     phoneticDisplay.textContent = '';
                     updateAllOptionalSectionsVisibility(); // 清空时确保隐藏可选
-                    updateNavigationDots(); // 更新点状态 (应该为空)
+                    // updateNavigationDots(); // 更新点状态 (应该为空)
                     updateNavButtonStates(); // 更新按钮状态 (应该禁用)
                 }
             } else {
@@ -624,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 definitionDisplay.textContent = '加载数据格式错误';
                 phoneticDisplay.textContent = '';
                 updateAllOptionalSectionsVisibility(); // 清空时确保隐藏可选
-                updateNavigationDots(); // 更新点状态
+                // updateNavigationDots(); // 更新点状态
                 updateNavButtonStates(); // 更新按钮状态
             }
         } catch (error) { 
@@ -634,108 +670,130 @@ document.addEventListener('DOMContentLoaded', async () => {
             definitionDisplay.textContent = '加载失败';
             phoneticDisplay.textContent = '';
             updateAllOptionalSectionsVisibility(); // 清空时确保隐藏可选
-            updateNavigationDots(); // 更新点状态
+            // updateNavigationDots(); // 更新点状态
             updateNavButtonStates(); // 更新按钮状态
         }
-        // --- 移除函数末尾的导航更新调用，因为已在 try/catch/else 中处理 ---
+        // --- 移除函数末尾的导航更新调用，因为已在 try/catch/else 中处理 ---\
         // updateNavigationDots();
         // updateNavButtonStates();
     }
 
-    // --- 修改 displayWordAtIndex (增强高亮逻辑) ---
+    // --- 修改 displayWordAtIndex (模式感知) ---
     function displayWordAtIndex(index) {
         // 使用直接变量 currentWordList
-        console.log(`[Display Word] Trying index ${index}. List length: ${currentWordList?.length}.`); 
+        console.log(`[Display Word] Mode: ${currentMode}. Trying index ${index}. List length: ${currentWordList?.length}.`); 
         if (!currentWordList || index < 0 || index >= currentWordList.length) { /*...*/ return; }
-        if (!wordCard) { /*...*/ return; }
         
-        const wordDisplay = wordCard.querySelector('.word');
-        const phoneticDisplay = wordCard.querySelector('.phonetic'); // 获取
-        const definitionDisplay = wordCard.querySelector('.definition'); // 获取
-        const phraseDisplay = wordCard.querySelector('.phrase'); // 获取
-        const morphologyDisplay = wordCard.querySelector('.morphology'); // 获取
-        const noteDisplay = wordCard.querySelector('.note'); // 获取
-        const sentenceDisplay = wordCard.querySelector('.sentence'); // 获取
-        if (!wordDisplay || !phoneticDisplay || !definitionDisplay) { /*...*/ return; } // 核心元素检查
-        
-        currentWordIndex = index; // 使用直接变量
-        const wordToShow = currentWordList[index]; // 使用直接变量
-        currentWordData = wordToShow; // 使用直接变量
+        // 根据模式选择正确的容器和元素
+        const activeModeContainerSelector = currentMode === 'full' ? '.mode-full' : '.mode-minimalist';
+        const activeCardSelector = currentMode === 'full' ? '.word-card' : '.minimalist-card-content';
+        const activeCardElement = document.querySelector(`${activeModeContainerSelector} ${activeCardSelector}`);
 
-        // --- 填充内容 ---
-        wordDisplay.textContent = wordToShow.word || 'N/A'; 
-        // 音标处理 (保持不变)
-        let phoneticText = wordToShow.phonetic || '';
-        if (phoneticText.startsWith('/') && phoneticText.endsWith('/')) {
-            phoneticText = phoneticText.slice(1, -1); 
+        if (!activeCardElement) { 
+             console.error(`[Display Word] Active card element not found for mode: ${currentMode}`);
+             return; 
         }
+        
+        // 使用激活容器内的选择器
+        const wordDisplay = activeCardElement.querySelector(currentMode === 'full' ? '.word' : '.word-minimalist');
+        const phoneticDisplay = activeCardElement.querySelector(currentMode === 'full' ? '.phonetic' : '.phonetic-minimalist');
+        const definitionDisplay = activeCardElement.querySelector(currentMode === 'full' ? '.definition' : '.definition-minimalist');
+        
+        if (!wordDisplay || !phoneticDisplay || !definitionDisplay) { 
+            console.error(`[Display Word] Core display elements not found in mode: ${currentMode}`);
+            return; 
+        }
+        
+        currentWordIndex = index; 
+        const wordToShow = currentWordList[index]; 
+        currentWordData = wordToShow; 
+
+        // --- 填充内容 --- 
+        wordDisplay.textContent = wordToShow.word || 'N/A'; 
+        let phoneticText = wordToShow.phonetic || '';
+        if (phoneticText.startsWith('/') && phoneticText.endsWith('/')) { phoneticText = phoneticText.slice(1, -1); }
         phoneticDisplay.textContent = phoneticText; 
         
-        // 对需要换行的字段应用格式化函数并使用 innerHTML
-        if (definitionDisplay) definitionDisplay.innerHTML = formatTextForDisplay(wordToShow.meaning);
-        if (phraseDisplay) phraseDisplay.innerHTML = formatTextForDisplay(wordToShow.phrase);
-        if (morphologyDisplay) morphologyDisplay.innerHTML = formatTextForDisplay(wordToShow.morphology);
-        if (noteDisplay) noteDisplay.innerHTML = formatTextForDisplay(wordToShow.note);
-        
-        // --- 增强：处理例句 (先格式化换行，再收集词形并高亮) ---
-        if (sentenceDisplay) { 
-            let exampleHTML = formatTextForDisplay(wordToShow.example); // 先处理换行
-            
-            // 1. 收集所有需要高亮的词形
-            const wordsToHighlight = new Set(); // 使用 Set 自动去重
-            if (wordToShow.word) {
-                 wordsToHighlight.add(wordToShow.word.trim());
-            }
-            if (wordToShow.morphology) {
-                const morphForms = wordToShow.morphology.split(/<br\s*\/?>/gi); // 按 <br> 分割
-                morphForms.forEach(form => {
-                    // 提取括号前的主要词形
-                    const match = form.match(/^([^()]*)/); // 匹配开头到第一个左括号之前的部分
-                    if (match && match[1]) {
-                        const wordForm = match[1].trim();
-                        if (wordForm) { // 确保不是空字符串
-                            wordsToHighlight.add(wordForm);
-                        }
-                    }
-                });
-            }
-            
-            // 2. 如果有需要高亮的词，构建并应用正则表达式
-            if (wordsToHighlight.size > 0) {
-                try {
-                    // 将 Set 转为数组，对每个词进行正则转义，然后用 | 连接
-                    const pattern = Array.from(wordsToHighlight)
-                                       .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // 转义
-                                       .join('|'); // 用 OR 连接
-                    
-                    // 创建正则表达式，匹配完整的单词 (\b)，全局 (g)，不区分大小写 (i)
-                    const regex = new RegExp(`\\b(${pattern})\\b`, 'gi'); 
-                    
-                    // 应用高亮
-                    exampleHTML = exampleHTML.replace(regex, '<span class="highlight">$1</span>'); 
-                } catch (e) {
-                     console.error("Error applying complex highlight regex:", e);
-                     // 如果正则构建或执行出错，至少还能显示处理了换行的例句
+        // 填充定义 (极简模式) 或 完整模式下的所有字段
+        if (currentMode === 'minimalist') {
+             if (definitionDisplay) definitionDisplay.innerHTML = formatTextForDisplay(wordToShow.meaning); 
+        } else {
+            // 完整模式填充所有字段
+            const phraseDisplay = activeCardElement.querySelector('.phrase');
+            const morphologyDisplay = activeCardElement.querySelector('.morphology');
+            const noteDisplay = activeCardElement.querySelector('.note');
+            const sentenceDisplay = activeCardElement.querySelector('.sentence');
+
+            if (definitionDisplay) definitionDisplay.innerHTML = formatTextForDisplay(wordToShow.meaning);
+            if (phraseDisplay) phraseDisplay.innerHTML = formatTextForDisplay(wordToShow.phrase);
+            if (morphologyDisplay) morphologyDisplay.innerHTML = formatTextForDisplay(wordToShow.morphology);
+            if (noteDisplay) noteDisplay.innerHTML = formatTextForDisplay(wordToShow.note);
+            if (sentenceDisplay) { 
+                let exampleHTML = formatTextForDisplay(wordToShow.example);
+                const wordToHighlight = wordToShow.word?.trim(); // 获取并去除首尾空格
+                const wordsToHighlight = new Set(); // 使用 Set 存储需要高亮的词
+
+                if (wordToHighlight) {
+                    wordsToHighlight.add(wordToHighlight);
                 }
-            }
-            
-            sentenceDisplay.innerHTML = exampleHTML; // 设置最终的 HTML
+
+                // --- 新增：解析并添加词形变化 --- 
+                const morphologyString = wordToShow.morphology?.trim();
+                if (morphologyString) {
+                    // 假设词形用逗号、分号或换行符分隔，并去除括号和标签
+                    const variations = morphologyString
+                        .replace(/\([^)]*\)|<[^>]*>/g, '') // 移除括号内容和HTML标签
+                        .split(/[\s,;，；\n]+/); // 按空格、逗号、分号、换行符分割
+                    variations.forEach(variation => {
+                        const cleanedVariation = variation.trim();
+                        if (cleanedVariation && cleanedVariation.length > 1) { // 避免空字符串和单个字母
+                            wordsToHighlight.add(cleanedVariation);
+                        }
+                    });
+                    console.log(`[Highlight Debug] Variations to highlight:`, Array.from(wordsToHighlight));
+                }
+                // ---------------------------------
+                
+                // --- 修改高亮逻辑以匹配多个词 ---
+                if (wordsToHighlight.size > 0 && exampleHTML) { 
+                    try {
+                        // 将所有需要高亮的词转义并用 | 连接成 OR 条件
+                        const escapedWords = Array.from(wordsToHighlight).map(word => 
+                            word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                        );
+                        const pattern = `\\b(${escapedWords.join('|')})\\b`; // 构建模式
+                        const highlightRegex = new RegExp(pattern, 'gi'); // 创建正则表达式
+                        
+                        exampleHTML = exampleHTML.replace(highlightRegex, '<span class=\"highlight\">$1</span>');
+                        console.log(`[Highlight Debug] Applied regex for multiple words. Pattern: ${pattern}`);
+                    } catch (e) {
+                        console.error(`[Highlight Debug] Error creating or applying regex for multiple words:`, e);
+                    }
+                } else {
+                    console.log(`[Highlight Debug] Skipping highlight: wordsToHighlight empty or no example.`);
+                }
+                // --- 结束高亮逻辑 ---
+
+                sentenceDisplay.innerHTML = exampleHTML; // 设置处理后的 HTML
+            } 
         }
-        // ---------------------------------
         
-        updateAllOptionalSectionsVisibility();
-        updateNavigationDots();
+        // 更新可选区域可见性 (仅完整模式需要)
+        if (currentMode === 'full') {
+            updateAllOptionalSectionsVisibility();
+        }
+        // updateNavigationDots();
         updateNavButtonStates();
-        // 使用直接变量
-        console.log(`[Display Word] Successfully updated UI for index ${currentWordIndex}.`); 
+        console.log(`[Display Word] Updated UI for index ${currentWordIndex} in ${currentMode} mode.`); 
     }
 
-    // --- 新增：设置开关按钮交互的函数 ---
+    // --- 新增：设置开关按钮交互的函数 --- (只处理完整模式)
     function setupContentToggles() {
-        const toggleContainer = document.querySelector('.content-toggles');
+        // 只选择完整模式的开关容器
+        const toggleContainer = document.getElementById('content-toggles-full'); 
 
         if (!toggleContainer) {
-             console.warn('[Card Page] Content toggle container (.content-toggles) not found.');
+             console.warn('[Card Page] Full mode content toggle container (#content-toggles-full) not found.');
              return;
         }
         
@@ -752,203 +810,331 @@ document.addEventListener('DOMContentLoaded', async () => {
                 icon.textContent = button.classList.contains('active') ? '✓' : ''; // 显示勾或空 (配合CSS空框)
             }
 
-            // 更新所有可选区域的可见性
+            // 更新所有可选区域的可见性 (只会影响完整模式，因为 updateAllOptionalSectionsVisibility 已修改)
             updateAllOptionalSectionsVisibility();
         });
 
-        console.log('[Card Page] Content toggle listeners setup using event delegation.');
+        console.log('[Card Page] Content toggle listeners setup for full mode only.');
     }
 
     // --- 新增：初始化颜色选择器 ---
     function setupColorPickers() {
-        const darkColorPicker = document.getElementById('text-dark-picker');
-        const lightColorPicker = document.getElementById('text-light-picker');
+        const darkPickers = document.querySelectorAll('.text-dark-picker');
+        const lightPickers = document.querySelectorAll('.text-light-picker');
         const rootStyle = document.documentElement.style;
+        let currentDarkColor = '', currentLightColor = '';
 
-        if (!darkColorPicker || !lightColorPicker) {
-            console.warn('[Card Page] One or both color pickers not found.');
-            return;
-        }
+        try { // 初始化共享状态和 Pickers
+            currentDarkColor = getComputedStyle(document.documentElement).getPropertyValue('--text-dark').trim();
+            currentLightColor = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim();
+            darkPickers.forEach(p => p.value = currentDarkColor);
+            lightPickers.forEach(p => p.value = currentLightColor);
+        } catch (e) { console.error('Error init color pickers', e); }
 
-        // --- 初始化选择器的值 (从 CSS 变量获取，确保同步) ---
-        try {
-            const initialDarkColor = getComputedStyle(document.documentElement).getPropertyValue('--text-dark').trim();
-            const initialLightColor = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim();
-            
-            // 注意: input[type=color] 需要 hex 格式
-            // 如果 CSS 变量不是 hex (例如 hsl)，需要转换，但我们现在是 hex
-            darkColorPicker.value = initialDarkColor;
-            lightColorPicker.value = initialLightColor;
-            console.log(`[Card Page] Initializing color pickers with: Dark=${initialDarkColor}, Light=${initialLightColor}`);
-        } catch (e) {
-             console.error('[Card Page] Error initializing color pickers from CSS variables:', e);
-             // Fallback to default values set in HTML if reading fails
-        }
-
-
-        // --- 添加事件监听器 ---
-        darkColorPicker.addEventListener('input', (event) => {
-            rootStyle.setProperty('--text-dark', event.target.value);
-            console.log(`[Card Page] --text-dark updated to: ${event.target.value}`);
+        darkPickers.forEach(picker => {
+            picker.addEventListener('input', (event) => {
+                currentDarkColor = event.target.value; // 更新共享状态
+                rootStyle.setProperty('--text-dark', currentDarkColor);
+                // 同步其他 picker
+                darkPickers.forEach(p => { if (p !== picker) p.value = currentDarkColor; });
+                console.log(`[Color Picker] Dark color updated to: ${currentDarkColor}`);
+            });
         });
-
-        lightColorPicker.addEventListener('input', (event) => {
-            rootStyle.setProperty('--text-light', event.target.value);
-            console.log(`[Card Page] --text-light updated to: ${event.target.value}`);
+        lightPickers.forEach(picker => {
+            picker.addEventListener('input', (event) => {
+                 currentLightColor = event.target.value; // 更新共享状态
+                 rootStyle.setProperty('--text-light', currentLightColor);
+                 // 同步其他 picker
+                 lightPickers.forEach(p => { if (p !== picker) p.value = currentLightColor; });
+                 console.log(`[Color Picker] Light color updated to: ${currentLightColor}`);
+            });
         });
-
-        console.log('[Card Page] Color pickers listeners setup.');
+        console.log('[Color Pickers] Listeners attached for both modes.');
     }
 
     // --- 重写：设置磨砂控制 ---
     function setupFrostControl() {
-        console.log('[Frost Control v2 - Debug] Setting up frost control...');
-        const controlWrapper = document.querySelector('.frost-control-wrapper'); 
-        const toggleButton = controlWrapper?.querySelector('.frosted-toggle');    
-        const sliderPopup = controlWrapper?.querySelector('.frost-slider-popup'); 
-        const blurSlider = sliderPopup?.querySelector('#frost-blur-slider');      
-        const blurValueDisplay = sliderPopup?.querySelector('.blur-value-display'); 
-
-        if (!controlWrapper || !toggleButton || !sliderPopup || !blurSlider || !blurValueDisplay) {
-            console.error('[Frost Control v2 - Debug] Required elements not found.');
-            return;
-        }
-        console.log('[Frost Control v2 - Debug] All elements found.');
-
-        const targetSelector = toggleButton.dataset.target; 
-        const targetElement = targetSelector ? document.querySelector(targetSelector) : null; 
-
-        if (!targetElement) {
-            console.error(`[Frost Control v2 - Debug] Target element ('${targetSelector}') not found.`);
-            return;
-        }
-        console.log('[Frost Control v2 - Debug] Target element found:', targetElement);
-        
+        const frostControlWrappers = document.querySelectorAll('.frost-control-wrapper');
         const rootStyle = document.documentElement.style;
-        const defaultBlur = 8; // 默认开启时的模糊度
+        const defaultBlur = 8;
+        let isFrostActive = false; // 共享状态
+        let currentBlur = 0;      // 共享状态
 
-        // --- 更新模糊值和显示的函数 ---
-        function updateBlur(value) {
-            const blurValue = Math.max(0, parseInt(value) || 0);
-            rootStyle.setProperty('--card-frost-blur', `${blurValue}px`);
-            // blurSlider.value = blurValue; // Slider value is set by user or init
-            blurValueDisplay.textContent = `${blurValue}px`;
-            console.log(`[Frost Control v2 - Debug] Set --card-frost-blur to ${blurValue}px`);
-        }
-        
-        // --- 切换磨砂效果 On/Off 的函数 ---
-        function toggleFrostEffect(activate) {
-            console.log(`[Frost Control v2 - Debug] Toggling frost effect: ${activate ? 'ON' : 'OFF'}`);
-            toggleButton.classList.toggle('active', activate);
-            targetElement.classList.toggle('frosted', activate);
-            
+        frostControlWrappers.forEach(wrapper => {
+            const toggleButton = wrapper.querySelector('.frosted-toggle');
+            const sliderPopup = wrapper.querySelector('.frost-slider-popup');
+            const blurSlider = wrapper.querySelector('.frost-blur-slider');
+            const blurValueDisplay = wrapper.querySelector('.blur-value-display');
+            const targetSelector = toggleButton?.dataset.target;
+            const targetElement = targetSelector ? document.querySelector(targetSelector) : null;
+
+            if (!toggleButton || !sliderPopup || !blurSlider || !blurValueDisplay || !targetElement) return;
+
+            // --- 应用函数 (基于共享状态) ---
+            const applyFrost = () => {
+                 console.log(`[Frost Apply Debug] Called. Mode: ${currentMode}, Target Selector: ${targetSelector}, Target Element Found: ${!!targetElement}`); // 新日志
+                 console.log(`[Frost Apply Debug] State: Active=${isFrostActive}, Blur=${currentBlur}`); // 新日志
+                 // 更新 CSS 变量
+                 rootStyle.setProperty('--card-frost-blur', `${isFrostActive ? currentBlur : 0}px`);
+                 console.log(`[Frost Apply Debug] Set CSS var --card-frost-blur to: ${isFrostActive ? currentBlur : 0}px`); // 新日志
+                 
+                 // --- 简化目标应用逻辑：直接使用 `targetElement` --- 
+                 if (targetElement) {
+                    targetElement.classList.toggle('frosted', isFrostActive);
+                    console.log(`[Frost Apply Debug] Toggled 'frosted' class (${isFrostActive}) on target:`, targetElement); // 新日志
+                 } else {
+                    console.error(`[Frost Apply Debug] Target element not found based on selector: ${targetSelector}`);
+                 }
+                 
+                 // 更新所有控件的视觉状态
+                 document.querySelectorAll('.frosted-toggle').forEach(btn => {
+                     btn.classList.toggle('active', isFrostActive);
+                     const icon = btn.querySelector('.toggle-icon');
+                     if(icon) icon.textContent = isFrostActive ? '✓' : '';
+                 });
+                 document.querySelectorAll('.frost-blur-slider').forEach(s => s.value = currentBlur);
+                 document.querySelectorAll('.blur-value-display').forEach(d => d.textContent = `${currentBlur}px`);
+                 document.querySelectorAll('.frost-slider-popup').forEach(p => p.classList.remove('visible')); // 默认关闭所有弹出
+            };
+
+            // --- 初始化控件视觉状态 ---
+            toggleButton.classList.toggle('active', isFrostActive);
             const icon = toggleButton.querySelector('.toggle-icon');
-            if (icon) {
-                icon.textContent = activate ? '✓' : '';
-            }
+            if(icon) icon.textContent = isFrostActive ? '✓' : '';
+            blurSlider.value = currentBlur;
+            blurValueDisplay.textContent = `${currentBlur}px`;
+            sliderPopup.classList.remove('visible');
 
-            if (activate) {
-                // 如果当前滑块值为0，并且是首次激活，使用默认模糊度
-                if (parseInt(blurSlider.value) === 0) {
-                     console.log(`[Frost Control v2 - Debug] Activating with 0 blur, setting to default: ${defaultBlur}px`);
-                     blurSlider.value = defaultBlur;
-                     updateBlur(defaultBlur);
-                } else {
-                     // 否则，应用当前滑块的值
-                     updateBlur(blurSlider.value);
+            // --- 事件监听 --- 
+            toggleButton.addEventListener('click', (event) => {
+                event.stopPropagation(); // 保留
+
+                if (isFrostActive) { // --- 如果效果已开启 --- 
+                    // 只切换弹出层可见性
+                    sliderPopup.classList.toggle('visible');
+                    console.log(`[Frost Toggle Click] Effect was active. Toggled popup visibility to: ${sliderPopup.classList.contains('visible')}`);
+                    // 不改变 isFrostActive，不调用 applyFrost()
+                } else { // --- 如果效果已关闭 --- 
+                    // 开启效果
+                    isFrostActive = true;
+                    console.log(`[Frost Toggle Click] Effect was inactive. Setting isFrostActive to true.`);
+                    if (currentBlur === 0) {
+                        currentBlur = defaultBlur; // 确保有模糊值
+                        console.log(`[Frost Toggle Click] Setting blur to default: ${currentBlur}`);
+                    }
+                    // 应用效果 (但不显示弹出层)
+                    applyFrost(); 
+                    sliderPopup.classList.remove('visible'); // 确保弹出层是隐藏的
                 }
-            } else {
-                 // 关闭时，视觉上移除模糊 (设为0)，但不改变滑块值，以便下次开启时恢复
-                 rootStyle.setProperty('--card-frost-blur', '0px'); 
-                 console.log('[Frost Control v2 - Debug] Deactivated, visually removed blur.');
-                 sliderPopup.classList.remove('visible'); // 关闭效果时也关闭弹出层
-            }
-        }
 
-        // --- 初始化 ---
-        try {
-            console.log('[Frost Control v2 - Debug] Initializing...');
-            // 初始状态：关闭
-            const initialBlur = 0; // 逻辑上初始是关闭的
-            blurSlider.value = initialBlur; // 滑块值可以保持上次设置或归0，这里先设0
-            blurValueDisplay.textContent = `${initialBlur}px`;
-            rootStyle.setProperty('--card-frost-blur', '0px'); // 确保初始CSS无模糊
-            toggleFrostEffect(false); // 确保初始是关闭状态
-            sliderPopup.classList.remove('visible'); // 确保初始隐藏
-            console.log('[Frost Control v2 - Debug] Initialization complete.');
-        } catch (e) {
-             console.error('[Frost Control v2 - Debug] Error during initialization:', e); 
-        }
+                /* // 移除上一个版本的逻辑
+                // 1. 反转激活状态
+                isFrostActive = !isFrostActive;
+                console.log(`[Frost Toggle Click] New isFrostActive state: ${isFrostActive}`);
 
-        // --- 事件监听器 ---
-        // 按钮点击
-        toggleButton.addEventListener('click', (event) => {
-            event.stopPropagation(); 
-            const isActive = toggleButton.classList.contains('active');
-            console.log(`[Frost Control v2 - Debug] Button clicked. Currently active: ${isActive}`);
-            
-            if (isActive) {
-                // 如果已激活，切换弹出层可见性
-                sliderPopup.classList.toggle('visible');
-                console.log(`[Frost Control v2 - Debug] Popup visibility toggled: ${sliderPopup.classList.contains('visible')}`);
-            } else {
-                // 如果未激活，开启效果（不显示弹出层）
-                toggleFrostEffect(true);
-            }
+                // 2. 根据新状态处理模糊值和弹出层
+                if (isFrostActive) { // 如果新状态是开启
+                    if (currentBlur === 0) {
+                         currentBlur = defaultBlur; // 确保有模糊值
+                         console.log(`[Frost Toggle Click] Frost activated with 0 blur, setting to default: ${currentBlur}`);
+                    }
+                    sliderPopup.classList.add('visible'); // 显示弹出层
+                    console.log(`[Frost Toggle Click] Popup should be visible.`);
+                } else { // 如果新状态是关闭
+                    sliderPopup.classList.remove('visible'); // 隐藏弹出层
+                    console.log(`[Frost Toggle Click] Popup should be hidden.`);
+                }
+
+                // 3. 应用新的状态 (会更新 CSS 变量和卡片类名)
+                applyFrost(); 
+                */
+            });
+            blurSlider.addEventListener('input', () => {
+                 if (isFrostActive) { // 只有激活时滑块才有效
+                     currentBlur = parseInt(blurSlider.value) || 0; // 更新共享模糊值
+                     applyFrost(); // 实时应用
+                 }
+            });
+            // 移除过于笼统的事件阻止
+            /* sliderPopup.addEventListener('click', (event) => { 
+                console.log("[Frost Popup Click Debug] Click inside popup detected, stopping propagation."); // 新日志
+                event.stopPropagation(); 
+            }); */
         });
 
-        // 滑块输入：实时更新模糊值
-        blurSlider.addEventListener('input', () => {
-            // 只有在按钮激活（效果开启）时才更新
-            if (toggleButton.classList.contains('active')) { 
-                 updateBlur(blurSlider.value);
-            }
-        });
-
-        // 点击页面其他地方只关闭弹出层
+        // 全局点击关闭所有弹出层 (只检查是否点击在 popup 外部)
         document.addEventListener('click', (event) => {
-            if (sliderPopup.classList.contains('visible') && !controlWrapper.contains(event.target)) {
-                console.log('[Frost Control v2 - Debug] Click outside detected, closing popup ONLY.');
-                sliderPopup.classList.remove('visible'); // 只关闭弹出层
+            document.querySelectorAll('.frost-slider-popup.visible').forEach(popup => {
+                // 只检查点击是否在弹出层内部
+                if (!popup.contains(event.target)) {
+                    // 如果点击发生在外部，则关闭该弹出层
+                    console.log("[Global Click Debug] Click strictly outside popup detected, closing popup:", popup);
+                    popup.classList.remove('visible');
+                }
+            });
+        });
+
+        // 新增：全局键盘监听关闭弹出层
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const visiblePopups = document.querySelectorAll('.frost-slider-popup.visible');
+                if (visiblePopups.length > 0) {
+                     console.log("[Global Keydown Debug] Enter key pressed, closing visible popups.");
+                     visiblePopups.forEach(popup => {
+                         popup.classList.remove('visible');
+                     });
+                     // 可选：阻止回车键的默认行为（例如表单提交）
+                     // event.preventDefault(); 
+                }
             }
         });
         
-        // 阻止点击弹出层自身导致关闭
-        sliderPopup.addEventListener('click', (event) => {
-             event.stopPropagation();
-        });
+        // 初始化应用一次状态 (确保 CSS 变量和类正确)
+        rootStyle.setProperty('--card-frost-blur', '0px'); 
+        document.querySelectorAll('.word-card, .minimalist-card-content').forEach(el => el.classList.remove('frosted'));
 
-        console.log('[Frost Control v2 - Debug] Listeners setup.');
+        console.log('[Frost Controls] Listeners attached for both modes.');
     }
 
-    // --- 修改 setupNavigationButtons (使用直接变量) ---
+    // --- 新增：设置模式切换 --- 
+    function setupModeSwitcher() {
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        modeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const selectedMode = button.dataset.mode;
+                if (selectedMode === currentMode) return; // 点击当前模式无效
+
+                currentMode = selectedMode;
+                console.log(`[Mode Switch] Switched to: ${currentMode}`);
+
+                // 更新按钮激活状态
+                modeButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.mode === currentMode);
+                });
+
+                // 切换 body 类控制显隐
+                document.body.classList.toggle('show-minimalist', currentMode === 'minimalist');
+
+                // 重新渲染当前单词到新模式
+                if (currentWordList && currentWordList.length > 0) {
+                    displayWordAtIndex(currentWordIndex); 
+                }
+                
+                // 可能需要重新应用样式/效果到新模式的卡片
+                applyCardStyle(); 
+                // applyFrost(); // Frost 状态会在 displayWordAtIndex 或其他交互中更新
+            });
+        });
+         console.log('[Mode Switcher] Listeners attached.');
+    }
+
+    // --- 修改 setupNavigationButtons (使用 querySelectorAll) ---
     function setupNavigationButtons() {
-        const prevButton = document.querySelector('.nav-arrow.prev');
-        const nextButton = document.querySelector('.nav-arrow.next');
-        if (!prevButton || !nextButton) { /*...*/ return; }
-        console.log('[Nav Buttons] Setup: Listeners attached.');
+        // 使用 querySelectorAll 获取所有匹配的按钮
+        const prevButtons = document.querySelectorAll('.nav-arrow.prev');
+        const nextButtons = document.querySelectorAll('.nav-arrow.next');
 
-        prevButton.addEventListener('click', () => {
-            // 使用直接变量 currentWordIndex, currentWordList
-            console.log(`[Nav Buttons] Prev Click Check: Index=${currentWordIndex}, ListValid=${!!currentWordList}, ListLength=${currentWordList?.length}`); 
-            if (currentWordList && currentWordIndex > 0) { 
-                console.log('[Nav Buttons] Prev condition PASSED. Calling displayWordAtIndex...'); 
-                displayWordAtIndex(currentWordIndex - 1); // 使用直接变量
-            } else {
-                console.log('[Nav Buttons] Prev condition FAILED.'); 
-            }
+        if (prevButtons.length === 0 && nextButtons.length === 0) {
+            console.warn("[Nav Buttons] No navigation buttons found to attach listeners.");
+            return;
+        }
+        console.log(`[Nav Buttons] Setup: Found ${prevButtons.length} prev buttons and ${nextButtons.length} next buttons.`);
+
+        // 为所有"上一个"按钮添加监听器
+        prevButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // 逻辑不变，依赖全局状态
+                console.log(`[Nav Buttons] Prev Click Check: Index=${currentWordIndex}, ListValid=${!!currentWordList}, ListLength=${currentWordList?.length}`); 
+                if (currentWordList && currentWordIndex > 0) { 
+                    console.log('[Nav Buttons] Prev condition PASSED. Calling displayWordAtIndex...'); 
+                    displayWordAtIndex(currentWordIndex - 1); 
+                } else {
+                    console.log('[Nav Buttons] Prev condition FAILED.'); 
+                }
+            });
         });
 
-        nextButton.addEventListener('click', () => {
-            // 使用直接变量 currentWordIndex, currentWordList
-            console.log(`[Nav Buttons] Next Click Check: Index=${currentWordIndex}, ListValid=${!!currentWordList}, ListLength=${currentWordList?.length}`); 
-            if (currentWordList && currentWordIndex < currentWordList.length - 1) { 
-                console.log('[Nav Buttons] Next condition PASSED. Calling displayWordAtIndex...'); 
-                displayWordAtIndex(currentWordIndex + 1); // 使用直接变量
-            } else {
-                 console.log('[Nav Buttons] Next condition FAILED.'); 
-            }
+        // 为所有"下一个"按钮添加监听器
+        nextButtons.forEach(button => {
+             button.addEventListener('click', () => {
+                 // 逻辑不变，依赖全局状态
+                 console.log(`[Nav Buttons] Next Click Check: Index=${currentWordIndex}, ListValid=${!!currentWordList}, ListLength=${currentWordList?.length}`); 
+                 if (currentWordList && currentWordIndex < currentWordList.length - 1) { 
+                     console.log('[Nav Buttons] Next condition PASSED. Calling displayWordAtIndex...'); 
+                     displayWordAtIndex(currentWordIndex + 1); 
+                 } else {
+                      console.log('[Nav Buttons] Next condition FAILED.'); 
+                 }
+             });
         });
+        console.log('[Nav Buttons] Setup: Listeners attached to all found buttons.');
+    }
+
+    // --- 新增：单词朗读函数 ---
+    function speakWord(wordText) {
+        if (!wordText) {
+            console.warn('[Speech] No word text provided to speak.');
+            return;
+        }
+
+        if ('speechSynthesis' in window) {
+            // 停止任何可能正在进行的朗读
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(wordText);
+            
+            // 尝试设置语言为英语 (美式优先)
+            utterance.lang = 'en-US';
+            
+            // 可选：尝试查找并设置特定的英语语音
+            const voices = window.speechSynthesis.getVoices();
+            const englishVoice = voices.find(voice => voice.lang === 'en-US' || voice.lang.startsWith('en-'));
+            if (englishVoice) {
+                utterance.voice = englishVoice;
+                console.log(`[Speech] Using voice: ${englishVoice.name} (${englishVoice.lang})`);
+            } else {
+                console.warn('[Speech] Could not find a specific English voice, using default.');
+            }
+
+            utterance.onerror = (event) => {
+                console.error('[Speech] Speech synthesis error:', event.error);
+            };
+
+            window.speechSynthesis.speak(utterance);
+            console.log(`[Speech] Attempting to speak: "${wordText}"`);
+        } else {
+            console.error('[Speech] Speech synthesis not supported by this browser.');
+            // 可以在这里给用户一个提示，例如 alert()
+            alert('抱歉，您的浏览器不支持语音朗读功能。');
+        }
+    }
+    
+    // 新增：在语音列表加载后再次尝试设置语音 (处理异步加载)
+    if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = () => {
+            console.log('[Speech] Voices changed/loaded.');
+            // 这里可以保留，以便在语音列表变化时更新可用语音信息
+            // 但 speakWord 函数内部每次也会获取最新列表
+        };
+    }
+
+    // --- 新增：设置喇叭按钮交互 ---
+    function setupAudioButtons() {
+        const audioButtons = document.querySelectorAll('.audio-btn');
+        console.log(`[Audio Buttons] Setup: Found ${audioButtons.length} audio buttons.`);
+        
+        audioButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation(); // 防止可能的父级事件冲突
+                
+                if (currentWordData && currentWordData.word) {
+                    speakWord(currentWordData.word);
+                } else {
+                    console.warn('[Audio Buttons] Clicked, but no current word data available to speak.');
+                }
+            });
+        });
+        console.log('[Audio Buttons] Setup: Listeners attached.');
     }
 
     // --- 初始化调用 ---
@@ -960,6 +1146,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupColorPickers(); // <-- 新增：调用颜色选择器初始化
     setupFrostControl(); // <-- 调用更新后的函数
     setupNavigationButtons(); // <-- 新增：调用导航按钮初始化
+    setupModeSwitcher(); // 初始化模式切换
+    setupAudioButtons(); // <-- 新增：初始化喇叭按钮
     await populateLevels(); // 开始加载级别和章节
     console.log('[Card Page] Final Initialization steps complete.');
 
