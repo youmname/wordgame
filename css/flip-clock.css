@@ -864,6 +864,27 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     background-color: #444;
 }
 
+/* Add styles for the home button link to match other buttons */
+.controls .control-button {
+    display: inline-block; /* Ensure it behaves like a block for padding/margins */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    border-radius: 30px;
+    padding: 8px 15px;
+    background-color: #282828;
+    color: #eee !important; /* Use !important to override general link color if needed */
+    border: none;
+    font-size: clamp(0.75em, 1.8vw, 0.9em);
+    text-decoration: none !important; /* Ensure no underline */
+    line-height: normal; /* Reset line-height if inherited */
+    vertical-align: middle; /* Align with other flex items */
+}
+
+.controls .control-button:hover {
+    background-color: #444;
+    color: #fff !important; /* Ensure hover color is consistent */
+}
+
 /* Style the new background selector like the mode selector */
 #backgroundSelector {
      min-width: 120px; /* Adjust width as needed */
@@ -893,20 +914,43 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
 
 
 #motto {
-    margin-top: 3vh;
+    /* margin-top: 3vh; 移除 */
     font-size: clamp(1.4em, 3.5vw, 2.2em);
     font-style: normal;
     color: #fff;
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
     min-height: 1.2em;
     text-align: center;
-    width: 85%;
-    max-width: 700px;
+    width: max-content; 
+    max-width: 90%; 
     line-height: 1.4;
-    cursor: text;
-    letter-spacing: 1px; /* Adjusted letter spacing slightly */
-    /* Changed font to standard system UI fonts */
+    /* cursor: grab; 移除默认抓取手势，让 contenteditable 生效 */
+    cursor: text; /* 恢复文本光标，提示可编辑 */
+    letter-spacing: 1px; 
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    /* --- 修改：绝对定位靠下居中 --- */
+    position: absolute;
+    /* top: 85%; 向上调整 */
+    top: calc(85% - 20px); /* 向上移动 20px */
+    left: 50%;
+    transform: translateX(-50%); 
+    z-index: 10; 
+    padding: 10px 20px; 
+    background-color: rgba(0, 0, 0, 0.3); /* 可选：加点背景区分 */
+    border-radius: 8px; /* 可选：加点圆角 */
+    user-select: none; /* 防止拖动时选中文字 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* 当正在拖动时改变光标 */
+#motto.dragging {
+    cursor: grabbing;
+    user-select: none; /* 拖动时禁止选择 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 /* Remove focus outline on editable motto */

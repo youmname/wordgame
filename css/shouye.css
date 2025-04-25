@@ -246,19 +246,25 @@ body {
 
 /* 垂直导航 */
 .vertical-nav {
-  margin-bottom: 30px;
-  
+  margin-top: auto; /* 将此部分推到底部 */
+  margin-bottom: 20px; /* 与下面的用户信息区保持间距 */
+  padding-top: 20px; /* 顶部内边距 */
+  border-top: 1px solid var(--border-color); /* 顶部边框，视觉分隔 */
 }
 
 .nav-section {
-  margin-top: 40px;
+  margin-top: 0px;
 }
 
 .nav-section h3 {
-  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 16px;
   color: var(--text-secondary);
-  margin-top: 40px;
-  margin-bottom: 40px;
+  margin-top: 0px;
+  margin-bottom: 20px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -286,8 +292,6 @@ body {
   box-sizing: border-box !important; /* 确保padding不会改变按钮尺寸计算 */
   writing-mode: horizontal-tb !important; /* 强制水平文本方向 */
 }
-
-
 
 .nav-btn:hover {
   background: #F5F9FF;
@@ -644,9 +648,7 @@ body {
 
 /* 用户头像区域 */
 .user-profile {
-  margin-top: auto; /* 将用户资料推到底部 */
   padding-top: 20px;
-  border-top: 1px solid var(--border-color);
   background-color: var(--bg-cream);
   border-radius: var(--border-radius);
   padding: 16px;
@@ -1371,3 +1373,198 @@ body {
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border-color);
 }
+
+/* --- 今日任务样式 --- */
+.task-container {
+  background-color: transparent; 
+  padding: 15px 24px; 
+  margin-bottom: 10px; 
+  overflow: hidden; /* 防止容器自身出现滚动条 */
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* 让此容器填充可用空间 */
+  border-top: 1px solid var(--border-color); 
+  margin-top: 20px; 
+}
+
+/* 任务列表区域 */
+.task-list {
+  flex-grow: 1; 
+  overflow-y: auto; /* 列表内容超出时滚动 */
+  margin-top: 10px;
+  padding-right: 5px; 
+}
+
+.task-list::-webkit-scrollbar {
+  width: 4px;
+}
+.task-list::-webkit-scrollbar-thumb {
+  background-color: var(--primary);
+  border-radius: 2px;
+}
+.task-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 新任务输入框 */
+.new-task-input {
+  width: 100%; 
+  padding: 10px 12px; 
+  border: none; 
+  border-radius: var(--border-radius-sm);
+  margin-top: 10px; 
+  font-size: 14px;
+  box-sizing: border-box;
+  background-color: rgba(var(--primary-rgb), 0.05);
+  color: var(--text);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.new-task-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.new-task-input:focus {
+  outline: none;
+  background-color: rgba(var(--primary-rgb), 0.1);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+/* 任务标题 */
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0; 
+  border-bottom: none; 
+}
+
+.task-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 任务项 */
+.task-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px; /* 减少项间距 */
+  padding: 8px 8px 8px 10px; /* 调整内边距，左侧给指示条留空 */
+  background-color: transparent;
+  border-radius: var(--border-radius-sm);
+  transition: background-color 0.2s ease, opacity 0.3s ease, border-left-color 0.3s ease;
+  position: relative; 
+  cursor: grab; 
+  border-left: 4px solid var(--primary); /* 左侧指示条，默认主色 */
+}
+
+.task-item:hover {
+  background-color: rgba(var(--primary-rgb), 0.05); 
+}
+
+/* 任务项悬停时显示删除按钮 */
+.task-item:hover .delete-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 已完成任务样式 */
+.task-item.checked {
+  opacity: 0.6;
+  border-left-color: var(--text-secondary); /* 完成的任务指示条变灰 */
+}
+
+.task-item.checked .task-text {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+/* 复选框 */
+.task-check {
+  margin-left: 4px; /* 调整与指示条的距离 */
+  margin-right: 8px;
+  cursor: pointer;
+  accent-color: var(--primary); 
+  flex-shrink: 0; 
+  transform: scale(1.1);
+}
+
+/* 隐藏颜色选择器相关的样式 */
+.color-picker, .color-indicator {
+    display: none; 
+}
+
+/* 任务文本 */
+.task-text {
+  flex-grow: 1;
+  font-size: 14px;
+  color: var(--text);
+  cursor: text;
+  padding: 2px 4px; 
+  border-radius: 3px;
+  background-color: transparent; 
+}
+
+.task-text:focus {
+  outline: none;
+  background-color: rgba(var(--primary-rgb), 0.1);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* 删除按钮 */
+.delete-btn {
+  margin-left: 8px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px; 
+  padding: 0 8px; 
+  opacity: 0; 
+  transform: scale(0.8); 
+  transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0; 
+}
+
+.delete-btn:hover {
+  color: var(--accent);
+}
+
+/* 拖动时的样式 */
+.task-item.dragging {
+  opacity: 0.4;
+  background: rgba(var(--primary-rgb), 0.1); 
+  cursor: grabbing; 
+}
+
+/* 拖动占位符/指示器 */
+.drag-over-placeholder {
+  height: 3px; 
+  background-color: var(--primary);
+  margin: 2px 0 2px 10px; /* 调整间距 */
+  border-radius: 1.5px;
+  transition: height 0.1s ease-out; 
+}
+
+/* 空列表状态 */
+.empty-state-message {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 30px 20px; 
+  margin-top: 10px;
+  opacity: 0.8;
+}
+
+/* 确保 .vertical-nav 的上边距足够小 */
+.vertical-nav {
+  margin-top: auto; 
+  margin-bottom: 15px; 
+  padding-top: 10px; /* 保持较小的上内边距 */
+  border-top: 1px solid var(--border-color); 
+}
+
+/* --- 今日任务样式结束 --- */

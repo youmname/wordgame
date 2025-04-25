@@ -1798,3 +1798,321 @@ async function loadTotalWordCount() {
         return null; // Return null to indicate failure
     }
 }
+
+// --- 新增：今日任务 功能 --- 
+document.addEventListener('DOMContentLoaded', () => {
+    const taskContainer = document.querySelector('.task-container');
+    const taskList = document.getElementById('taskList');
+    const newTaskInput = document.querySelector('.new-task-input');
+    const emptyStateMessage = taskContainer.querySelector('.empty-state-message');
+    let tasks = []; // 存储任务数据的数组
+    let draggedItem = null;
+    let dragOverPlaceholder = null;
+
+    if (!taskContainer || !taskList || !newTaskInput || !emptyStateMessage) {
+        console.warn('今日任务模块缺少必要的元素，功能可能无法正常工作。');
+        return;
+    }
+
+    const TASKS_STORAGE_KEY = 'wordgame_tasks_v2'; // 使用新 key 避免旧数据冲突
+
+    // --- 排序、保存、加载 --- 
+    const sortTasksArray = () => {
+        tasks.sort((a, b) => a.checked - b.checked);
+    };
+
+    const saveTasks = () => {
+        try {
+            localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+            checkEmptyState();
+        } catch (error) {
+            console.error('保存任务到 localStorage 失败:', error);
+            // showErrorAlert('无法保存任务列表...'); // showErrorAlert 可能未定义，暂时注释
+        }
+    };
+
+    const loadTasks = () => {
+        try {
+            const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
+            tasks = savedTasks ? JSON.parse(savedTasks) : [];
+            sortTasksArray(); // 加载后立即排序
+            renderTaskList();
+        } catch (error) {
+            console.error('从 localStorage 加载任务失败:', error);
+            tasks = [];
+            renderTaskList();
+        }
+    };
+
+    // --- 渲染 --- 
+    const renderTaskList = () => {
+        taskList.innerHTML = '';
+        tasks.forEach(taskData => {
+            const taskElement = renderTaskItem(taskData);
+            taskList.appendChild(taskElement);
+        });
+        checkEmptyState();
+    };
+
+    const renderTaskItem = (taskData) => {
+        const taskItem = document.createElement('div');
+        taskItem.className = 'task-item';
+        taskItem.setAttribute('draggable', 'true');
+        taskItem.dataset.taskId = taskData.id;
+        if (taskData.checked) {
+            taskItem.classList.add('checked');
+        }
+        // 注意：不再需要设置背景色变量，颜色由 border-left-color 控制
+        taskItem.innerHTML = `
+          <input type="checkbox" class="task-check" ${taskData.checked ? 'checked' : ''} title="${taskData.checked ? '标记为未完成' : '标记为已完成'}">
+          <span class="task-text editable" contenteditable>${escapeHtml(taskData.text)}</span>
+          <button class="delete-btn" title="删除任务">×</button>
+          `;
+           // 移除颜色选择器和指示器的相关代码
+        return taskItem;
+    };
+
+    // --- 任务操作 --- 
+    const addTask = (text) => {
+        const trimmedText = text.trim();
+        if (!trimmedText) return;
+
+        const newTaskData = {
+            id: Date.now().toString(),
+            text: trimmedText,
+            // color: getRandomSoftColor(), // 不再需要颜色
+            checked: false
+        };
+        tasks.unshift(newTaskData);
+        sortTasksArray(); // 添加后也要排序，确保新任务在未完成列表顶部
+        saveTasks();
+        renderTaskList();
+        newTaskInput.value = '';
+    };
+
+    const updateTask = (id, updates) => {
+        let taskUpdated = false;
+        tasks = tasks.map(task => {
+            if (task.id === id) {
+                // 检查是否有实际变化
+                if (Object.keys(updates).some(key => task[key] !== updates[key])) {
+                    taskUpdated = true;
+                    return { ...task, ...updates };
+                }
+            }
+            return task;
+        });
+        // 只有在数据实际改变时才保存
+        if (taskUpdated) {
+            // 不需要在这里排序，因为 updateTask 主要是改文本，勾选会单独处理排序和渲染
+            saveTasks(); 
+        }
+        return taskUpdated; // 返回是否更新了
+    };
+
+    const deleteTask = (id) => {
+        const initialLength = tasks.length;
+        tasks = tasks.filter(task => task.id !== id);
+        if (tasks.length < initialLength) { // 确认有任务被删除
+           saveTasks(); // 保存更改
+           const elementToRemove = taskList.querySelector(`[data-task-id="${id}"]`);
+           if (elementToRemove) {
+               elementToRemove.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+               elementToRemove.style.opacity = '0';
+               elementToRemove.style.transform = 'translateX(-20px)';
+               setTimeout(() => {
+                   elementToRemove.remove();
+                   checkEmptyState(); // 移除后再检查空状态
+               }, 300);
+           } else {
+              renderTaskList(); // Fallback
+           }
+        } else {
+             checkEmptyState(); // 以防万一
+        }
+    };
+
+    // --- 工具函数 --- 
+    const checkEmptyState = () => {
+        if (tasks.length === 0) {
+            emptyStateMessage.style.display = 'block';
+            taskList.style.display = 'none';
+        } else {
+            emptyStateMessage.style.display = 'none';
+            taskList.style.display = 'block';
+        }
+    };
+    
+    // getRandomSoftColor 不再需要
+    
+    const escapeHtml = (unsafe) => {
+        // ... (保持不变) ...
+         return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    };
+
+    // --- 事件监听 --- 
+    newTaskInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // 防止可能的表单提交行为
+            addTask(newTaskInput.value);
+        }
+    });
+
+    taskList.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.classList.contains('task-check')) {
+            const taskItem = target.closest('.task-item');
+            const taskId = taskItem?.dataset.taskId;
+            if (taskId) {
+                // 1. 更新内存中任务的状态 (直接修改 checked)
+                const task = tasks.find(t => t.id === taskId);
+                if(task) task.checked = target.checked;
+                // 2. 对内存中的 tasks 数组进行排序
+                sortTasksArray();
+                // 3. 保存排序后的数组到 localStorage
+                saveTasks();
+                // 4. 根据排序后的数组重新渲染整个列表
+                renderTaskList(); 
+            }
+        }
+         // 移除颜色选择器相关的 change 监听
+    });
+
+    taskList.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.classList.contains('delete-btn')) {
+            const taskItem = target.closest('.task-item');
+            const taskId = taskItem?.dataset.taskId;
+            if (taskId) {
+                deleteTask(taskId);
+            }
+        }
+        // 移除颜色指示器相关的 click 监听
+    });
+
+    taskList.addEventListener('blur', (e) => {
+        const target = e.target;
+        if (target.classList.contains('task-text') && target.hasAttribute('contenteditable')) {
+            const taskItem = target.closest('.task-item');
+            const taskId = taskItem?.dataset.taskId;
+            const newText = target.textContent.trim(); // 使用 textContent 更安全
+            
+            if (taskId) {
+                 if (!newText) {
+                     deleteTask(taskId);
+                 } else {
+                    // updateTask 内部会检查是否真的改变了并保存
+                    updateTask(taskId, { text: newText });
+                    // 不需要手动更新 DOM 的 textContent，因为 blur 后内容已更新
+                 }
+            }
+        }
+    }, true);
+
+    // --- 拖放事件处理 --- 
+    taskList.addEventListener('dragstart', (e) => {
+        if (e.target.classList.contains('task-item')) {
+            draggedItem = e.target;
+            const dragImage = draggedItem.cloneNode(true);
+            // ... (setDragImage 代码保持不变) ...
+            dragImage.style.position = 'absolute';
+            dragImage.style.top = '-9999px'; 
+            dragImage.style.width = draggedItem.offsetWidth + 'px';
+            dragImage.style.opacity = '0.8'; 
+            dragImage.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+            document.body.appendChild(dragImage);
+            e.dataTransfer.setDragImage(dragImage, 10, 10);
+            requestAnimationFrame(() => { 
+                if(document.body.contains(dragImage)) {
+                    document.body.removeChild(dragImage);
+                }
+            });
+            
+            setTimeout(() => draggedItem?.classList.add('dragging'), 0);
+        }
+    });
+
+    taskList.addEventListener('dragend', (e) => {
+        if (draggedItem) {
+             draggedItem.classList.remove('dragging');
+            if (dragOverPlaceholder) {
+                dragOverPlaceholder.remove();
+                dragOverPlaceholder = null;
+            }
+            // 获取当前 DOM 顺序
+            const newOrderedIds = Array.from(taskList.querySelectorAll('.task-item')).map(item => item.dataset.taskId);
+            // 根据 DOM 顺序重排内存中的 tasks 数组
+            tasks = newOrderedIds.map(id => tasks.find(t => t.id === id)).filter(Boolean);
+            // 强制按完成状态排序
+            sortTasksArray();
+            // 保存最终结果
+            saveTasks();
+            // 重新渲染以确保视觉和数据一致
+            renderTaskList(); 
+            draggedItem = null;
+        }
+    });
+
+    taskList.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(taskList, e.clientY);
+        const currentDragging = document.querySelector('.dragging');
+        if (!currentDragging) return;
+
+        if (!dragOverPlaceholder) {
+            dragOverPlaceholder = document.createElement('div');
+            dragOverPlaceholder.classList.add('drag-over-placeholder');
+        }
+
+        if (afterElement == null) {
+            if (taskList.lastElementChild !== dragOverPlaceholder && taskList.lastElementChild !== currentDragging) {
+                 taskList.appendChild(dragOverPlaceholder);
+            }
+        } else {
+             if (afterElement.previousSibling !== dragOverPlaceholder && afterElement !== currentDragging) {
+                taskList.insertBefore(dragOverPlaceholder, afterElement);
+             }
+        }
+    });
+    
+    taskList.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (dragOverPlaceholder && draggedItem) { 
+            taskList.insertBefore(draggedItem, dragOverPlaceholder);
+        }
+    });
+
+    taskList.addEventListener('dragleave', (e) => {
+        // 移除占位符，如果鼠标移出了列表区域
+        if (dragOverPlaceholder && !taskList.contains(e.relatedTarget)) {
+             if (dragOverPlaceholder.parentNode === taskList) { // 确保还在 taskList 中
+                 dragOverPlaceholder.remove();
+             }
+             dragOverPlaceholder = null;
+        }
+    });
+
+    // 辅助函数：获取拖动位置下方的元素
+    function getDragAfterElement(container, y) {
+        // ... (保持不变) ...
+        const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // --- 初始化 --- 
+    loadTasks(); 
+});
+// --- 今日任务 功能结束 ---

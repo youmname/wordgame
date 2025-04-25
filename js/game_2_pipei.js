@@ -2346,7 +2346,7 @@
             // 根据难度设置游戏参数
             this.setDifficulty(this.difficulty);
             this.initialTime = this.timeLeft; // 新增：保存初始时间，用于计算时间奖励
-
+            
             // 加载单词数据（异步）
             this.loadWordData().then(() => {
                 // 更新UI
@@ -2882,7 +2882,7 @@
 
             // 获取当前难度的分数设置 (可能不再需要，但保留以防万一)
             const difficultyConfig = WordConfig.DIFFICULTY[this.difficulty];
-
+            
             // 计算分数（仅在胜利时）
             if (isWin) {
                 // 移除旧的时间奖励计算
@@ -2915,7 +2915,7 @@
             document.getElementById('final-score').textContent = this.score; // 使用更新后的 score (即 totalScore)
             document.getElementById('time-left').textContent = `${this.timeLeft}s`;
             document.getElementById('max-combo').textContent = this.maxCombo;
-
+            
             // --- 修改：更新弹窗中的积分明细 (使用 innerHTML) ---
             const scoreDetailsElement = document.getElementById('score-details');
             if (scoreDetailsElement && isWin) {
@@ -2943,7 +2943,7 @@
             // --- 修改：根据新的 totalScore 和上限(20) 计算星级 --- 
             const maxPossibleScore = 20; // 新的总分上限是 10 + 5 + 5 = 20
             const scorePercent = maxPossibleScore > 0 ? (this.score / maxPossibleScore) : 0; // 使用新的上限计算百分比
-
+            
             const stars = document.querySelectorAll('.star');
             stars.forEach(star => star.classList.remove('active'));
             

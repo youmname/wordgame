@@ -2368,3 +2368,123 @@ $(document).ready(function() {
     setInterval(updateDate, 60000);
 
 }); 
+
+// --- 新增：使 Motto 可拖动 (无延迟版本) ---
+document.addEventListener('DOMContentLoaded', () => {
+    const mottoElement = document.getElementById('motto');
+    if (!mottoElement) return;
+
+    let isDragging = false;
+    let hasMoved = false; // 标记是否发生了移动
+    let startX, startY;
+    let initialLeft, initialTop; // 记录拖动开始时的元素位置
+    let offsetX, offsetY;       // 记录鼠标按下时相对于元素左上角的偏移
+
+    // --- 拖动阈值 (像素) ---
+    const DRAG_THRESHOLD = 5;
+
+    const startDrag = (e) => {
+        // 只处理鼠标左键或触摸事件
+        if (e.type === 'mousedown' && e.button !== 0) return;
+
+        hasMoved = false; // 重置移动标记
+        isDragging = false; // 尚未开始拖动
+
+        startX = e.clientX || e.touches[0].clientX;
+        startY = e.clientY || e.touches[0].clientY;
+
+        // 获取元素当前计算后的位置 (left/top)
+        const style = window.getComputedStyle(mottoElement);
+        // 如果是第一次拖动，可能 left/top 是 'auto' 或百分比，需要获取绝对定位
+        const rect = mottoElement.getBoundingClientRect();
+        // 注意：如果元素初始不是绝对定位，这里需要处理
+        initialLeft = rect.left - (parseFloat(style.marginLeft) || 0);
+        initialTop = rect.top - (parseFloat(style.marginTop) || 0);
+
+        // 计算鼠标按下点相对于元素左上角的偏移
+        offsetX = startX - initialLeft;
+        offsetY = startY - initialTop;
+
+        // 添加移动和结束监听器 (注意：passive: false 很重要，因为需要 preventDefault)
+        document.addEventListener('mousemove', onDrag, { passive: false });
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', onDrag, { passive: false });
+        document.addEventListener('touchend', stopDrag);
+
+        // 初始时光标保持 text，允许编辑
+        mottoElement.style.cursor = 'text';
+        // 初始不阻止默认行为，允许点击聚焦编辑
+    };
+
+    const onDrag = (e) => {
+        const currentX = e.clientX || e.touches[0].clientX;
+        const currentY = e.clientY || e.touches[0].clientY;
+
+        // 计算移动距离
+        const dx = currentX - startX;
+        const dy = currentY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (!isDragging && distance > DRAG_THRESHOLD) {
+            // --- 超过阈值，正式开始拖动 ---
+            isDragging = true;
+            hasMoved = true; // 标记已移动
+            mottoElement.classList.add('dragging');
+            mottoElement.style.cursor = 'grabbing';
+
+            // 开始拖动后，才阻止默认行为（如文本选择）
+            e.preventDefault();
+        }
+
+        if (isDragging) {
+            // 持续拖动时阻止默认行为（如页面滚动）
+            e.preventDefault();
+
+            let newLeft = currentX - offsetX;
+            let newTop = currentY - offsetY;
+
+            // 边界检查
+            const parentRect = document.body.getBoundingClientRect(); // 或其他容器
+            const elementWidth = mottoElement.offsetWidth;
+            const elementHeight = mottoElement.offsetHeight;
+
+            newLeft = Math.max(0, Math.min(newLeft, parentRect.width - elementWidth));
+            newTop = Math.max(0, Math.min(newTop, parentRect.height - elementHeight));
+
+            // 更新位置 (确保 transform 被清除)
+            mottoElement.style.left = `${newLeft}px`;
+            mottoElement.style.top = `${newTop}px`;
+            mottoElement.style.transform = 'none';
+        }
+    };
+
+    const stopDrag = (e) => {
+        // 移除所有监听器
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', stopDrag);
+
+        if (isDragging) {
+            mottoElement.classList.remove('dragging');
+        }
+
+        // 恢复光标
+        mottoElement.style.cursor = 'text';
+        isDragging = false; // 重置拖动状态
+
+        // 如果按下后没有移动（即点击），浏览器默认会处理 contenteditable 的聚焦和编辑
+        // 如果移动了（isDragging 为 true），则拖动逻辑已处理
+    };
+
+    // 监听 mousedown 或 touchstart 事件开始潜在的拖动
+    mottoElement.addEventListener('mousedown', startDrag);
+    mottoElement.addEventListener('touchstart', startDrag, { passive: false });
+
+    // 阻止浏览器默认的拖放行为干扰（如果 motto 本身不是 drag source）
+    mottoElement.addEventListener('dragstart', (e) => {
+        e.preventDefault();
+    });
+
+});
+// --- Motto 可拖动结束 (无延迟版本) --- 
