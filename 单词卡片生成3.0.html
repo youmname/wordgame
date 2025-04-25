@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>艺术感单词卡片生成器 2.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #f5f7fa, #c3cfe2); color: #2c3e50; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); }
+        h2 { text-align: center; color: #34495e; margin-bottom: 20px; font-size: 2em; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        #input-area { width: 100%; height: 180px; margin-bottom: 20px; padding: 15px; font-size: 16px; border: 1px solid #dfe6e9; border-radius: 10px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); background: #fff; resize: vertical; transition: border-color 0.3s; }
+        #input-area:focus { border-color: #3498db; outline: none; }
+        .control-panel { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+        .checkbox-group { display: flex; gap: 15px; flex-wrap: wrap; }
+        .checkbox-item { display: flex; align-items: center; gap: 5px; background: rgba(236, 240, 241, 0.8); padding: 6px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: background 0.3s; }
+        .checkbox-item:hover { background: rgba(236, 240, 241, 1); }
+        .checkbox-item input { margin: 0; cursor: pointer; }
+        .checkbox-item label { cursor: pointer; font-size: 14px; color: #2c3e50; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        button, select { padding: 10px 20px; font-size: 14px; border: none; border-radius: 25px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+        #generate-btn { background: linear-gradient(45deg, #e74c3c, #c0392b); color: white; }
+        #download-btn { background: linear-gradient(45deg, #3498db, #2980b9); color: white; }
+        #quiz-btn { background: linear-gradient(45deg, #2ecc71, #27ae60); color: white; }
+        #clear-btn { background: linear-gradient(45deg, #95a5a6, #7f8c8d); color: white; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        select, input[type="color"] { background: #ecf0f1; color: #2c3e50; border: 1px solid #dfe6e9; padding: 8px; }
+        select:hover, input[type="color"]:hover { background: #dfe6e9; }
+        .color-pickers { display: none; gap: 10px; align-items: center; }
+        .card-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); position: relative; overflow: hidden; transition: transform 0.3s; }
+        .card:hover { transform: translateY(-5px); }
+        .card.elegant { background: linear-gradient(to bottom, #ffffff, #f7f9fc); border: 2px solid #b0bec5; }
+        .card.elegant::before { content: '✎'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #b0bec5; }
+        .card.simple { background: #ffffff; border: 1px solid #ecf0f1; }
+        .card.classic { background: #fef9e7; border: 2px dashed #d4a017; }
+        .card.classic::after { content: '📖'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #d4a017; }
+        .card.modern { background: linear-gradient(135deg, #e6ecef, #ffffff); border: 2px solid #00b4d8; }
+        .card.modern::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #00b4d8, #00d4ff); }
+        .card.vintage { background: #fdf6e9 url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAB5JREFUCB1jYGBgYGBgYGBgYGBgYGBgYGBgYGBgAAAD6QBPm5WvPQAAAABJRU5ErkJggg=='); border: 2px solid #8d5524; }
+        .card.vintage::after { content: '🖋️'; position: absolute; top: 10px; right: 10px; font-size: 20px; color: #8d5524; }
+        .card.nature { background: linear-gradient(to bottom, #e9f5e9, #ffffff); border: 2px solid #7cba7c; }
+        .card.nature::before { content: '🌿'; position: absolute; bottom: 10px; left: 10px; font-size: 20px; color: #7cba7c; }
+        .card.dreamy { background: linear-gradient(120deg, #f0e8ff, #ffffff); border: 2px solid #9b59b6; }
+        .card.dreamy::after { content: '🌌'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #9b59b6; }
+        .card.sunset { background: linear-gradient(to bottom right, #ffe8cc, #ffcc99); border: 2px solid #e67e22; }
+        .card.sunset::before { content: '🌇'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #e67e22; }
+        .card.monochrome { background: #ffffff; border: 2px solid #2c3e50; }
+        .card.monochrome .card-header, .card.monochrome .card-body p strong { color: #2c3e50; }
+        .card.monochrome .card-line { border-color: #7f8c8d; }
+        .card.ocean { background: linear-gradient(to bottom, #e6f0fa, #b3d9ff); border: 2px solid #2980b9; }
+        .card.ocean::after { content: '🐚'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #2980b9; }
+        .card.custom { border: 2px solid #34495e; }
+        .card-header { font-size: 1.8em; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: center; align-items: baseline; color: #34495e; }
+        .card-header .pronunciation { font-size: 0.6em; color: #7f8c8d; margin-left: 8px; }
+        .card-body p { font-size: 1.1em; line-height: 1.6; margin: 8px 0; }
+        .card-body p strong { font-weight: bold; margin-right: 5px; }
+        .card-line { border-bottom: 1px solid rgba(127, 140, 141, 0.3); margin: 15px 0; }
+        .card-section h4 { font-size: 1em; color: #3498db; margin: 12px 0 6px; border-bottom: 1px dashed #dfe6e9; padding-bottom: 3px; }
+        .phrase-item, .example-item, .form-item { padding: 6px 10px; margin: 5px 0; border-radius: 5px; background: rgba(236, 240, 241, 0.7); }
+        .phrase-item { border-left: 4px solid #2ecc71; }
+        .example-item { border-left: 4px solid #f1c40f; }
+        .form-item { border-left: 4px solid #3498db; }
+        .note { background: rgba(236, 240, 241, 0.8); border-left: 4px solid #3498db; padding: 8px 10px; margin-top: 10px; border-radius: 5px; }
+        .quiz-definition { padding: 8px 10px; margin: 6px 0; border-left: 4px solid #3498db; background: rgba(236, 240, 241, 0.7); border-radius: 5px; }
+        @media (max-width: 900px) { .card-container { grid-template-columns: repeat(2, 1fr); } .control-panel { flex-direction: column; align-items: flex-start; } }
+        @media (max-width: 768px) { .card-container { grid-template-columns: 1fr; } }
+        #temp-container, #a4-container, #b5-container { position: absolute; top: -9999px; left: -9999px; }
+        #a4-container { width: 794px; padding: 20px; box-sizing: border-box; }
+        #b5-container { width: 516px; padding: 20px; box-sizing: border-box; }
+        .a4-grid, .b5-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
+        /* 移除了固定高度，允许内容自然扩展 */
+        .card { overflow: hidden; box-sizing: border-box; } 
+        .format-help { background: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 15px; margin-bottom: 20px; font-size: 14px; border-left: 4px solid #3498db; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .format-help h3 { margin-top: 0; color: #2980b9; font-size: 1.2em; }
+        .format-help pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 13px; }
+        .format-toggle { cursor: pointer; color: #3498db; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>艺术感单词卡片生成器 2.0</h2>
+        
+        <div class="format-help">
+            <h3>支持的输入格式 <span class="format-toggle" onclick="toggleFormatHelp()">［收起］</span></h3>
+            <div id="format-details">
+                <p><strong>1. 制表符分隔格式:</strong></p>
+                <pre>序号	单词	音标	定义	短语	例句	词形变化	注释
+1	abandon	/əˈbændən/	1.v.放弃，抛弃	1.abandon oneself to	1.She abandoned herself to grief.\n2.He abandoned his car.	1.abandoned 2.abandoning	常用于贬义场合</pre>
+                <p><strong>2. 表格复制格式:</strong></p>
+                <pre>1 embrace BrE: /ɪmˈbreɪs/ 1. 接受 2. 拥抱</pre>
+                <p><strong>3. 简化格式:</strong></p>
+                <pre>1 abandon /əˈbændən/ v.放弃，抛弃 n.放任</pre>
+            </div>
+        </div>
+        
+        <textarea id="input-area" placeholder="请粘贴单词数据（支持多种格式）"></textarea>
+        
+        <div class="control-panel">
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="show-phrases" checked>
+                    <label for="show-phrases">短语</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="show-examples" checked>
+                    <label for="show-examples">例句</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="show-forms" checked>
+                    <label for="show-forms">词形</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="show-notes" checked>
+                    <label for="show-notes">注释</label>
+                </div>
+            </div>
+            <div class="button-group">
+                <button id="generate-btn">生成卡片</button>
+                <select id="card-style" onchange="toggleColorPickers()">
+                    <option value="elegant">优雅艺术风</option>
+                    <option value="simple">简约风格</option>
+                    <option value="classic">经典风格</option>
+                    <option value="modern">现代科技风</option>
+                    <option value="vintage">复古书卷风</option>
+                    <option value="nature">自然清新风</option>
+                    <option value="dreamy">梦幻紫罗兰风</option>
+                    <option value="sunset">温暖日落风</option>
+                    <option value="monochrome">极简黑白风</option>
+                    <option value="ocean">海洋深蓝风</option>
+                    <option value="custom">自定义背景</option>
+                </select>
+                <input type="file" id="custom-bg" accept="image/*" style="display:none;" onchange="loadCustomBackground(event)">
+                <button onclick="document.getElementById('custom-bg').click()">选择背景</button>
+                <div class="color-pickers" id="color-pickers">
+                    <label>单词颜色: <input type="color" id="word-color" value="#34495e" onchange="updateCards()"></label>
+                    <label>音标颜色: <input type="color" id="pronunciation-color" value="#7f8c8d" onchange="updateCards()"></label>
+                    <label>定义颜色: <input type="color" id="definition-color" value="#2c3e50" onchange="updateCards()"></label>
+                </div>
+                <select id="download-size">
+                    <option value="a4">A4</option>
+                    <option value="b5">B5</option>
+                    <option value="single">单页</option>
+                </select>
+                <select id="download-bg">
+                    <option value="white">白色背景</option>
+                    <option value="transparent">透明背景</option>
+                </select>
+                <button id="download-btn">下载</button>
+                <select id="quiz-mode">
+                    <option value="en-to-zh">英-中</option>
+                    <option value="zh-to-en">中-英</option>
+                </select>
+                <button id="quiz-btn">默写模式</button>
+                <button id="clear-btn">清空</button>
+            </div>
+        </div>
+        <div id="card-container" class="card-container"></div>
+        <div id="quiz-container" class="card-container"></div>
+        <div id="temp-container"></div>
+        <div id="a4-container"></div>
+        <div id="b5-container"></div>
+    </div>
+    <script>
+        let cardsData = [];
+        let customBackground = null;
+
+        function toggleFormatHelp() {
+            const formatDetails = document.getElementById('format-details');
+            const toggle = document.querySelector('.format-toggle');
+            formatDetails.style.display = formatDetails.style.display === 'none' ? 'block' : 'none';
+            toggle.textContent = formatDetails.style.display === 'none' ? '［展开］' : '［收起］';
+        }
+
+        function cleanText(text) {
+            return text.replace(/\\n/g, ' ').replace(/[;]/g, '').trim();
+        }
+
+        function toggleColorPickers() {
+            const style = document.getElementById('card-style').value;
+            const pickers = document.getElementById('color-pickers');
+            pickers.style.display = style === 'custom' ? 'flex' : 'none';
+            if (cardsData.length) updateCards();
+        }
+
+        function updateCards() {
+            const mode = document.getElementById('quiz-container').style.display === 'none' ? 'normal' : 
+                document.getElementById('quiz-mode').value === 'en-to-zh' ? 'quiz-en-to-zh' : 'quiz-zh-to-en';
+            const html = renderCards(cardsData, mode);
+            const target = mode === 'normal' ? 'card-container' : 'quiz-container';
+            document.getElementById(target).innerHTML = html;
+        }
+
+        function loadCustomBackground(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    customBackground = e.target.result;
+                    if (cardsData.length) updateCards();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function parsePronunciation(text) {
+            const match = text.match(/\/[^\/]+\//);
+            return match ? match[0].replace(/BrE:|AmE:/g, '') : text;
+        }
+
+        // 修改splitMultiSeparator函数，去除空格分隔符，只保留 ; 、, 、| 和数字分隔
+            function splitMultiSeparator(text) {
+                if (!text) return [];
+
+                // 使用正则表达式分割多个分隔符，如 ; 、, 、| 和数字（如1.、2.）
+                const separator = /[;,\|]|\d\.\s/;
+
+                // 分割文本，并移除空格
+                return text.split(separator)
+                        .map(item => cleanText(item))
+                        .filter(item => item);
+            }
+
+            function parseWordData(input) {
+                const lines = input.trim().split('\n').filter(line => line);
+                const cards = [];
+
+                lines.forEach((line, index) => {
+                    const parts = line.split('\t');
+                    if (parts.length < 2) return;
+
+                    if (index === 0 && (parts.includes('序号') || parts.includes('单词'))) return;
+
+                    // ✅ 修改：对定义、短语、词形、注释等字段使用splitMultiSeparator，支持数字和分号等
+                    const definitions = parts[3] ? splitMultiSeparator(parts[3]) : [];
+                    const phrases = parts[4] ? splitMultiSeparator(parts[4]) : [];
+
+                    // ✅ 例句部分使用数字和点分割（如 1.、2.）
+                    const examples = parts[5] ? splitExampleSentences(parts[5]) : [];
+                    const forms = parts[6] ? splitMultiSeparator(parts[6]) : [];
+                    const notes = parts[7] ? cleanText(parts[7]) : '';
+
+                    cards.push({
+                        word: cleanText(parts[1] || ''),
+                        pronunciation: parts[2] ? parsePronunciation(parts[2]) : '',
+                        definitions: definitions.length ? definitions.map(d => {
+                            const match = d.match(/^(\d+\.\s*)([a-z]+\.\s*)?(.*)/);
+                            return match ? { pos: match[2] ? match[2].replace('.', '') : '', def: match[3] } : { pos: '', def: d };
+                        }) : [{ pos: '', def: '' }],
+                        phrases,
+                        examples,
+                        forms,
+                        notes
+                    });
+                });
+
+                if (cards.length === 0) {
+                    return parseAlternativeFormats(input);
+                }
+                return cards;
+            }
+
+            // ✅ 处理例句部分，使用数字和点分割
+            function splitExampleSentences(text) {
+                // 使用数字分隔符（如 1.、2.）来分割
+                const exampleSentences = text.split(/\d\.\s/).map(e => cleanText(e)).filter(Boolean);
+                return exampleSentences;
+            }
+
+
+        function parseAlternativeFormats(input) {
+            const lines = input.split('\n').filter(line => line.trim());
+            const cards = [];
+
+            lines.forEach(line => {
+                const fields = line.split(/\s+/).filter(f => f);
+                if (!fields[0]?.match(/^\d+$/)) return;
+
+                const word = fields[1];
+                let pronunciation = '';
+                let definitions = [];
+                let startIdx = 2;
+
+                if (fields[2]?.match(/^[\[\/].+[\]\/]$/)) {
+                    pronunciation = parsePronunciation(fields[2]);
+                    startIdx = 3;
+                }
+
+                for (let i = startIdx; i < fields.length; i++) {
+                    const cleanedField = cleanText(fields[i]);
+                    const match = cleanedField.match(/^([a-z]+)\.(.*)/);
+                    if (match) {
+                        definitions.push({ pos: match[1], def: match[2].trim() });
+                    } else if (cleanedField.match(/^\d+\./)) {
+                        definitions.push({ pos: '', def: cleanedField.replace(/^\d+\./, '').trim() });
+                    }
+                }
+
+                if (word) {
+                    cards.push({
+                        word: cleanText(word),
+                        pronunciation,
+                        definitions: definitions.length ? definitions : [{ pos: '', def: '' }],
+                        phrases: [],
+                        examples: [],
+                        forms: [],
+                        notes: ''
+                    });
+                }
+            });
+
+            return cards;
+        }
+
+        function renderCards(cards, mode = 'normal') {
+            const style = document.getElementById('card-style').value;
+            const showPhrases = document.getElementById('show-phrases').checked;
+            const showExamples = document.getElementById('show-examples').checked;
+            const showForms = document.getElementById('show-forms').checked;
+            const showNotes = document.getElementById('show-notes').checked;
+            const wordColor = style === 'custom' && document.getElementById('word-color') ? document.getElementById('word-color').value : '#34495e';
+            const pronColor = style === 'custom' && document.getElementById('pronunciation-color') ? document.getElementById('pronunciation-color').value : '#7f8c8d';
+            const defColor = style === 'custom' && document.getElementById('definition-color') ? document.getElementById('definition-color').value : '#2c3e50';
+
+            return cards.map(card => {
+                const backgroundStyle = style === 'custom' && customBackground ? 
+                    `style="background: url('${customBackground}') no-repeat center/cover;"` : '';
+                const colorStyle = style === 'custom' ? `style="color: ${wordColor};"` : '';
+                const pronStyle = style === 'custom' ? `style="color: ${pronColor};"` : '';
+                const defStyle = style === 'custom' ? `style="color: ${defColor};"` : '';
+
+                if (mode === 'quiz-en-to-zh') {
+                    return `
+                        <div class="card ${style}" ${backgroundStyle}>
+                            <div class="card-header" ${colorStyle}>
+                                ${card.word}
+                                ${card.pronunciation ? `<span class="pronunciation" ${pronStyle}>${card.pronunciation}</span>` : ''}
+                            </div>
+                            <div class="card-line"></div>
+                            <div class="card-body" style="height: 120px"></div>
+                        </div>
+                    `;
+                } else if (mode === 'quiz-zh-to-en') {
+                    return `
+                        <div class="card ${style}" ${backgroundStyle}>
+                            <div class="card-header">
+                                ${card.pronunciation ? `<span class="pronunciation" ${pronStyle}>${card.pronunciation}</span>` : ''}
+                            </div>
+                            <div class="card-line"></div>
+                            <div class="card-body">
+                                ${card.definitions.map(d => `
+                                    <div class="quiz-definition" ${defStyle}>
+                                        <strong>${d.pos ? d.pos + '.' : ''}</strong> ${d.def}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="card ${style}" ${backgroundStyle}>
+                            <div class="card-header" ${colorStyle}>
+                                ${card.word}
+                                ${card.pronunciation ? `<span class="pronunciation" ${pronStyle}>${card.pronunciation}</span>` : ''}
+                            </div>
+                            <div class="card-line"></div>
+                            <div class="card-body">
+                                ${card.definitions.map(d => `
+                                    <p ${defStyle}><strong>${d.pos ? d.pos + '.' : ''}</strong> ${d.def}</p>
+                                `).join('')}
+                                ${showPhrases && card.phrases.length ? `
+                                    <div class="card-section">
+                                        <h4>常用短语</h4>
+                                        ${card.phrases.map(p => `<div class="phrase-item">${p}</div>`).join('')}
+                                    </div>
+                                ` : ''}
+                                ${showExamples && card.examples.length ? `
+                                    <div class="card-section">
+                                        <h4>例句</h4>
+                                        ${card.examples.map(e => `<div class="example-item">${e}</div>`).join('')}
+                                    </div>
+                                ` : ''}
+                                ${showForms && card.forms.length ? `
+                                    <div class="card-section">
+                                        <h4>词形变化</h4>
+                                        ${card.forms.map(f => `<div class="form-item">${f}</div>`).join('')}
+                                    </div>
+                                ` : ''}
+                                ${showNotes && card.notes ? `
+                                    <div class="note">${card.notes}</div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        document.getElementById('generate-btn').addEventListener('click', function() {
+            const input = document.getElementById('input-area').value.trim();
+            if (!input) {
+                alert('请输入单词数据！');
+                return;
+            }
+
+            cardsData = parseWordData(input);
+            if (cardsData.length === 0) {
+                alert('无法解析输入数据，请检查格式！');
+                return;
+            }
+
+            const cardHTML = renderCards(cardsData, 'normal');
+            document.getElementById('card-container').innerHTML = cardHTML;
+            document.getElementById('card-container').style.display = 'grid';
+            document.getElementById('quiz-container').style.display = 'none';
+            toggleColorPickers();
+        });
+
+        document.getElementById('quiz-btn').addEventListener('click', function() {
+            if (!cardsData.length) {
+                alert('请先生成卡片！');
+                return;
+            }
+            const mode = document.getElementById('quiz-mode').value === 'en-to-zh' ? 'quiz-en-to-zh' : 'quiz-zh-to-en';
+            const quizHTML = renderCards(cardsData, mode);
+            document.getElementById('quiz-container').innerHTML = quizHTML;
+            document.getElementById('card-container').style.display = 'none';
+            document.getElementById('quiz-container').style.display = 'grid';
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            document.getElementById('input-area').value = '';
+            document.getElementById('card-container').innerHTML = '';
+            document.getElementById('quiz-container').innerHTML = '';
+            cardsData = [];
+            customBackground = null;
+            document.getElementById('custom-bg').value = '';
+            toggleColorPickers();
+        });
+
+        async function downloadAllCards(cards, size) {
+            const tempContainer = document.getElementById('temp-container');
+            const a4Container = document.getElementById('a4-container');
+            const b5Container = document.getElementById('b5-container');
+            const bgOption = document.getElementById('download-bg').value;
+            const backgroundColor = bgOption === 'white' ? '#fff' : null;
+            const blobs = [];
+            const baseName = 'wordcard';
+
+            if (size === 'single') {
+                for (let i = 0; i < cards.length; i++) {
+                    const clone = cards[i].cloneNode(true);
+                    clone.style.maxHeight = 'none'; // 移除高度限制
+                    
+                    tempContainer.innerHTML = '';
+                    tempContainer.appendChild(clone);
+                    
+                    const canvas = await html2canvas(tempContainer, {
+                        scale: 2,
+                        backgroundColor: backgroundColor
+                    });
+                    blobs.push({ name: `${baseName}_${i + 1}.png`, data: canvas.toDataURL('image/png') });
+                }
+            } else {
+                // 设置页面尺寸
+                const pageConfig = size === 'a4' ? 
+                    { width: 794, height: 1123, container: a4Container, gridClass: 'a4-grid' } : 
+                    { width: 516, height: 729, container: b5Container, gridClass: 'b5-grid' };
+                
+                // 计算每页最多容纳的卡片数量
+                const maxCardsPerPage = 4; // 默认每页最多4张卡片
+                
+                // 分组卡片处理
+                const cardGroups = [];
+                for (let i = 0; i < cards.length; i += maxCardsPerPage) {
+                    cardGroups.push(cards.slice(i, i + maxCardsPerPage));
+                }
+                
+                // 处理每一组卡片
+// 处理每一组卡片
+for (let i = 0; i < cardGroups.length; i++) {
+                    const pageCards = cardGroups[i];
+                    const cardWidth = (pageConfig.width - 40) / 2; // 两列布局，减去左右边距
+                    
+                    // 创建页面容器
+                    pageConfig.container.innerHTML = '';
+                    const gridDiv = document.createElement('div');
+                    gridDiv.className = pageConfig.gridClass;
+                    
+                    // 根据卡片数量确定布局
+                    if (pageCards.length <= 2) {
+                        gridDiv.style.gridTemplateRows = '1fr';
+                    } else {
+                        gridDiv.style.gridTemplateRows = 'repeat(2, auto)';
+                    }
+                    
+                    // 添加卡片到页面
+                    pageCards.forEach(card => {
+                        const clone = card.cloneNode(true);
+                        clone.style.width = `${cardWidth}px`;
+                        clone.style.maxHeight = 'none'; // 允许卡片根据内容自适应高度
+                        gridDiv.appendChild(clone);
+                    });
+                    
+                    pageConfig.container.appendChild(gridDiv);
+                    
+                    // 渲染页面为图片
+                    const canvas = await html2canvas(pageConfig.container, {
+                        width: pageConfig.width,
+                        height: pageConfig.height,
+                        scale: 2,
+                        backgroundColor: backgroundColor
+                    });
+                    
+                    blobs.push({ 
+                        name: `${baseName}_${size.toUpperCase()}_${i + 1}.png`, 
+                        data: canvas.toDataURL('image/png') 
+                    });
+                }
+            }
+
+            return blobs;
+        }
+
+        document.getElementById('download-btn').addEventListener('click', async function() {
+            if (!cardsData.length) {
+                alert('请先生成卡片！');
+                return;
+            }
+
+            const size = document.getElementById('download-size').value;
+            const container = document.getElementById('card-container').style.display !== 'none' 
+                ? document.getElementById('card-container')
+                : document.getElementById('quiz-container');
+            const cards = [...container.children];
+
+            const blobs = await downloadAllCards(cards, size);
+
+            // 使用 JSZip 打包
+            const zip = new JSZip();
+            blobs.forEach(blob => {
+                const base64Data = blob.data.split(',')[1];
+                zip.file(blob.name, base64Data, { base64: true });
+            });
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const bgOption = document.getElementById('download-bg').value;
+                saveAs(content, `wordcards_${size}_${bgOption}_${Date.now()}.zip`);
+            });
+        });
+
+        document.getElementById('card-style').addEventListener('change', function() {
+            if (cardsData.length) {
+                updateCards();
+            }
+        });
+    </script>
+</body>
+</html>

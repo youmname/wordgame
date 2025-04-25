@@ -742,18 +742,11 @@ window.WordDataLoader = {
             // 监听"今日推荐"卡片点击
             const dailyCard = document.querySelector('.func-card[data-type="secondary"]:nth-child(4)');
             if (dailyCard) {
-                const originalOnClick = dailyCard.onclick;
+                // 新增：直接跳转到 card.html
                 dailyCard.onclick = (e) => {
-                    // 设置为今日推荐模式
-                    if (window.store && typeof window.store.updatePlayMode === 'function') {
-                        window.store.updatePlayMode('daily');
-                        console.log('WordDataLoader: 已设置为今日推荐模式');
-                    }
-                    
-                    // 执行原始点击事件（如果有）
-                    if (typeof originalOnClick === 'function') {
-                        originalOnClick.call(dailyCard, e);
-                    }
+                    e.preventDefault(); // 阻止可能的默认行为
+                    console.log('WordDataLoader: 点击今日推荐，跳转到 card.html');
+                    window.location.href = 'card.html'; // 确保 card.html 路径正确
                 };
             }
             

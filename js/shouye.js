@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         initCalendar();
         initViewSwitcher();
         bindEventListeners();
-
+  
         // 4. 尝试创建Web Worker
         initWorkers();
         
@@ -582,7 +582,7 @@ function loadCalendarData(calendar) {
                 calendarData[dateStr] = heatmapData[dateStr];
             });
             if (calendar) { // 确保 calendar 实例存在
-                 calendar.setData(calendarData);
+            calendar.setData(calendarData);
             }
             
             // ---> 计算 streak 并更新 userStats <--- 

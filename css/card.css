@@ -1,0 +1,1075 @@
+/* Google Fonts for better typography */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Quicksand:wght@400;500;700&display=swap');
+
+:root {
+    --primary-color: #4a90e2; /* 柔和蓝 */
+    --secondary-color: #f5a623; /* 橙黄 */
+    --gradient-start: #ff9a9e; /* 粉 */
+    --gradient-end: #fad0c4; /* 浅粉 */
+    --gradient-blue-start: #89f7fe; /* 浅蓝 */
+    --gradient-blue-end: #66a6ff; /* 中蓝 */
+
+    /* --- 恢复简单的文本颜色定义 --- */
+    --text-dark: #2c3e50; /* 深灰蓝 (初始值) */
+    --text-light: #7f8c8d; /* 浅灰 (初始值) */
+    /* --- 新增：磨砂模糊程度变量 --- */
+    --card-frost-blur: 8px; /* 默认模糊值 */
+    /* ------------------------------ */
+
+    --bg-light: #f8f9fa;
+    --bg-white: #ffffff;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --card-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+}
+
+body {
+    margin: 0;
+    font-family: 'Noto Sans SC', 'Quicksand', sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    line-height: 1.7;
+    overflow: hidden; /* 防止页面滚动条影响布局 */
+}
+
+/* 整体布局 */
+.card-page-container {
+  display: flex;
+  height: 100vh; /* 固定高度为视口高度 */
+}
+
+/* 左侧导航栏 */
+.sidebar {
+  width: 260px; /* 展开宽度 */
+  background: var(--bg-white);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  box-shadow: 4px 0 15px var(--shadow-color);
+  flex-shrink: 0; /* 防止被压缩 */
+  position: relative; /* 改为相对定位，因为不再需要sticky */
+  height: 100%; /* 占满父容器高度 */
+  overflow-x: hidden; /* 隐藏水平溢出 */
+  z-index: 1000; /* 确保在最上层 */
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px; /* 调整内边距 */
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px; /* 与下方内容间距 */
+    flex-shrink: 0; /* 防止头部被压缩 */
+}
+
+.sidebar-logo-text {
+   font-size: 1.2rem;
+   font-weight: 700;
+   color: var(--text-dark);
+   margin-left: 15px; /* 与按钮间距 */
+   opacity: 1;
+   transition: opacity 0.2s ease 0.1s; /* 延迟消失 */
+   white-space: nowrap;
+}
+
+/* 切换按钮新样式 */
+.sidebar-toggle-btn {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-color); /* 灰色边框 */
+    color: var(--text-light); /* 图标颜色 */
+    width: 32px;
+    height: 32px;
+    border-radius: 8px; /* 圆角矩形 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.3s ease;
+    flex-shrink: 0; /* 防止被压缩 */
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #f0f0f0;
+    color: var(--text-dark);
+}
+
+.sidebar.collapsed {
+    width: 80px; /* 收起后的窄宽度 */
+}
+
+/* 收起状态下的样式调整 */
+.sidebar.collapsed .sidebar-header {
+   padding: 15px; /* 调整内边距以适应按钮 */
+   justify-content: center; /* 按钮居中 */
+}
+.sidebar.collapsed .sidebar-logo-text {
+    opacity: 0; /* 隐藏Logo文字 */
+    width: 0; /* 防止占位 */
+    margin-left: 0;
+    transition-delay: 0s; /* 立刻消失 */
+}
+.sidebar.collapsed .nav-title,
+.sidebar.collapsed .custom-select,
+.sidebar.collapsed .chapter-item
+{ 
+   opacity: 0;
+   pointer-events: none; /* 不可交互 */
+   transition: opacity 0.1s ease; /* 快速消失 */
+   height: 0; /* 隐藏占位 */
+   margin: 0;
+   padding: 0;
+   border: none;
+   overflow: hidden;
+}
+
+.sidebar.collapsed .nav-section { 
+    margin-bottom: 0; 
+    padding: 0 15px; /* 收起时内部留点边距 */
+}
+
+/* 调整切换按钮在收起时的旋转 */
+.sidebar.collapsed .sidebar-toggle-btn {
+    transform: rotate(180deg); /* 箭头反向 */
+}
+
+.nav-section {
+    margin-bottom: 20px; /* 减小间距 */
+    padding: 0 20px; /* 左右内边距 */
+    transition: opacity 0.2s ease 0.1s; /* 延迟消失 */
+}
+
+.nav-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px; /* 减小间距 */
+    padding-left: 0;
+    white-space: nowrap;
+}
+
+/* 自定义下拉选择组件样式 */
+.custom-select-wrapper {
+    position: relative;
+    width: 100%;
+    cursor: pointer;
+    user-select: none; /* 防止文本选中 */
+    transition: opacity 0.2s ease 0.1s; /* 保持与 sidebar 内容一致的过渡 */
+}
+
+.custom-select-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px; /* 调整内边距 */
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* 圆角 */
+    background-color: var(--bg-white);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-select-wrapper:focus .custom-select-display, /* 聚焦时显示效果 */
+.custom-select-wrapper.open .custom-select-display {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+.selected-option {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 超出显示省略号 */
+}
+
+.dropdown-arrow {
+    color: var(--text-light);
+    transition: transform 0.3s ease;
+    flex-shrink: 0; /* 防止箭头被压缩 */
+    margin-left: 8px;
+}
+
+.custom-select-wrapper.open .dropdown-arrow {
+    transform: rotate(180deg); /* 展开时箭头旋转 */
+}
+
+.custom-select-options {
+    position: absolute;
+    top: calc(100% + 5px); /* 在显示区域下方 */
+    left: 0;
+    right: 0;
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 12px; /* 选项列表圆角 */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    max-height: 200px; /* 限制最大高度 */
+    overflow-y: auto;
+    z-index: 1001; /* 确保在其他元素之上 */
+    list-style: none;
+    padding: 8px 0; /* 上下内边距 */
+    margin: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px); /* 初始向上偏移 */
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+.custom-select-wrapper.open .custom-select-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0); /* 展开时恢复位置 */
+}
+
+.custom-select-options li {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 自定义悬停和选中样式 */
+.custom-select-options li:hover {
+    background-color: #e9f3ff; /* 柔和的蓝色背景 */
+    color: var(--primary-color);
+}
+
+.custom-select-options li.selected {
+    background-color: #d4e8ff; /* 稍深一点的蓝色表示选中 */
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* 美化滚动条 (可选) */
+.custom-select-options::-webkit-scrollbar { width: 6px; }
+.custom-select-options::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+.custom-select-options::-webkit-scrollbar-track { background: #f1f1f1; }
+
+/* 侧边栏收起时隐藏自定义下拉框 */
+.sidebar.collapsed .custom-select-wrapper {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease;
+    height: 0;
+    overflow: hidden;
+}
+
+/* 章节列表 */
+.chapter-list-container { /* 添加容器用于滚动 */
+    flex-grow: 1; /* 占据剩余空间 */
+    overflow-y: auto; /* 允许滚动 */
+    padding: 0 5px 0 20px; /* 左侧加内边距，右侧留滚动条空间 */
+}
+
+.chapter-list { 
+    /* 移除滚动条相关样式 */
+    padding-right: 0;
+}
+
+/* 美化滚动条 (可选) */
+.chapter-list-container::-webkit-scrollbar { width: 6px; }
+.chapter-list-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+.chapter-list-container::-webkit-scrollbar-track { background: #f1f1f1; }
+
+.chapter-item {
+  padding: 10px 15px;
+  margin-bottom: 6px; /* 减小间距 */
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease 0.1s;
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.chapter-item::before { /* 添加悬停效果 */
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background-color: var(--primary-color);
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+  transform-origin: bottom;
+}
+
+.chapter-item:hover {
+  background-color: #f1f8ff; /* 浅蓝背景 */
+}
+
+.chapter-item.active {
+  background-color: var(--primary-color);
+  color: var(--bg-white);
+  font-weight: 500;
+}
+.chapter-item.active::before {
+  transform: scaleY(1);
+}
+
+/* 锁定章节的样式 */
+.chapter-item.locked {
+    color: #aaa; /* 灰色文字 */
+    cursor: not-allowed; /* 禁用鼠标指针 */
+    background-color: transparent !important; /* 强制透明背景 */
+    pointer-events: none; /* 禁用点击事件 */
+    opacity: 0.7; /* 可选：稍微降低透明度 */
+}
+
+.chapter-item.locked:hover {
+    background-color: transparent !important;
+}
+
+.chapter-item.locked::before {
+    display: none; /* 隐藏左侧的蓝色竖线 */
+}
+
+/* 主内容区 */
+.card-main {
+  flex-grow: 1; /* 占据剩余空间 */
+  display: flex;
+  flex-direction: column;
+  position: relative; /* 移除，因为不再需要与sticky sidebar交互 */
+  height: 100vh; /* 限制高度以启用滚动 */
+  box-sizing: border-box; /* 包含 padding */
+  /* margin-left 由JS控制或移除 */
+  padding: 30px 40px; /* 内边距 */
+  overflow: hidden; /* 防止主区域滚动 */
+}
+
+/* 移除边距调整，JS控制或Flexbox处理 */
+/* .sidebar.collapsed + .card-main {
+  margin-left: 80px; 
+} */
+
+/* 顶部控制栏 */
+.top-controls {
+    display: flex;
+    /* justify-content: flex-end; */ /* 移除或注释 */
+    justify-content: space-between; /* <-- 让两组按钮分布在行两端 */
+    align-items: center;  /* <-- 垂直居中 */
+    margin-bottom: 20px;
+    padding: 0 10px; /* 可以恢复或调整左右内边距 */
+    flex-shrink: 0; 
+}
+
+/* 确保 .action-buttons 保持 flex 布局 */
+.action-buttons {
+    display: flex;
+    gap: 15px; 
+    /* 不需要 justify-content: flex-end，因为父级 align-items: flex-end */
+}
+
+/* 微调 action-btn 基础样式以适应 select */
+.action-btn {
+    padding: 10px 15px; /* 调整内边距 */
+    border: none;
+    border-radius: 20px; /* 圆角 */
+    background-color: #e9ecef; /* 浅灰色背景 */
+    color: var(--text-dark);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center; /* 确保内部元素垂直居中 */
+    gap: 8px; /* 图标和文字间距 */
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    appearance: none; /* 移除 select 默认样式 */
+    text-align: center;
+    height: 38px; /* 设定一个固定高度 */
+    box-sizing: border-box; /* 统一 box-sizing */
+}
+.action-btn:hover {
+    background-color: #dee2e6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.action-btn.btn-save:hover { background-color: #a5d6a7; color: #1b5e20; } 
+/* 移除旧 btn-bg 悬停 */
+/* .action-btn.btn-bg:hover { background-color: #b3e5fc; color: #01579b; } */
+
+/* 样式选择器包裹容器 */
+.style-selector-wrapper {
+    position: relative; /* 用于可能的下拉箭头定位（如果需要自定义箭头） */
+}
+
+/* 下拉菜单特定样式 */
+#card-style-select {
+    min-width: 120px; /* 给点最小宽度 */
+    padding-right: 30px; /* 为可能的箭头留空间 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237f8c8d' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    height: 38px; 
+    box-sizing: border-box;
+     /* 微调 padding 使文字垂直居中 (可能需要根据字体调整) */
+     padding-top: 0; 
+     padding-bottom: 0;
+}
+#card-style-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2); /* 添加聚焦效果 */
+}
+
+/* 单词卡片容器 - 确保居中 */
+.word-card-wrapper {
+    flex-grow: 1; /* 占据中间主要空间 */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* <-- 改为顶部对齐 */
+    /* perspective: 1000px; */ /* 透视效果移到卡片本身或按需保留 */
+    /* overflow: hidden; */ /* <-- 移除隐藏 */
+    overflow-y: auto; /* <-- 添加垂直滚动 */
+    padding: 20px 0; /* 上下留些间距 */
+}
+
+/* 添加这个规则，用于调试 */
+.word-card.is-updating {
+    outline: 4px solid red !important; /* 非常显眼的红色外框 */
+    transition: none !important; /* 更新期间禁用过渡效果 */
+}
+
+.word-card {
+  width: 100%;
+  max-width: 700px; 
+  /* min-height: 400px; */ /* <-- 移除最小高度 */
+  background: linear-gradient(135deg, var(--bg-white) 0%, #fdfbfb 100%); 
+  border-radius: 24px; 
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, border 0.3s ease; /* 添加 background 和 border 过渡 */
+  position: relative; /* 确保伪元素定位正确 */
+  /* overflow: hidden; */ /* <-- 移除隐藏 */
+  border: 2px solid transparent; /* 添加透明边框占位，防止切换时跳动 */
+  margin-top: 20px; /* 可选：给顶部加点边距 */
+  margin-bottom: 20px; /* 可选：给底部加点边距，防止滚动条太贴底 */
+  perspective: 1000px; /* 如果需要翻转效果，放在这里 */
+}
+
+.word-card.default { /* 对应默认样式 */
+     background: linear-gradient(135deg, var(--bg-white) 0%, #fdfbfb 100%);
+     border-color: transparent;
+}
+
+/* --- 添加从生成器复制的卡片样式 --- */
+.word-card.elegant { background: linear-gradient(to bottom, #ffffff, #f7f9fc); border: 2px solid #b0bec5; }
+.word-card.elegant::before { content: '✎'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #b0bec5; opacity: 0.7; }
+
+.word-card.simple { background: #ffffff; border: 1px solid #ecf0f1; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+
+.word-card.classic { background: #fef9e7; border: 2px dashed #d4a017; }
+.word-card.classic::after { content: '📖'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #d4a017; opacity: 0.8; }
+
+.word-card.modern { background: linear-gradient(135deg, #e6ecef, #ffffff); border: 2px solid #00b4d8; }
+.word-card.modern::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, #00b4d8, #90e0ef); }
+
+/* 注意：需要确保背景图片路径正确或移除data URL */
+.word-card.vintage { background: #fdf6e9 url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAB5JREFUCB1jYGBgYGBgYGBgYGBgYGBgYGBgYGBgAAAD6QBPm5WvPQAAAABJRU5ErkJggg=='); border: 2px solid #8d5524; }
+.word-card.vintage::after { content: '🖋️'; position: absolute; top: 10px; right: 10px; font-size: 20px; color: #8d5524; opacity: 0.9; }
+
+.word-card.nature { background: linear-gradient(to bottom, #f0fff0, #ffffff); border: 2px solid #7cba7c; }
+.word-card.nature::before { content: '🌿'; position: absolute; bottom: 10px; left: 10px; font-size: 20px; color: #7cba7c; }
+
+.word-card.dreamy { background: linear-gradient(120deg, #f3e5f5, #ffffff); border: 2px solid #ab47bc; }
+.word-card.dreamy::after { content: '🌌'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #ab47bc; opacity: 0.8; }
+
+.word-card.sunset { background: linear-gradient(to bottom right, #fff3e0, #ffe0b2); border: 2px solid #ffa726; }
+.word-card.sunset::before { content: '🌇'; position: absolute; top: 10px; left: 10px; font-size: 20px; color: #ffa726; }
+
+.word-card.monochrome { background: #ffffff; border: 2px solid #37474f; }
+.word-card.monochrome .card-header, .word-card.monochrome .definition { color: #37474f; } /* 调整选择器 */
+.word-card.monochrome .phonetic, .word-card.monochrome .sentence { color: #78909c; } /* 调整选择器 */
+.word-card.monochrome .card-line { border-color: #b0bec5; }
+.word-card.monochrome .highlight { background-color: rgba(55, 71, 79, 0.1); color: #37474f; }
+
+.word-card.ocean { background: linear-gradient(to bottom, #e3f2fd, #bbdefb); border: 2px solid #42a5f5; }
+.word-card.ocean::after { content: '🌊'; position: absolute; bottom: 10px; right: 10px; font-size: 18px; color: #1e88e5; }
+
+/* 自定义背景样式 (JS会设置 background-image) */
+.word-card.custom {
+    border: 2px solid var(--primary-color); /* 给个默认边框 */
+    background-size: cover; 
+    background-position: center;
+}
+
+/* 可能需要调整内部元素的颜色以适应不同背景 */
+.word-card:not(.default):not(.monochrome) .card-header { /* 示例：非默认和黑白主题，头部颜色深一点 */
+   /* color: var(--text-dark); */ /* 可以根据需要调整 */
+}
+
+/* 确保内部元素在伪元素之上 */
+.card-content {
+    position: relative; 
+    z-index: 1; /* 确保内容在伪元素之上 */
+}
+
+.card-header {
+  text-align: center;
+  border-bottom: 1px solid var(--border-color); /* 更细的分割线 */
+  padding-bottom: 20px; /* 减小间距 */
+  margin-bottom: 25px; /* 减小间距 */
+  position: relative; /* 为发音按钮定位 */
+}
+
+.word {
+  font-size: 2.8rem; /* 调整单词字号 */
+  font-weight: 700; /* 加粗 */
+  color: var(--text-dark);
+  margin: 0 0 8px 0; /* 调整间距 */
+  letter-spacing: 1px;
+}
+
+.phonetic {
+  color: var(--text-light);
+  font-size: 1.2rem; /* 调整音标字号 */
+  font-family: 'Quicksand', sans-serif; /* 使用不同字体 */
+}
+
+.audio-btn {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.audio-btn:hover {
+    color: var(--primary-color);
+}
+
+.card-body {
+    text-align: left; /* 改为左对齐可能更适合多段信息 */
+    padding: 0 30px 30px 30px; /* 调整内边距 */
+}
+
+.definition {
+    font-size: 1.15rem; 
+    color: var(--text-dark);
+    margin-bottom: 20px; 
+    font-weight: 500;
+}
+
+/* 新增：标题样式 */
+.phrase-title, 
+.morphology-title, 
+.note-title,
+.sentence-title {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-top: 20px; /* 与上一段的间距 */
+    margin-bottom: 5px; /* 与内容间距 */
+    display: none; /* 默认隐藏，由 JS 控制显示 */
+    font-weight: bold; /* 加粗标题 */
+}
+
+/* 新增：内容样式 */
+.phrase,
+.morphology,
+.note {
+    font-size: 1rem;
+    color: var(--text-dark);
+    line-height: 1.6;
+    margin-bottom: 15px;
+    display: none; /* 默认隐藏，由 JS 控制显示 */
+     white-space: pre-wrap; /* 保留换行符 */
+}
+
+.sentence {
+    font-size: 1rem;
+    color: var(--text-light);
+    line-height: 1.7;
+     margin-bottom: 0; /* 例句通常是最后，移除下边距 */
+     display: none; /* 默认隐藏，由 JS 控制显示 */
+}
+
+/* 如果需要，调整高亮样式 */
+.sentence .highlight {
+    color: var(--primary-color);
+    font-weight: 500;
+    background-color: rgba(74, 144, 226, 0.1);
+    padding: 2px 5px;
+    border-radius: 4px;
+    /* 注意：JS 中已移除静态高亮，未来可动态添加 */
+}
+
+/* 新导航控件 */
+.card-navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px 0; /* 稍微减小垂直 padding */
+  margin-top: 15px; /* 与卡片的间距 */
+  /* background-color: rgba(255, 255, 255, 0.8); */ /* 移到 .frosted */
+  background-color: var(--bg-white); /* 默认不透明白色背景 */
+  border-radius: 30px; /* 圆角 */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  width: fit-content; /* 宽度自适应内容 */
+  margin-left: auto;
+  margin-right: auto; /* 水平居中 */
+  /* backdrop-filter: blur(5px); */ /* 移到 .frosted */
+  flex-shrink: 0; /* 防止被压缩 */
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease; /* 添加 backdrop-filter 过渡 */
+}
+
+/* 新增 .frosted 类 */
+/* 
+.card-navigation.frosted {
+    background-color: rgba(255, 255, 255, 0.8); 
+    backdrop-filter: blur(5px); 
+    -webkit-backdrop-filter: blur(5px); 
+} 
+*/
+
+.nav-arrow {
+  width: 40px; /* 按钮尺寸 */
+  height: 40px;
+  border-radius: 50%; /* 圆形 */
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--gradient-blue-start), var(--gradient-blue-end)); /* 图片中的渐变色 */
+  color: white;
+  box-shadow: 0 4px 10px rgba(102, 166, 255, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin: 0 15px; /* 按钮与点的间距 */
+}
+.nav-arrow svg {
+    width: 22px;
+    height: 22px;
+}
+
+.nav-arrow:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 15px rgba(102, 166, 255, 0.5);
+}
+.nav-arrow:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 5px rgba(102, 166, 255, 0.3);
+}
+
+/* 在 .nav-arrow 样式之后添加 */
+.nav-arrow.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none; /* 禁用点击 */
+    box-shadow: none; /* 移除阴影 */
+    transform: none; /* 移除悬停效果 */
+}
+.nav-arrow.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.nav-dots {
+  display: flex;
+  gap: 10px; /* 点之间的间距 */
+}
+
+.dot {
+  width: 8px; /* 点的尺寸 */
+  height: 8px;
+  border-radius: 50%;
+  background-color: #d8d8d8; /* 非激活状态颜色 (图片中的灰色) */
+  transition: background-color 0.3s ease;
+}
+
+.dot.active {
+  background-color: var(--gradient-start); /* 激活状态颜色 (图片中的粉色) */
+}
+
+/* 移除旧按钮样式 (如果需要) */
+/* .btn-prev, .btn-next, .right-group {
+    display: none; 
+} */
+
+/* 响应式设计：小屏幕下的行为调整 */
+@media (max-width: 768px) {
+    body { overflow: auto; } /* 小屏幕允许滚动 */
+    .card-page-container { height: auto; min-height: 100vh; } /* 高度自适应 */
+
+    .sidebar {
+        position: fixed; /* 改为固定定位 */
+        left: 0;
+        top: 0;
+        height: 100%;
+        transform: translateX(-100%); /* 默认隐藏 */
+        transition: transform 0.3s ease, width 0s; /* 宽度变化不需要动画 */
+        box-shadow: 4px 0 15px rgba(0,0,0,0.15);
+        width: 260px; /* 小屏幕展开时是固定宽度 */
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .sidebar.collapsed { /* 小屏幕收起状态无效，强制展开宽度 */
+       width: 260px;
+       transform: translateX(-100%); /* 保持隐藏 */
+    }
+     /* 小屏幕时，隐藏收起状态下的样式变化，因为总是完全展开或完全隐藏 */
+     .sidebar.collapsed .sidebar-header,
+     .sidebar.collapsed .sidebar-logo-text,
+     .sidebar.collapsed .nav-title,
+     .sidebar.collapsed .custom-select,
+     .sidebar.collapsed .chapter-item,
+     .sidebar.collapsed .nav-section { 
+        opacity: 1;
+        pointer-events: auto;
+        transition: none;
+        height: auto;
+        margin: revert; /* 恢复默认的外边距 */
+        padding: revert; /* 恢复默认的内边距 */
+        border: revert; /* 恢复默认边框 */
+        overflow: visible;
+     }
+     .sidebar.collapsed .sidebar-toggle-btn {
+         transform: rotate(0deg); /* 箭头保持向左 */
+     }
+
+    .card-main {
+        margin-left: 0 !important; /* 小屏幕主内容区不留左边距 */
+        padding: 20px; /* 减小内边距 */
+        height: auto; /* 取消固定高度 */
+        min-height: 100vh; /* 保证至少占满屏幕 */
+    }
+    .word-card-wrapper { padding: 10px 0; }
+    .word-card {
+        min-height: auto; /* 取消最小高度 */
+        max-width: 90%; /* 适应屏幕宽度 */
+    }
+    .card-content { padding: 25px; }
+    .word { font-size: 2.2rem; }
+    .phonetic { font-size: 1rem; }
+    .definition { font-size: 1.1rem; margin-bottom: 15px; }
+    .sentence { font-size: 0.9rem; }
+    .action-btn span { display: none; } /* 小屏幕只显示图标 */
+    .action-btn { padding: 10px; }
+    .top-controls { margin-bottom: 15px; padding: 0; }
+    
+    /* 确保切换按钮在侧边栏内部仍然可以控制开关 */
+    .sidebar-toggle-btn {
+        /* 不需要特殊处理z-index，因为它随sidebar移动 */
+    }
+    
+    #sidebar-overlay { /* 遮罩层样式 */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 999; /* 低于侧边栏 */
+        display: none; /* 默认隐藏 */
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    #sidebar-overlay.visible {
+        display: block;
+        opacity: 1;
+    }
+}
+
+.content-toggles {
+    display: flex;
+    /* justify-content: flex-end; */ /* <-- 移除，由父级控制 */
+    align-items: center;
+    flex-wrap: wrap; 
+    gap: 12px; 
+    /* margin-bottom: 10px; */ /* <-- 移除行间距 */
+    /* width: 100%; */ /* <-- 移除宽度限制 */
+}
+
+.toggle-chip {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* 圆角 */
+    background-color: var(--bg-white);
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px; /* 图标和文字间距 */
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    user-select: none; /* 防止文本选中 */
+}
+
+.toggle-chip .toggle-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px; /* 垂直居中图标 */
+    text-align: center;
+    border-radius: 4px;
+    background-color: #e0e0e0; /* 未选中图标背景 */
+    color: white;
+    font-size: 12px; /* 图标大小 */
+    transition: background-color 0.2s ease;
+    margin-right: 4px; /* 图标和文字的细微间距 */
+}
+
+.toggle-chip:hover {
+    border-color: #ccc;
+}
+
+/* 选中状态 */
+.toggle-chip.active {
+    background-color: #e9f3ff; /* 浅蓝背景 */
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.toggle-chip.active .toggle-icon {
+    background-color: var(--primary-color); /* 选中图标背景 */
+    content: '✓'; /* 确保显示勾号 */
+}
+
+/* 未选中状态的图标 (可选：显示空框) */
+.toggle-chip:not(.active) .toggle-icon {
+     content: ''; /* 隐藏默认的✓ */
+     /* 可以添加一个边框来模拟空框 */
+     border: 1px solid #ccc;
+     background-color: white;
+}
+
+/* 确保标题和内容默认是 block 或 inline-block，以便 JS 控制 display */
+.phrase-title, .morphology-title, .note-title, .sentence-title,
+.phrase, .morphology, .note, .sentence {
+    /* display: block;  确保这些元素默认是块级或行内块 */
+    /* JS 会设置 display: 'block' 或 'none' */
+}
+
+.hue-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px; /* 给点内边距，视觉上更舒适 */
+    background-color: #e9ecef; /* 与其他按钮背景类似 */
+    border-radius: 20px; /* 圆角 */
+}
+
+.hue-label {
+    font-size: 0.9rem;
+    color: var(--text-light); /* 使用浅色文本变量 */
+    font-weight: 500;
+    white-space: nowrap; /* 防止标签换行 */
+}
+
+#hue-slider {
+    cursor: pointer;
+    width: 100px; /* 给滑块一个基础宽度 */
+    height: 8px; /* 滑块轨道高度 */
+    appearance: none; /* 移除默认样式 */
+    background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red); /* 色相渐变背景 */
+    border-radius: 4px;
+    outline: none;
+}
+
+/* 自定义滑块按钮 (Thumb) 样式 (可选，不同浏览器前缀不同) */
+#hue-slider::-webkit-slider-thumb { /* Chrome, Safari, Edge */
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color); /* 使用主色调 */
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+#hue-slider::-moz-range-thumb { /* Firefox */
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.color-picker-btn {
+    display: flex;
+    align-items: center;
+    padding: 5px 8px; /* 调整内边距以匹配高度 */
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* 与其他按钮一致的圆角 */
+    background-color: var(--bg-white); /* 使用白色背景 */
+    cursor: pointer;
+    gap: 6px;
+    height: 38px; 
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+.color-picker-btn:hover {
+    border-color: #ccc;
+}
+
+.color-picker-btn label { /* 可选的标签 */
+    font-size: 0.9rem;
+    color: var(--text-light); 
+    margin-right: 4px;
+    line-height: 1; /* 确保标签垂直居中 */
+}
+
+.color-picker-btn input[type="color"] {
+    width: 24px; /* 颜色预览区域宽度 */
+    height: 24px; /* 颜色预览区域高度 */
+    border: none;
+    padding: 0; /* 移除默认内边距 */
+    border-radius: 4px; /* 轻微圆角 */
+    cursor: pointer;
+    background-color: transparent; /* 隐藏 input 本身的背景 */
+    appearance: none; /* 尝试移除默认外观 */
+    outline: none; /* 移除外框 */
+    /* 清除浏览器默认的颜色选择器按钮样式 */
+    &::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+    &::-webkit-color-swatch {
+        border: 1px solid #ccc; /* 给颜色样本加个边框 */
+        border-radius: 4px;
+    }
+     &::-moz-color-swatch { /* Firefox */
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+}
+
+/* 定义伪元素基本样式 */
+.word-card::before {
+    content: '';
+    position: absolute;
+    inset: 0; /* 等同于 top: 0; left: 0; right: 0; bottom: 0; */
+    z-index: 0; /* 在背景之上，内容之下 */
+    border-radius: inherit; /* 继承卡片的圆角 */
+    
+    /* 默认状态：透明，无效果 */
+    background-color: transparent; 
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    
+    /* 添加过渡效果 */
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+    
+    /* 防止伪元素干扰鼠标事件 (重要) */
+    pointer-events: none; 
+}
+
+/* 当 .word-card 具有 .frosted 类时，修改伪元素的样式 */
+.word-card.frosted::before {
+    background-color: rgba(255, 255, 255, 0.1); /* 设置半透明背景 */
+    backdrop-filter: blur(var(--card-frost-blur)); /* 使用 CSS 变量 */
+    -webkit-backdrop-filter: blur(var(--card-frost-blur));
+}
+
+/* 修改 .frost-control-wrapper，使其成为定位上下文 */
+.frost-control-wrapper {
+    position: relative; /* 必须，用于弹出层绝对定位 */
+    display: inline-block; /* 或保持 flex 但需要注意内部对齐 */
+}
+/* 恢复磨砂按钮的独立样式 (如果之前被 wrapper 覆盖了) */
+.frost-control-wrapper .frosted-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background-color: var(--bg-white);
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    height: 38px; 
+    box-sizing: border-box;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.frost-control-wrapper .frosted-toggle.active {
+    background-color: #e9f3ff;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.frost-control-wrapper .frosted-toggle .toggle-icon {
+     display: inline-block; width: 16px; height: 16px; line-height: 16px;
+     text-align: center; border-radius: 4px; background-color: #e0e0e0; 
+     color: white; font-size: 12px; transition: background-color 0.2s ease;
+     margin-right: 4px; 
+}
+.frost-control-wrapper .frosted-toggle.active .toggle-icon {
+     background-color: var(--primary-color); content: '✓'; 
+}
+.frost-control-wrapper .frosted-toggle:not(.active) .toggle-icon {
+     content: ''; border: 1px solid #ccc; background-color: white;
+}
+
+
+/* 新增：滑块弹出层样式 */
+.frost-slider-popup {
+    position: absolute;
+    top: calc(100% + 5px); /* 在按钮下方 */
+    left: 50%; 
+    transform: translateX(-50%); 
+    background-color: var(--bg-white);
+    border-radius: 8px;
+    padding: 10px 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10; 
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0; /* 默认隐藏 */
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; /* 添加 transform 过渡 */
+    width: max-content; 
+    transform: translate(-50%, -5px); /* 初始向上偏移一点 */
+}
+.frost-slider-popup.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%); /* 恢复位置 */
+}
+
+.frost-slider-popup label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+#frost-blur-slider { /* 滑块样式 */
+    width: 120px; 
+    cursor: pointer;
+    height: 8px; 
+    appearance: none; 
+    background: #ddd; 
+    border-radius: 4px;
+    outline: none;
+}
+#frost-blur-slider::-webkit-slider-thumb { /* 滑块按钮 */
+    appearance: none; width: 16px; height: 16px;
+    background: var(--primary-color); border-radius: 50%; cursor: pointer;
+}
+#frost-blur-slider::-moz-range-thumb {
+    width: 16px; height: 16px; background: var(--primary-color);
+    border-radius: 50%; cursor: pointer; border: none;
+}
+
+.blur-value-display { /* 数值显示 */
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    min-width: 30px; 
+    text-align: right;
+    font-family: 'Quicksand', sans-serif; /* 使用数字友好字体 */
+}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词卡片学习</title>
+    <link rel="stylesheet" href="css/card.css"> <!-- 链接外部CSS -->
+</head>
+<body>
+
+<!-- 卡片页面整体容器 -->
+<div class="card-page-container">
+    <!-- 左侧导航栏 -->
+    <nav class="sidebar">
+        <!-- 切换按钮 (移到侧边栏内部) -->
+        <div class="sidebar-header">
+            <button class="sidebar-toggle-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="sidebar-logo-text">单词卡</span> <!-- 添加 Logo 或标题 -->
+        </div>
+        
+        <!-- 级别选择 (改为自定义下拉框) -->
+        <div class="nav-section">
+          <h3 class="nav-title">选择词库</h3>
+          <div class="custom-select-wrapper" tabindex="0"> <!-- 添加 tabindex 使其可聚焦 -->
+            <div class="custom-select-display">
+              <span class="selected-option">考研英语</span>
+              <svg class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+            </div>
+            <ul class="custom-select-options">
+              <li data-value="kaoyan">考研英语</li>
+              <li data-value="cet4">四级词汇</li>
+              <li data-value="cet6">六级核心</li>
+              <!-- 可以添加更多选项 -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- 章节列表 -->
+        <div class="nav-section">
+          <h3 class="nav-title">章节列表</h3>
+          <div class="chapter-list-container">
+            <div class="chapter-list">
+              <!-- 章节将由JS动态填充 -->
+            </div>
+          </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="card-main">
+      <!-- 顶部控制栏 -->
+      <div class="top-controls">
+          <!-- 新增：内容显示开关 (移到这里) -->
+          <div class="content-toggles">
+              <button class="toggle-chip active" data-controls="phrase">
+                  <span class="toggle-icon">✓</span> 短语
+              </button>
+              <button class="toggle-chip active" data-controls="sentence">
+                  <span class="toggle-icon">✓</span> 例句
+              </button>
+              <button class="toggle-chip active" data-controls="morphology">
+                  <span class="toggle-icon">✓</span> 词形
+              </button>
+              <button class="toggle-chip active" data-controls="note">
+                  <span class="toggle-icon">✓</span> 注释
+              </button>
+          </div>
+          
+          <!-- 现有动作按钮 -->
+          <div class="action-buttons">
+              <button class="action-btn btn-save">💡 <span>极简模式</span></button>
+              <div class="style-selector-wrapper">
+                  <select id="card-style-select" class="action-btn">
+                      <option value="default">默认样式</option> <!-- 添加一个默认选项 -->
+                      <option value="elegant">优雅艺术</option>
+                      <option value="simple">简约风格</option>
+                      <option value="classic">经典风格</option>
+                      <option value="modern">现代科技</option>
+                      <option value="vintage">复古书卷</option>
+                      <option value="nature">自然清新</option>
+                      <option value="dreamy">梦幻紫罗兰</option>
+                      <option value="sunset">温暖日落</option>
+                      <option value="monochrome">极简黑白</option>
+                      <option value="ocean">海洋深蓝</option>
+                      <option value="custom">自定义背景...</option> 
+                  </select>
+                  <input type="file" id="custom-bg-input" accept="image/*" style="display:none;">
+              </div>
+              
+              <!-- 新增：颜色选择器按钮 -->
+              <div class="color-picker-btn" title="选择主要文字颜色">
+                  <label for="text-dark-picker">主色:</label>
+                  <input type="color" id="text-dark-picker" value="#2c3e50">
+              </div>
+              <div class="color-picker-btn" title="选择次要文字颜色">
+                  <label for="text-light-picker">次色:</label>
+                  <input type="color" id="text-light-picker" value="#7f8c8d">
+              </div>
+              
+              <!-- 恢复：包裹磨砂控制 -->
+              <div class="frost-control-wrapper">
+                  <button class="toggle-chip frosted-toggle" data-target=".word-card" title="切换/调整卡片背景磨砂效果"> <!-- 初始可以没有 active -->
+                      <span class="toggle-icon"></span> <!-- 初始空图标 --> 磨砂
+                  </button>
+                  <!-- 磨砂程度滑块弹出层 (默认隐藏) -->
+                  <div class="frost-slider-popup"> 
+                      <label for="frost-blur-slider">模糊度:</label>
+                      <input type="range" id="frost-blur-slider" min="0" max="20" step="1" value="0"> <!-- 初始值为 0, 范围调整 -->
+                      <span class="blur-value-display">0px</span> 
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <!-- 单词卡片 -->
+      <div class="word-card-wrapper">
+          <div class="word-card">
+            <div class="card-content">
+                <div class="card-header">
+                  <h2 class="word">Perseverance</h2>
+                  <span class="phonetic">/ˌpɜːrsəˈvɪrəns/</span>
+                  <button class="audio-btn">🔊</button>
+                </div>
+                <div class="card-body">
+                  <p class="definition">这里显示释义</p>
+                  <!-- 新增：显示短语 -->
+                  <p class="phrase-title"><strong>常用短语:</strong></p>
+                  <p class="phrase">这里显示短语</p> 
+                  <!-- 新增：显示词形 -->
+                  <p class="morphology-title"><strong>词形变化:</strong></p>
+                  <p class="morphology">这里显示词形变化</p>
+                  <!-- 新增：显示注释 -->
+                  <p class="note-title"><strong>补充注释:</strong></p>
+                  <p class="note">这里显示注释</p>
+                  <!-- 例句 -->
+                  <div class="sentence-title"><strong>例句:</strong></div>
+                  <div class="sentence">Success is the result of perfection, hard work, learning from failure, loyalty, and <span class="highlight">perseverance</span>.</div>
+                </div>
+            </div>
+          </div>
+      </div>
+
+      <!-- 新的导航控件 -->
+      <div class="card-navigation">
+        <button class="nav-arrow prev">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        </button>
+        <div class="nav-dots">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <button class="nav-arrow next">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+      </div>
+    </main>
+</div>
+
+<!-- 引入外部 JavaScript, 添加 defer 属性 -->
+<script src="js/data-loader.js" defer></script> 
+<script src="js/card.js" defer></script> 
+
+</body>
+</html>

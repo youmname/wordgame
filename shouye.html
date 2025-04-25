@@ -560,12 +560,8 @@
                     if (window.setPlayMode) {
                         window.setPlayMode('recommended');
                     }
-                    // 原有的onclick行为：startTodayChallenge()
-                    if (typeof window.showTodayRecommend === 'function') {
-                        window.showTodayRecommend();
-                    } else {
-                        startTodayChallenge();
-                    }
+                    // 修改跳转逻辑：跳转到 CARD.html
+                    window.location.href = 'card.html'; 
                 };
             }
         });
