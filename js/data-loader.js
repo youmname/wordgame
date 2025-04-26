@@ -152,21 +152,19 @@ window.WordDataLoader = {
      * 获取特定章节的所有单词（不分页）
      * 根据当前游戏类型智能返回相应的单词数据
      * @param {number|string} chapterId - 章节ID
+     * @param {string} mode - 游戏模式 (例如 'normal', 'random', 'imported')
      * @returns {Promise<Array>} 单词数组
      */
-    getAllWordsByChapter: async function(chapterId) {
+    getAllWordsByChapter: async function(chapterId, mode) {
         try {
-            // 获取当前游戏类型 - 从store获取
-            let playMode = 'normal';
-            if (window.store && typeof window.store.getState === 'function') {
-                playMode = window.store.getState().game.playMode || 'normal';
-            }
+            // 获取当前游戏类型 - 直接使用传入的 mode 参数
+            const playMode = mode || 'normal'; // 使用传入的 mode，设置默认值为 'normal'
             if(chapterId === 'random'){
                 console.log('~~~~~~~~~chapterId的值为:~~~~~~~~~~~~~ ', chapterId);
                 console.log("~~~~~~~~~playMode的值为:~~~~~~~~~~~~~",playMode);
                 return await this.getRandomWordsFromLevel(chapterId, 20);
             }
-            console.log(`WordDataLoader: 当前游戏类型 [${playMode}]`);
+            console.log(`WordDataLoader: 使用传入的游戏类型 [${playMode}]`);
             
             // 根据游戏类型返回不同的单词数据，强制使用对应的数据源
             switch (playMode) {
@@ -441,17 +439,6 @@ window.WordDataLoader = {
      */
     getImportedWords: async function() {
         try {
-            // 检查当前是否为imported模式
-            let playMode = this.getPlayMode();
-            if (window.store && typeof window.store.getState === 'function') {
-                playMode = window.store.getState().game.playMode;
-            }
-            
-            if (playMode !== 'imported') {
-                console.log('当前不是导入模式，不使用本地导入数据');
-                return [];
-            }
-            
             console.log(`WordDataLoader: 获取导入的单词`);
             
             // 首先检查全局变量是否有导入的单词数据

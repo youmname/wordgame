@@ -1137,6 +1137,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[Audio Buttons] Setup: Listeners attached.');
     }
 
+    // --- 新增：设置键盘快捷键 ---
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (event) => {
+            // 忽略在输入框或可编辑区域内的按键
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) {
+                return;
+            }
+
+            // 获取当前激活的模式容器的选择器
+            const activeModeContainerSelector = currentMode === 'full' ? '.mode-full' : '.mode-minimalist';
+            const inactiveMode = currentMode === 'full' ? 'minimalist' : 'full';
+
+            switch (event.key) {
+                case 'ArrowLeft':
+                    console.log('[Shortcut] ArrowLeft detected.');
+                    // 查找当前可见且未禁用的"上一个"按钮并模拟点击
+                    const prevButton = document.querySelector(`${activeModeContainerSelector} .nav-arrow.prev:not(.disabled)`);
+                    if (prevButton) {
+                        console.log('[Shortcut] Clicking previous button.');
+                        prevButton.click();
+                    } else {
+                        console.log('[Shortcut] Previous button not found or disabled.');
+                    }
+                    break;
+                case 'ArrowRight':
+                    console.log('[Shortcut] ArrowRight detected.');
+                    // 查找当前可见且未禁用的"下一个"按钮并模拟点击
+                    const nextButton = document.querySelector(`${activeModeContainerSelector} .nav-arrow.next:not(.disabled)`);
+                    if (nextButton) {
+                        console.log('[Shortcut] Clicking next button.');
+                        nextButton.click();
+                    } else {
+                        console.log('[Shortcut] Next button not found or disabled.');
+                    }
+                    break;
+                case ' ': // 空格键
+                    console.log('[Shortcut] Space detected.');
+                    event.preventDefault(); // 阻止默认的页面滚动行为
+                    // 查找当前可见的"发音"按钮并模拟点击
+                    const audioButton = document.querySelector(`${activeModeContainerSelector} .audio-btn`);
+                    if (audioButton) {
+                        console.log('[Shortcut] Clicking audio button.');
+                        audioButton.click();
+                    } else {
+                        console.log('[Shortcut] Audio button not found.');
+                    }
+                    break;
+                case 'm':
+                case 'M':
+                    console.log('[Shortcut] M/m detected.');
+                    // 查找代表 *另一个* 模式的切换按钮并模拟点击
+                    const modeSwitchButton = document.querySelector(`.mode-btn[data-mode="${inactiveMode}"]`);
+                    if (modeSwitchButton) {
+                        console.log(`[Shortcut] Clicking mode switch button for ${inactiveMode}.`);
+                        modeSwitchButton.click();
+                    } else {
+                         console.log(`[Shortcut] Mode switch button for ${inactiveMode} not found.`);
+                    }
+                    break;
+            }
+        });
+         console.log('[Shortcuts] Keyboard shortcut listener attached.');
+    }
+
     // --- 初始化调用 ---
     //setupSidebarToggle(); // 这些已在 DOMContentLoaded 内部的其他地方调用或不再需要独立调用
     //setupResizeListener();
@@ -1148,6 +1212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationButtons(); // <-- 新增：调用导航按钮初始化
     setupModeSwitcher(); // 初始化模式切换
     setupAudioButtons(); // <-- 新增：初始化喇叭按钮
+    setupKeyboardShortcuts(); // <--- 新增调用
     await populateLevels(); // 开始加载级别和章节
     console.log('[Card Page] Final Initialization steps complete.');
 

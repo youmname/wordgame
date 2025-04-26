@@ -2527,7 +2527,7 @@
                         
                         try {
                             // 使用数据加载模块获取单词 - 使用新方法获取所有单词
-                            const words = await window.WordDataLoader.getAllWordsByChapter(chapterId);
+                            const words = await window.WordDataLoader.getAllWordsByChapter(chapterId, mode);
                             console.log(`成功获取章节${chapterId}的单词数据:`, words);
                             
                             if (words && words.length > 0) {
