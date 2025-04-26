@@ -3143,6 +3143,37 @@
                 }
             }
 
+            // --- 新增：游客限制检查 --- 
+            const userType = localStorage.getItem('userType');
+            const guestLimit = 5; // 游客最多玩到第5关
+
+            if (userType === 'guest' && this.currentChapterOrderNum !== undefined && this.currentChapterOrderNum !== null) {
+                const currentNum = parseInt(this.currentChapterOrderNum, 10);
+                if (!isNaN(currentNum) && currentNum >= guestLimit) {
+                    console.log(`[匹配游戏] 游客达到限制 (关卡 ${currentNum})，阻止进入下一关。`);
+                    // 使用 SweetAlert (如果项目已集成)
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: '试玩结束',
+                            text: '免费试玩已结束，请登录或注册以解锁更多关卡！',
+                            icon: 'info',
+                            confirmButtonText: '去登录',
+                            showCancelButton: true,
+                            cancelButtonText: '取消'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = '页面.html'; // 跳转到登录页
+                            }
+                        });
+                    } else {
+                        // 备用 alert 提示
+                        alert('免费试玩已结束，请登录或注册以解锁更多关卡！');
+                    }
+                    return; // 阻止后续代码执行
+                }
+            }
+            // --- 游客限制检查结束 ---\n
+
             // 验证必要信息是否存在
             if (!this.currentLevelId || this.currentChapterOrderNum === undefined || this.currentChapterOrderNum === null) {
                 console.error('[匹配游戏] 缺少 currentLevelId 或 currentChapterOrderNum 无法进入下一关');

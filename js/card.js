@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // updateNavigationDots(); // 更新点状态
             updateNavButtonStates(); // 更新按钮状态
         }
-        // --- 移除函数末尾的导航更新调用，因为已在 try/catch/else 中处理 ---\
+        // --- 移除函数末尾的导航更新调用，因为已在 try/catch/else 中处理 ---
         // updateNavigationDots();
         // updateNavButtonStates();
     }
@@ -817,39 +817,83 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[Card Page] Content toggle listeners setup for full mode only.');
     }
 
-    // --- 新增：初始化颜色选择器 ---
+    // --- 新增：初始化颜色选择器 --- (添加卡片元素引用和逻辑修改 + 增强日志)
     function setupColorPickers() {
+        console.log('[Color Picker] Initializing...'); // <--- 新增日志
         const darkPickers = document.querySelectorAll('.text-dark-picker');
         const lightPickers = document.querySelectorAll('.text-light-picker');
-        const rootStyle = document.documentElement.style;
-        let currentDarkColor = '', currentLightColor = '';
+        // --- 修改：使用新变量名，并直接用 picker 默认值初始化 --- 
+        let currentCardContentDarkColor = '#2c3e50'; 
+        let currentCardContentLightColor = '#7f8c8d'; 
+        // ------------------------------------------------------
+        
+        const fullModeCard = document.querySelector('.mode-full .word-card');
+        const minimalistCard = document.querySelector('.mode-minimalist .minimalist-card-content');
+        console.log('[Color Picker] Card elements found:', { fullMode: !!fullModeCard, minimalist: !!minimalistCard }); // <--- 新增日志
 
-        try { // 初始化共享状态和 Pickers
-            currentDarkColor = getComputedStyle(document.documentElement).getPropertyValue('--text-dark').trim();
-            currentLightColor = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim();
-            darkPickers.forEach(p => p.value = currentDarkColor);
-            lightPickers.forEach(p => p.value = currentLightColor);
-        } catch (e) { console.error('Error init color pickers', e); }
+        // --- 修改：简化初始化，直接从 picker 获取默认值 --- 
+        try { 
+            if (darkPickers.length > 0) {
+                currentCardContentDarkColor = darkPickers[0].value; 
+            }
+            if (lightPickers.length > 0) {
+                currentCardContentLightColor = lightPickers[0].value;
+            }
+            console.log(`[Color Picker Init] Initial values: Dark=${currentCardContentDarkColor}, Light=${currentCardContentLightColor}`);
+            
+            // 应用初始颜色到卡片
+            if (fullModeCard) {
+                fullModeCard.style.setProperty('--card-content-dark', currentCardContentDarkColor);
+                fullModeCard.style.setProperty('--card-content-light', currentCardContentLightColor);
+            }
+            if (minimalistCard) {
+                minimalistCard.style.setProperty('--card-content-dark', currentCardContentDarkColor);
+                minimalistCard.style.setProperty('--card-content-light', currentCardContentLightColor);
+            }
+
+        } catch (e) { 
+            console.error('Error initializing color pickers:', e);
+            // Fallback in case reading value fails (though unlikely for input type color)
+            darkPickers.forEach(p => p.value = currentCardContentDarkColor);
+            lightPickers.forEach(p => p.value = currentCardContentLightColor);
+        }
+        // ------------------------------------------------------
 
         darkPickers.forEach(picker => {
             picker.addEventListener('input', (event) => {
-                currentDarkColor = event.target.value; // 更新共享状态
-                rootStyle.setProperty('--text-dark', currentDarkColor);
-                // 同步其他 picker
-                darkPickers.forEach(p => { if (p !== picker) p.value = currentDarkColor; });
-                console.log(`[Color Picker] Dark color updated to: ${currentDarkColor}`);
+                currentCardContentDarkColor = event.target.value; // 更新本地变量
+                console.log(`[Color Picker Event] Dark picker changed. New value: ${currentCardContentDarkColor}`); 
+                // --- 修改：更新 --card-content-dark 变量 --- 
+                if (fullModeCard) {
+                    fullModeCard.style.setProperty('--card-content-dark', currentCardContentDarkColor);
+                    console.log('[Color Picker Event] Set --card-content-dark on fullModeCard'); 
+                }
+                if (minimalistCard) {
+                    minimalistCard.style.setProperty('--card-content-dark', currentCardContentDarkColor);
+                    console.log('[Color Picker Event] Set --card-content-dark on minimalistCard'); 
+                }
+                // -----------------------------------------
+                darkPickers.forEach(p => { if (p !== picker) p.value = currentCardContentDarkColor; }); // 同步其他 picker
             });
         });
         lightPickers.forEach(picker => {
             picker.addEventListener('input', (event) => {
-                 currentLightColor = event.target.value; // 更新共享状态
-                 rootStyle.setProperty('--text-light', currentLightColor);
-                 // 同步其他 picker
-                 lightPickers.forEach(p => { if (p !== picker) p.value = currentLightColor; });
-                 console.log(`[Color Picker] Light color updated to: ${currentLightColor}`);
+                 currentCardContentLightColor = event.target.value; // 更新本地变量
+                 console.log(`[Color Picker Event] Light picker changed. New value: ${currentCardContentLightColor}`); 
+                 // --- 修改：更新 --card-content-light 变量 --- 
+                 if (fullModeCard) {
+                     fullModeCard.style.setProperty('--card-content-light', currentCardContentLightColor);
+                     console.log('[Color Picker Event] Set --card-content-light on fullModeCard'); 
+                 }
+                 if (minimalistCard) {
+                     minimalistCard.style.setProperty('--card-content-light', currentCardContentLightColor);
+                     console.log('[Color Picker Event] Set --card-content-light on minimalistCard'); 
+                 }
+                 // -----------------------------------------
+                 lightPickers.forEach(p => { if (p !== picker) p.value = currentCardContentLightColor; }); // 同步其他 picker
             });
         });
-        console.log('[Color Pickers] Listeners attached for both modes.');
+        console.log('[Color Pickers] Listeners attached for card-specific content colors.');
     }
 
     // --- 重写：设置磨砂控制 ---
@@ -1201,25 +1245,151 @@ document.addEventListener('DOMContentLoaded', async () => {
          console.log('[Shortcuts] Keyboard shortcut listener attached.');
     }
 
+    // --- 新增：设置全屏切换 ---
+    function setupFullscreenToggle() {
+        // --- 新增：在手机模式下直接返回，不初始化全屏功能 ---
+        if (isMobile) { // isMobile 在文件前面定义，基于 window.innerWidth <= 768
+            console.log('[Fullscreen] Fullscreen toggle disabled on mobile view.');
+            // 确保按钮也被隐藏 (虽然 CSS 应该已经处理了，但双重保险)
+            const fullscreenButton = document.getElementById('floating-fullscreen-btn');
+            if (fullscreenButton) {
+                fullscreenButton.style.display = 'none';
+            }
+            return;
+        }
+        // --- 新增结束 ---
+
+        const fullscreenButton = document.getElementById('floating-fullscreen-btn');
+        if (!fullscreenButton) {
+            console.warn('[Fullscreen] Floating fullscreen toggle button not found.');
+            return;
+        }
+
+        function updateFullscreenButtons() {
+            const isFullscreen = !!document.fullscreenElement;
+            const icon = fullscreenButton.querySelector('svg');
+
+            if (isFullscreen) {
+                fullscreenButton.title = '退出全屏';
+                if (icon) {
+                    icon.innerHTML = `<path fill-rule="evenodd" d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5zm5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5zM0 10.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 0 .5.5v4a.5.5 0 0 1-.5.5h-4a.5.5 0 0 1-.5-.5v-4zm10 0a.5.5 0 0 1 .5-.5h4a1.5 1.5 0 0 1 1.5 1.5v4a.5.5 0 0 1-.5.5h-4a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 0-.5-.5z"/>`;
+                }
+            } else {
+                fullscreenButton.title = '进入全屏';
+                if (icon) {
+                    icon.innerHTML = `<path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/>`;
+                }
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .then(() => console.log('[Fullscreen] Entered fullscreen mode.'))
+                    .catch(err => console.error(`[Fullscreen] Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
+            } else {
+                document.exitFullscreen()
+                    .then(() => console.log('[Fullscreen] Exited fullscreen mode.'))
+                    .catch(err => console.error(`[Fullscreen] Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
+            }
+        }
+
+        fullscreenButton.addEventListener('click', toggleFullscreen);
+        document.addEventListener('fullscreenchange', updateFullscreenButtons);
+        updateFullscreenButtons();
+        console.log('[Fullscreen] Floating fullscreen toggle listener attached.');
+    }
+
+    // --- 新增：设置移动端菜单切换按钮 --- 
+    function setupMobileMenuToggle() {
+        console.log('[Mobile Menu] Attempting to setup mobile toggle...');
+        const mobileToggleBtn = document.getElementById('mobile-menu-toggle');
+        const sidebarEl = document.querySelector('.sidebar'); 
+        const mobileToggleIcon = mobileToggleBtn ? mobileToggleBtn.querySelector('i') : null; 
+        
+        // 移除调试反馈 1
+        if (!mobileToggleBtn) {
+            console.error('[Mobile Menu] ERROR: Mobile toggle button #mobile-menu-toggle not found!');
+            return;
+        }
+        if (!sidebarEl) {
+            console.error('[Mobile Menu] ERROR: Sidebar element .sidebar not found!');
+            return;
+        }
+        if (!mobileToggleIcon) {
+            console.error('[Mobile Menu] ERROR: Icon element <i> inside #mobile-menu-toggle not found!');
+        }
+        console.log('[Mobile Menu] Elements found, attaching listener...');
+        // 移除调试反馈 1 结束
+
+        mobileToggleBtn.addEventListener('click', (e) => {
+            // 移除调试反馈 2
+            console.log('[Mobile Menu] Mobile toggle button clicked!');
+            // 移除调试反馈 2 结束
+            
+            e.stopPropagation(); 
+            
+            const isOpening = !sidebarEl.classList.contains('open');
+            sidebarEl.classList.toggle('open'); 
+            console.log(`[Mobile Menu] Sidebar 'open' class toggled. Has class now: ${sidebarEl.classList.contains('open')}`);
+            
+            // 图标切换
+            if (mobileToggleIcon) { 
+                if (isOpening) {
+                    mobileToggleIcon.classList.remove('fa-bars');
+                    mobileToggleIcon.classList.add('fa-times');
+                } else {
+                    mobileToggleIcon.classList.remove('fa-times');
+                    mobileToggleIcon.classList.add('fa-bars');
+                }
+            }
+        });
+
+        // 点击外部关闭逻辑 (保持不变)
+        const mainContentArea = document.querySelector('.main-content'); 
+        const closeMobileSidebar = () => {
+            if (sidebarEl.classList.contains('open')) {
+                sidebarEl.classList.remove('open');
+                if (mobileToggleIcon) {
+                    mobileToggleIcon.classList.remove('fa-times');
+                    mobileToggleIcon.classList.add('fa-bars');
+                }
+                console.log('[Mobile Menu] Sidebar closed by clicking outside.');
+            }
+        };
+        sidebarEl.addEventListener('click', (e) => { e.stopPropagation(); });
+        if (mainContentArea) { mainContentArea.addEventListener('click', closeMobileSidebar); } else { console.warn('[Mobile Menu] Main content area (.main-content) not found for outside click listener.'); }
+        document.body.addEventListener('click', (e) => { if (!mobileToggleBtn.contains(e.target) && sidebarEl.classList.contains('open')) { closeMobileSidebar(); } }, true); 
+        // 外部关闭逻辑结束
+
+        console.log('[Mobile Menu] Mobile menu toggle listener attached successfully.');
+    }
+
     // --- 初始化调用 ---
-    //setupSidebarToggle(); // 这些已在 DOMContentLoaded 内部的其他地方调用或不再需要独立调用
-    //setupResizeListener();
-    setupStyleSelector(); // 确保样式选择器逻辑被初始化
-    //setupGlobalClickListener();
-    setupContentToggles(); // <-- 新增：内容开关初始化
-    setupColorPickers(); // <-- 新增：调用颜色选择器初始化
-    setupFrostControl(); // <-- 调用更新后的函数
-    setupNavigationButtons(); // <-- 新增：调用导航按钮初始化
-    setupModeSwitcher(); // 初始化模式切换
-    setupAudioButtons(); // <-- 新增：初始化喇叭按钮
-    setupKeyboardShortcuts(); // <--- 新增调用
-    await populateLevels(); // 开始加载级别和章节
-    console.log('[Card Page] Final Initialization steps complete.');
+    setupStyleSelector();
+    setupContentToggles();
+    setupColorPickers();
+    setupFrostControl();
+    setupNavigationButtons();
+    setupModeSwitcher();
+    setupAudioButtons();
+    setupKeyboardShortcuts();
+    setupFullscreenToggle();
+    setupMobileMenuToggle(); // <-- 新增：调用移动端菜单切换初始化
 
-    // 初始屏幕状态检查 (保持不变)
-    if (isMobile) {
-       sidebar.classList.remove('collapsed');
-       sidebar.style.transform = 'translateX(-100%)';
-    } 
+    // 异步操作放在最后
+    (async () => {
+        await populateLevels(); 
+        console.log('[Card Page] Final Initialization steps complete.');
+        
+        // 初始屏幕状态检查
+        if (isMobile) {
+           if (sidebar) { 
+               sidebar.classList.remove('collapsed');
+               // 移除 transform，因为手机模式下初始状态由 CSS 控制
+               // sidebar.style.transform = 'translateX(-100%)'; 
+           }
+        } 
+    })(); 
 
-});
+}); // DOMContentLoaded 的结束括号

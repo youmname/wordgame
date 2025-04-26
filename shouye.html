@@ -178,11 +178,19 @@
             console.log('切换主题:', theme);
             document.documentElement.setAttribute('data-theme', theme);
             
+            // 保存主题偏好到 localStorage
+            localStorage.setItem('preferred-theme', theme);
+
             // 更新按钮状态
             document.querySelectorAll('.theme-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            document.querySelector(`.theme-btn.${theme}`).classList.add('active');
+            const activeButton = document.querySelector(`.theme-btn.${theme}`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            } else {
+                console.warn(`未找到主题按钮: .theme-btn.${theme}`);
+            }
         }
         
         function showCustomWordbank() {
@@ -274,7 +282,7 @@
                 </div>
                 
                 <div class="func-card" data-type="secondary">
-                    🌟 今日推荐
+                    🌟 单词卡片
                     <div class="sparkle-effect"></div>
                 </div>
             </div>

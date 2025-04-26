@@ -381,7 +381,7 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0%, black 100%);
     -webkit-animation: hide 0.5s 0.3s linear both;
     -moz-animation: hide 0.5s 0.3s linear both;
-    animation: hide 0.5s 0.3s linear both;
+    animation: hide 0.5s 0.2s linear both; /* Original delay was 0.3s */
 }
 
 .flip-clock-wrapper ul.play li.flip-clock-before .down .shadow {
@@ -967,4 +967,437 @@ body .flip-clock-wrapper .flip-clock-meridium a, body .flip-clock-small-wrapper 
     font-size: clamp(0.7em, 1.5vw, 0.85em); /* Adjust size */
     margin-left: -5px; /* Pull closer to input */
     margin-right: 8px; /* Space before next input/button */
+}
+
+/* --- 响应式设计 --- */
+
+/* 平板电脑样式 (例如 <= 1024px) */
+@media (max-width: 1024px) {
+    .flip-clock-container {
+        font-size: 11vw; /* 稍微减小整体比例 */
+    }
+
+    .flip-clock-wrapper ul {
+        width: 15vw; /* 使用 vw 单位实现更好的缩放 */
+        height: 18vw; 
+        font-size: 14vw;
+        line-height: 18vw;
+        margin: 0.6vw;
+        border-radius: 0.8vw;
+    }
+    
+    .flip-clock-divider {
+        width: 2.5vw; 
+        height: 18vw; 
+    }
+    
+    .flip-clock-dot {
+        width: 1.5vw;  
+        height: 1.5vw; 
+        left: 0.5vw; 
+    }
+    .flip-clock-dot.top { top: 6vw; }
+    .flip-clock-dot.bottom { bottom: 6vw; }
+
+    #date {
+        font-size: clamp(1em, 2vw, 1.3em);
+        margin-bottom: 3vh;
+    }
+
+    #motto {
+        font-size: clamp(1.2em, 3vw, 1.8em);
+        top: calc(88% - 15px); /* 稍微向上移动 */
+        padding: 8px 15px;
+    }
+
+    .controls select,
+    .controls input[type="number"],
+    .controls button,
+    .controls .control-button {
+        padding: 7px 12px;
+        font-size: clamp(0.7em, 1.6vw, 0.85em);
+    }
+     .controls input[type="number"] {
+        width: clamp(55px, 8vw, 65px);
+     }
+}
+
+/* 手机样式 (例如 <= 768px) */
+@media (max-width: 768px) {
+    body {
+        /* 允许 body 在内容过多时滚动 */
+        height: auto;
+        min-height: 100vh;
+        padding: 20px 0; /* 上下加点内边距 */
+        align-items: flex-start; /* 从顶部开始对齐 */
+    }
+
+    .flip-clock-container {
+        font-size: 18vw; /* 手机上相对大一些 */
+        margin-bottom: 4vh;
+    }
+
+    .flip-clock-wrapper ul {
+        width: 20vw; 
+        height: 24vw; 
+        font-size: 19vw;
+        line-height: 24vw;
+        margin: 1vw;
+        border-radius: 1.5vw;
+    }
+    
+    .flip-clock-divider {
+        width: 4vw; 
+        height: 24vw; 
+    }
+    
+    .flip-clock-dot {
+        width: 2vw;  
+        height: 2vw; 
+        left: 1vw; 
+    }
+    .flip-clock-dot.top { top: 8vw; }
+    .flip-clock-dot.bottom { bottom: 8vw; }
+
+    #date {
+        font-size: clamp(0.9em, 3.5vw, 1.1em);
+        margin-bottom: 2vh;
+    }
+
+    .controls-motto-container {
+        width: 90%; /* 限制容器宽度 */
+        margin-top: 2vh; /* 时钟和控件间距 */
+    }
+
+    .controls {
+        flex-direction: column; /* 控件垂直堆叠 */
+        gap: 15px; /* 增大垂直间距 */
+        width: 100%;
+    }
+
+    .controls select,
+    .controls input[type="number"],
+    .controls button,
+    .controls .control-button,
+    #customTimeControls,
+    #backgroundSelector {
+        width: 100%; /* 控件宽度占满 */
+        box-sizing: border-box; /* 包含 padding 和 border */
+        text-align: center;
+        font-size: 1em; /* 固定字体大小 */
+    }
+    .controls select {
+         padding-right: 15px; /* 保持箭头空间 */
+         background-position: right 15px center; /* 箭头位置 */
+    }
+     .controls input[type="number"] {
+         width: 80px; /* 固定宽度 */
+         margin: 0 auto; /* 居中 */
+     }
+     #customTimeControls {
+        flex-direction: column; /* 自定义时间内部也垂直堆叠 */
+        align-items: center;
+        gap: 10px;
+     }
+     .time-unit {
+         margin: 0; /* 移除左右间距 */
+     }
+
+    #motto {
+        position: static; /* 取消绝对定位 */
+        transform: none; /* 取消位移 */
+        margin-top: 4vh; /* 与上方控件的间距 */
+        font-size: clamp(1.1em, 4.5vw, 1.5em);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        background-color: transparent; /* 移除背景 */
+        box-shadow: none; /* 移除阴影 */
+        padding: 0;
+    }
+}
+
+/* 手机横屏样式 (可选，进一步调整) */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+     body {
+         padding: 10px 0; 
+     }
+    .flip-clock-container {
+        font-size: 12vh; /* 基于高度调整大小 */
+        margin-bottom: 2vh;
+    }
+    .flip-clock-wrapper ul {
+        width: 14vh; 
+        height: 16vh; 
+        font-size: 13vh;
+        line-height: 16vh;
+        margin: 0.5vh;
+        border-radius: 1vh;
+    }
+     .flip-clock-divider {
+        width: 3vh; 
+        height: 16vh; 
+    }
+    .flip-clock-dot {
+        width: 1.5vh;  
+        height: 1.5vh; 
+        left: 0.7vh; 
+    }
+    .flip-clock-dot.top { top: 5.5vh; }
+    .flip-clock-dot.bottom { bottom: 5.5vh; }
+
+    #date {
+        font-size: clamp(0.8em, 2.5vh, 1em);
+        margin-bottom: 1vh;
+    }
+
+    .controls-motto-container {
+        flex-direction: row; /* 尝试横向排列 */
+        align-items: flex-start; /* 顶部对齐 */
+        gap: 20px;
+        width: 95%;
+    }
+    .controls {
+        flex-direction: row; /* 控件内部也尝试横向 */
+        flex-wrap: wrap; /* 允许换行 */
+        justify-content: center;
+        gap: 10px;
+        width: auto; /* 宽度自适应 */
+        flex: 1; /* 占据一部分空间 */
+    }
+     .controls select,
+     .controls button,
+     .controls .control-button,
+     #backgroundSelector {
+         width: auto; /* 按钮宽度自适应 */
+         padding: 6px 10px;
+     }
+     #customTimeControls {
+         flex-direction: row; /* 自定义时间恢复横向 */
+         width: auto;
+         gap: 5px;
+     }
+     .controls input[type="number"] {
+         width: 50px; 
+     }
+
+    #motto {
+        position: relative; /* 相对定位 */
+        margin-top: 0; 
+        font-size: clamp(1em, 3vh, 1.2em);
+        width: auto; /* 宽度自适应 */
+        flex-basis: 200px; /* 给个基础宽度 */
+        text-align: right;
+        padding: 0;
+    }
+}
+
+/* 非常小的手机屏幕 (例如 <= 480px) */
+@media (max-width: 480px) {
+    .flip-clock-container {
+        font-size: 22vw; /* 再次调整 */
+    }
+    .flip-clock-wrapper ul {
+        width: 24vw; 
+        height: 28vw; 
+        font-size: 23vw;
+        line-height: 28vw;
+        margin: 0.8vw;
+        border-radius: 2vw;
+    }
+    .flip-clock-divider {
+        width: 5vw; 
+        height: 28vw; 
+    }
+    .flip-clock-dot {
+        width: 2.5vw;  
+        height: 2.5vw; 
+        left: 1.2vw; 
+    }
+    .flip-clock-dot.top { top: 9.5vw; }
+    .flip-ock-dot.bottom { bottom: 9.5vw; }
+
+    #date {
+        font-size: clamp(0.8em, 4vw, 1em);
+    }
+    #motto {
+        font-size: clamp(1em, 5vw, 1.3em);
+    }
+    .controls select,
+    .controls input[type="number"],
+    .controls button,
+    .controls .control-button {
+        font-size: 0.9em; /* 进一步减小控件字体 */
+    }
+}
+
+/* --- 全屏模式下的特定样式 --- */
+
+/* 标准语法和带前缀版本 */
+body:fullscreen,
+body:-webkit-full-screen,
+body:-moz-full-screen,
+body:-ms-fullscreen {
+    /* 全屏时可能需要强制背景色，以防默认背景干扰 */
+    background-color: #000 !important; 
+    /* 确保内容垂直居中，如果需要的话 */
+    display: flex;
+    flex-direction: column; /* 保持垂直布局 */
+    justify-content: center;
+    align-items: center;
+    padding: 2vh 0; /* 上下留些间距 */
+    height: 100vh; /* 确保占满全屏 */
+    overflow: hidden; /* 禁止全屏时滚动 */
+}
+
+:fullscreen .flip-clock-container,
+:-webkit-full-screen .flip-clock-container,
+:-moz-full-screen .flip-clock-container,
+:-ms-fullscreen .flip-clock-container {
+    /* 使用 vmin 确保在不同宽高比下适应 */
+    font-size: 13vmin; /* 基于较小边调整大小 */
+    margin-bottom: 3vh; /* 调整与下方控件的距离 */
+    max-width: 98%; /* 允许更宽 */
+}
+
+:fullscreen .flip-clock-wrapper ul,
+:-webkit-full-screen .flip-clock-wrapper ul,
+:-moz-full-screen .flip-clock-wrapper ul,
+:-ms-fullscreen .flip-clock-wrapper ul {
+    /* 基于 vmin 调整卡片大小 */
+    width: 16vmin;
+    height: 20vmin;
+    font-size: 15vmin;
+    line-height: 20vmin;
+    margin: 0.8vmin;
+    border-radius: 1vmin;
+}
+
+:fullscreen .flip-clock-divider,
+:-webkit-full-screen .flip-clock-divider,
+:-moz-full-screen .flip-clock-divider,
+:-ms-fullscreen .flip-clock-divider {
+    width: 3vmin;
+    height: 20vmin;
+}
+
+:fullscreen .flip-clock-dot,
+:-webkit-full-screen .flip-clock-dot,
+:-moz-full-screen .flip-clock-dot,
+:-ms-fullscreen .flip-clock-dot {
+    width: 1.8vmin;
+    height: 1.8vmin;
+    left: 0.6vmin;
+}
+
+:fullscreen .flip-clock-dot.top,
+:-webkit-full-screen .flip-clock-dot.top,
+:-moz-full-screen .flip-clock-dot.top,
+:-ms-fullscreen .flip-clock-dot.top {
+    top: 6.5vmin;
+}
+
+:fullscreen .flip-clock-dot.bottom,
+:-webkit-full-screen .flip-clock-dot.bottom,
+:-moz-full-screen .flip-clock-dot.bottom,
+:-ms-fullscreen .flip-clock-dot.bottom {
+    bottom: 6.5vmin;
+}
+
+:fullscreen #date,
+:-webkit-full-screen #date,
+:-moz-full-screen #date,
+:-ms-fullscreen #date {
+    font-size: clamp(1em, 2.5vmin, 1.5em); /* 使用 vmin 调整 */
+    margin-bottom: 2vh;
+    position: absolute; /* 让日期固定在顶部 */
+    top: 3vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+}
+
+:fullscreen #motto,
+:-webkit-full-screen #motto,
+:-moz-full-screen #motto,
+:-ms-fullscreen #motto {
+    font-size: clamp(1.2em, 3.5vmin, 2em);
+    position: absolute; /* 固定在底部 */
+    bottom: 4vh;
+    top: auto; /* 覆盖之前的 top */
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto; /* 宽度自适应 */
+    max-width: 80%;
+    padding: 8px 15px;
+    background-color: rgba(0, 0, 0, 0.4); /* 稍微加深背景 */
+}
+
+:fullscreen .controls-motto-container,
+:-webkit-full-screen .controls-motto-container,
+:-moz-full-screen .controls-motto-container,
+:-ms-fullscreen .controls-motto-container {
+    /* 将控件容器放在格言上方 */
+    position: absolute;
+    bottom: calc(4vh + 60px); /* 基于格言位置计算，留出格言高度+间距 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto; /* 宽度自适应 */
+    max-width: 90%;
+    margin-top: 0;
+}
+
+:fullscreen .controls,
+:-webkit-full-screen .controls,
+:-moz-full-screen .controls,
+:-ms-fullscreen .controls {
+    flex-direction: row; /* 全屏时尝试恢复横向 */
+    flex-wrap: wrap; /* 允许换行 */
+    justify-content: center;
+    gap: 10px;
+    padding: 5px 10px;
+    background-color: rgba(25, 25, 25, 0.5); /* 轻微背景 */
+    border-radius: 30px;
+    width: auto;
+}
+
+:fullscreen .controls select,
+:fullscreen .controls input[type="number"],
+:fullscreen .controls button,
+:fullscreen .controls .control-button,
+:fullscreen #backgroundSelector,
+:-webkit-full-screen .controls select,
+:-webkit-full-screen .controls input[type="number"],
+:-webkit-full-screen .controls button,
+:-webkit-full-screen .controls .control-button,
+:-webkit-full-screen #backgroundSelector,
+/* ... (其他前缀) ... */
+:-moz-full-screen .controls select, 
+:-moz-full-screen .controls input[type="number"], 
+:-moz-full-screen .controls button, 
+:-moz-full-screen .controls .control-button, 
+:-moz-full-screen #backgroundSelector,
+:-ms-fullscreen .controls select,
+:-ms-fullscreen .controls input[type="number"],
+:-ms-fullscreen .controls button,
+:-ms-fullscreen .controls .control-button,
+:-ms-fullscreen #backgroundSelector {
+    width: auto; /* 控件宽度自适应 */
+    font-size: clamp(0.7em, 1.8vmin, 0.9em); /* 基于 vmin 调整字体 */
+    padding: 6px 12px;
+}
+
+:fullscreen #customTimeControls,
+:-webkit-full-screen #customTimeControls,
+:-moz-full-screen #customTimeControls,
+:-ms-fullscreen #customTimeControls {
+    flex-direction: row; /* 恢复横向 */
+    width: auto;
+    gap: 5px;
+}
+:fullscreen .controls input[type="number"],
+:-webkit-full-screen .controls input[type="number"],
+:-moz-full-screen .controls input[type="number"],
+:-ms-fullscreen .controls input[type="number"] {
+    width: clamp(50px, 8vmin, 70px); /* 基于 vmin 调整宽度 */
 } 

@@ -313,6 +313,7 @@ body {
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -349,11 +350,32 @@ body {
     font-weight: bold;
     font-size: 14px;
     color: #0050b3; /* 深蓝色文字 */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    white-space: normal;
+    overflow-x: hidden;
+    width: 100%; /* 确保有宽度限制 */
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 4px; /* 单词和含义之间的间距 */
 }
 
 .card-meaning {
     font-size: 14px;
     color: #873800; /* 棕色文字 */
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+    text-align: left;
+    flex-grow: 1;
+    min-height: 0; /* 防止 flex 溢出 */
+    width: 100%; /* 确保宽度正确 */
+    padding: 0 5px; /* 左右留点边距 */
+}
+
+/* 新增：隐藏 Webkit 滚动条 */
+.card-meaning::-webkit-scrollbar {
+    display: none;
 }
 
 /* 卡片交互和状态样式 */

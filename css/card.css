@@ -10,8 +10,8 @@
     --gradient-blue-end: #66a6ff; /* 中蓝 */
 
     /* --- 恢复简单的文本颜色定义 --- */
-    --text-dark: #2c3e50; /* 深灰蓝 (初始值) */
-    --text-light: #7f8c8d; /* 浅灰 (初始值) */
+    --text-dark: #2c3e50; /* 深灰蓝 (全局默认) */
+    --text-light: #7f8c8d; /* 浅灰 (全局默认) */
     /* --- 新增：磨砂模糊程度变量 --- */
     --card-frost-blur: 8px; /* 默认模糊值 */
     /* ------------------------------ */
@@ -21,13 +21,17 @@
     --border-color: #e0e0e0;
     --shadow-color: rgba(0, 0, 0, 0.08);
     --card-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+
+    /* --- 新增：卡片内容颜色变量 --- */
+    --card-content-dark: #37474f; /* 深色卡片内容 */
+    --card-content-light: #7f8c8d; /* 浅色卡片内容 */
 }
 
 body {
     margin: 0;
     font-family: 'Noto Sans SC', 'Quicksand', sans-serif;
     background-color: var(--bg-light);
-    color: var(--text-dark);
+    color: var(--text-dark); /* 全局使用默认深色 */
     line-height: 1.7;
     overflow: hidden; /* 防止页面滚动条影响布局 */
 }
@@ -66,7 +70,7 @@ body {
 .sidebar-logo-text {
    font-size: 1.2rem;
    font-weight: 700;
-   color: var(--text-dark);
+   color: var(--text-dark); /* 侧边栏使用全局默认 */
    margin-left: 15px; /* 与按钮间距 */
    opacity: 1;
    transition: opacity 0.2s ease 0.1s; /* 延迟消失 */
@@ -142,7 +146,7 @@ body {
 .nav-title {
     font-size: 0.9rem;
     font-weight: 500;
-    color: var(--text-light);
+    color: var(--text-light); /* 侧边栏使用全局默认 */
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 10px; /* 减小间距 */
@@ -179,14 +183,14 @@ body {
 
 .selected-option {
     font-size: 0.95rem;
-    color: var(--text-dark);
+    color: var(--text-dark); /* 下拉框使用全局默认 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis; /* 超出显示省略号 */
 }
 
 .dropdown-arrow {
-    color: var(--text-light);
+    color: var(--text-light); /* 下拉框使用全局默认 */
     transition: transform 0.3s ease;
     flex-shrink: 0; /* 防止箭头被压缩 */
     margin-left: 8px;
@@ -226,7 +230,7 @@ body {
 .custom-select-options li {
     padding: 10px 20px;
     font-size: 0.95rem;
-    color: var(--text-dark);
+    color: var(--text-dark); /* 下拉框选项使用全局默认 */
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -292,11 +296,9 @@ body {
   left: 0;
   top: 0;
   height: 100%;
-  width: 4px;
-  background-color: var(--primary-color);
-  transform: scaleY(0);
-  transition: transform 0.2s ease;
-  transform-origin: bottom;
+  width: 4px; /* 竖条宽度 */
+  border-top-left-radius: 8px;    /* 左上圆角 */
+  border-bottom-left-radius: 8px; /* 左下圆角 */
 }
 
 .chapter-item:hover {
@@ -406,7 +408,7 @@ body {
     border: none;
     border-radius: 20px; /* 圆角 */
     background-color: #e9ecef; /* 浅灰色背景 */
-    color: var(--text-dark);
+    color: var(--text-dark); /* 顶部按钮使用全局默认 */
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
@@ -579,10 +581,10 @@ body {
 .minimalist-card-content.monochrome {
      background: #ffffff; border: 2px solid #37474f; 
 }
-.word-card.monochrome .card-header, .word-card.monochrome .definition { color: #37474f; } /* 调整选择器 */
-.word-card.monochrome .phonetic, .word-card.monochrome .sentence { color: #78909c; } /* 调整选择器 */
+.word-card.monochrome .card-header, .word-card.monochrome .definition { color: var(--card-content-dark); } /* 调整选择器, 使用新的卡片变量 */
+.word-card.monochrome .phonetic, .word-card.monochrome .sentence { color: var(--card-content-light); } /* 调整选择器, 使用新的卡片变量 */
 .word-card.monochrome .card-line { border-color: #b0bec5; }
-.word-card.monochrome .highlight { background-color: rgba(55, 71, 79, 0.1); color: #37474f; }
+.word-card.monochrome .highlight { background-color: rgba(55, 71, 79, 0.1); color: var(--card-content-dark); } /* monochrome 高亮也用新变量 */
 
 .word-card.ocean,
 .minimalist-card-content.ocean {
@@ -626,13 +628,13 @@ body {
 .word {
   font-size: 2.8rem; /* 调整单词字号 */
   font-weight: 700; /* 加粗 */
-  color: var(--text-dark);
+  color: var(--card-content-dark); /* 卡片内部使用新的卡片变量 */
   margin: 0 0 8px 0; /* 调整间距 */
   letter-spacing: 1px;
 }
 
 .phonetic {
-  color: var(--text-light);
+  color: var(--card-content-light); /* 卡片内部使用新的卡片变量 */
   font-size: 1.2rem; /* 调整音标字号 */
   font-family: 'Quicksand', sans-serif; /* 使用不同字体 */
 }
@@ -645,7 +647,7 @@ body {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: var(--text-light);
+    color: var(--card-content-light); /* 卡片内部使用新的卡片变量 */
     cursor: pointer;
     transition: color 0.2s ease;
 }
@@ -664,7 +666,7 @@ body {
 
 .definition {
     font-size: 1.15rem; 
-    color: var(--text-dark);
+    color: var(--card-content-dark); /* 卡片内部使用新的卡片变量 */
     margin-bottom: 20px; 
     font-weight: 500;
 }
@@ -691,7 +693,7 @@ body {
 .note,
 .sentence {
     font-size: 1rem;
-    color: var(--text-dark);
+    color: var(--card-content-dark); /* 卡片内部使用新的卡片变量 */
     line-height: 1.6;
     margin-bottom: 15px;
     display: none; /* 默认隐藏，由 JS 控制显示 */
@@ -861,23 +863,26 @@ body {
     .card-page-container { height: auto; min-height: 100vh; } /* 高度自适应 */
 
     .sidebar {
-        position: fixed; /* 改为固定定位 */
+        position: fixed; 
         left: 0;
         top: 0;
         height: 100%;
-        transform: translateX(-100%); /* 默认隐藏 */
-        transition: transform 0.3s ease, width 0s; /* 宽度变化不需要动画 */
+        /* --- 恢复：默认完全隐藏 --- */
+        transform: translateX(-100%); 
+        /* transform: translateX(calc(-100% + 45px)); */ /* <-- 移除部分移出 */
+        transition: transform 0.3s ease; 
         box-shadow: 4px 0 15px rgba(0,0,0,0.15);
-        width: 260px; /* 小屏幕展开时是固定宽度 */
+        width: 260px; 
+        z-index: 1000; 
     }
     .sidebar.open {
         transform: translateX(0);
     }
-    .sidebar.collapsed { /* 小屏幕收起状态无效，强制展开宽度 */
+    .sidebar.collapsed { /* 小屏幕收起状态无效 */
        width: 260px;
-       transform: translateX(-100%); /* 保持隐藏 */
+       transform: translateX(-100%);
     }
-     /* 小屏幕时，隐藏收起状态下的样式变化，因为总是完全展开或完全隐藏 */
+     /* 小屏幕时，移除收起状态下的样式变化 */
      .sidebar.collapsed .sidebar-header,
      .sidebar.collapsed .sidebar-logo-text,
      .sidebar.collapsed .nav-title,
@@ -888,56 +893,235 @@ body {
         pointer-events: auto;
         transition: none;
         height: auto;
-        margin: revert; /* 恢复默认的外边距 */
-        padding: revert; /* 恢复默认的内边距 */
-        border: revert; /* 恢复默认边框 */
+        margin: revert; 
+        padding: revert; 
+        border: revert; 
         overflow: visible;
      }
      .sidebar.collapsed .sidebar-toggle-btn {
-         transform: rotate(0deg); /* 箭头保持向左 */
+         transform: rotate(0deg); 
      }
 
     .card-main {
-        margin-left: 0 !important; /* 小屏幕主内容区不留左边距 */
-        padding: 20px; /* 减小内边距 */
-        height: auto; /* 取消固定高度 */
-        min-height: 100vh; /* 保证至少占满屏幕 */
+        margin-left: 0 !important; 
+        padding: 15px; /* 进一步减小内边距 */
+        height: auto; 
+        min-height: 100vh; 
     }
-    .word-card-wrapper { padding: 10px 0; }
+    
+    /* 卡片显示区域调整 */
+    .card-display-area {
+        padding: 5px 0; 
+    }
+
+    .word-card-wrapper {
+         padding: 10px 0; 
+         max-width: 100%; 
+    }
     .word-card {
-        min-height: auto; /* 取消最小高度 */
-        max-width: 90%; /* 适应屏幕宽度 */
+        min-height: auto; 
+        max-width: 95%; /* 卡片宽度适应屏幕 */
+        padding: 20px; /* 减小卡片内边距 */
+        min-width: auto; /* 移除最小宽度 */
+        border-radius: 16px; /* 减小圆角 */
     }
-    .card-content { padding: 25px; }
-    .word { font-size: 2.2rem; }
-    .phonetic { font-size: 1rem; }
-    .definition { font-size: 1.1rem; margin-bottom: 15px; }
-    .sentence { font-size: 0.9rem; }
-    .action-btn span { display: none; } /* 小屏幕只显示图标 */
-    .action-btn { padding: 10px; }
-    .top-controls { margin-bottom: 15px; padding: 0; }
-    
-    /* 确保切换按钮在侧边栏内部仍然可以控制开关 */
-    .sidebar-toggle-btn {
-        /* 不需要特殊处理z-index，因为它随sidebar移动 */
+    /* 卡片内部内容 */
+    .card-header {
+        padding-bottom: 15px; /* 减小间距 */
+        margin-bottom: 15px; /* 减小间距 */
+    }
+    .word {
+        font-size: 2rem; /* 减小字号 */
+        margin-bottom: 5px;
+    }
+    .phonetic {
+        font-size: 1rem;
+    }
+    .audio-btn {
+        font-size: 1.3rem; /* 减小喇叭图标 */
+        right: 5px; /* 靠近边缘一点 */
+    }
+    .card-body {
+        padding: 0 15px 15px 15px; /* 调整内边距 */
+    }
+    .definition {
+        font-size: 1rem; /* 减小释义字号 */
+        margin-bottom: 15px;
+    }
+    .phrase-title, .morphology-title, .note-title, .sentence-title {
+        font-size: 0.85rem; /* 减小标题字号 */
+        margin-top: 15px;
+        margin-bottom: 5px;
+    }
+    .phrase, .morphology, .note, .sentence {
+        font-size: 0.9rem; /* 减小内容字号 */
+        padding: 10px 10px 10px 20px; /* 调整内边距 */
+        margin-bottom: 10px;
+    }
+    .mode-full .sentence .highlight {
+        padding: 1px 3px; /* 减小高亮 padding */
+    }
+
+    /* 极简模式卡片调整 */
+    .minimalist-card-content {
+        padding: 25px 15px; /* 减小内边距 */
+        max-width: 95%;
+        width: auto; /* 移除固定宽度 */
+        min-height: auto; /* 移除最小高度 */
+        height: auto; /* 高度自适应 */
+        border-radius: 16px;
+    }
+    .minimalist-card-header {
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    .word-minimalist {
+         font-size: 1.8rem; /* 减小字号 */
+         margin-bottom: 5px;
+    }
+    .phonetic-minimalist {
+         font-size: 0.9rem; 
+    }
+    .definition-minimalist {
+         font-size: 1rem; 
+    }
+
+    /* 导航箭头调整 - 改为固定底部悬浮 */
+    .nav-arrow {
+        position: fixed; /* 固定定位 */
+        bottom: 25px; /* 距离底部距离，与全屏按钮一致 */
+        z-index: 1040; /* 层级，略低于全屏按钮 */
+        width: 40px; /* 保持调整后的大小或按需设置 */
+        height: 40px;
+        /* 添加悬浮按钮样式 */
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        /* 移除可能冲突的渐变背景 (如果之前有) */
+        background: var(--primary-color); 
+    }
+    .nav-arrow:hover {
+        background-color: #3a80d2; /* 加深主色 */
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(var(--primary-rgb, 74, 144, 226), 0.4); /* 使用变量，加深阴影 */
+    }
+    .nav-arrow.prev {
+        left: 25px; /* 定位到左下角 */
+        right: auto; /* 清除 right 属性 */
+    }
+    .nav-arrow.next {
+        right: 25px; /* 定位到右下角 */
+        left: auto; /* 清除 left 属性 */
+    }
+    .nav-arrow svg {
+        width: 20px; /* 调整 SVG 大小 */
+        height: 20px;
+    }
+
+    /* 顶部控制栏按钮 */
+    .action-btn span {
+        display: none; 
+    }
+    .action-btn {
+        padding: 8px; /* 进一步减小 padding */
+        min-width: 35px; /* 减小最小宽度 */
+    }
+    .top-controls {
+        margin-bottom: 10px;
+        padding: 0 5px; /* 减小左右 padding */
+        height: auto; /* 高度自适应 */
+        min-height: 50px;
+        gap: 8px; /* 减小内部 gap */
+    }
+    .top-controls-minimalist {
+        padding: 0 10px;
+        height: auto;
+        min-height: 50px;
+    }
+    /* 确保小屏幕按钮换行显示 */
+    .top-controls .action-buttons, 
+    .top-controls-minimalist .action-buttons {
+        flex-wrap: wrap; 
+        justify-content: flex-end; 
+        gap: 5px; /* 减小按钮间距 */
+        grid-column: 1 / -1; 
+    }
+    .mode-btn {
+        padding: 6px 10px; /* 减小模式按钮 padding */
+        height: 32px; /* 减小高度 */
+    }
+    .toggle-chip {
+        padding: 6px 12px; /* 减小开关按钮 padding */
+        font-size: 0.8rem;
     }
     
-    #sidebar-overlay { /* 遮罩层样式 */
+    /* 隐藏顶部不需要的元素 */
+    .top-controls .content-toggles { display: none; } /* 隐藏内容开关 */
+    .style-selector-wrapper, 
+    .color-picker-btn,
+    .frost-control-wrapper {
+        display: none !important; /* 强制隐藏 */
+    }
+
+    /* 遮罩层 */
+    #sidebar-overlay { /* ... */ }
+    #sidebar-overlay.visible { /* ... */ }
+
+    /* 悬浮按钮调整 */
+    .floating-action-btn {
+        width: 40px; 
+        height: 40px;
+        bottom: 20px; 
+        left: 50%; 
+        transform: translateX(-50%); 
+        background-color: rgba(0, 0, 0, 0.3); 
+        color: rgba(255, 255, 255, 0.8); 
+        opacity: 1; 
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); 
+        z-index: 1050; 
+        /* --- 新增：在小屏幕隐藏全屏按钮 --- */
+        display: none;
+    }
+    .floating-action-btn:hover {
+        /* 悬停样式在隐藏时无效，但保留无妨 */
+        background-color: rgba(0, 0, 0, 0.5); 
+        transform: translateX(-50%) scale(1.05); 
+        color: white;
+    }
+    .floating-action-btn svg {
+        width: 18px; 
+        height: 18px;
+    }
+
+    #mobile-menu-toggle {
+        display: flex !important; 
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.4);
-        z-index: 999; /* 低于侧边栏 */
-        display: none; /* 默认隐藏 */
-        opacity: 0;
-        transition: opacity 0.3s ease;
+        top: 15px;
+        left: 15px;
+        z-index: 1001 !important; 
+        /* --- 修改样式 --- */
+        background-color: white !important; /* 白色背景 */
+        color: var(--primary-color, #0056b3) !important; /* 图标颜色改为深蓝或主题色 */
+        border: 1px solid #e0e0e0 !important; /* 添加一个浅灰色边框，避免完全融入背景 */
+        /* --- 样式修改结束 --- */
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important; /* 稍微加深阴影 */
     }
-    #sidebar-overlay.visible {
-        display: block;
-        opacity: 1;
+
+    /* 可选：修改 hover 效果 */
+    #mobile-menu-toggle:hover {
+        background-color: #f8f9fa !important; /* 悬停时浅灰色背景 */
+        color: var(--primary-color, #003d80) !important; /* 悬停时图标颜色可加深 */
     }
+
+    /* ... 其他移动端样式 ... */
 }
 
 .content-toggles {
@@ -1022,7 +1206,7 @@ body {
 
 .hue-label {
     font-size: 0.9rem;
-    color: var(--text-light); /* 使用浅色文本变量 */
+    color: var(--text-light); /* 色相滑块标签使用全局默认 */
     font-weight: 500;
     white-space: nowrap; /* 防止标签换行 */
 }
@@ -1078,7 +1262,7 @@ body {
 
 .color-picker-btn label { /* 可选的标签 */
     font-size: 0.9rem;
-    color: var(--text-light); 
+    color: var(--text-light); /* 颜色选择器标签使用全局默认 */
     margin-right: 4px;
     line-height: 1; /* 确保标签垂直居中 */
 }
@@ -1148,7 +1332,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 20px;
     background-color: var(--bg-white);
-    color: var(--text-light);
+    color: var(--text-light); /* 磨砂按钮使用全局默认 */
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
@@ -1204,7 +1388,7 @@ body {
 
 .frost-slider-popup label {
     font-size: 0.85rem;
-    color: var(--text-light);
+    color: var(--text-light); /* 磨砂滑块标签使用全局默认 */
     white-space: nowrap;
 }
 
@@ -1228,7 +1412,7 @@ body {
 
 .blur-value-display { /* 数值显示 */
     font-size: 0.85rem;
-    color: var(--text-dark);
+    color: var(--card-content-dark); /* 磨砂数值显示使用新的卡片变量 */
     min-width: 30px; 
     text-align: right;
     font-family: 'Quicksand', sans-serif; /* 使用数字友好字体 */
@@ -1270,7 +1454,7 @@ body.show-minimalist .mode-minimalist {
     padding: 8px 15px;
     border: none;
     background-color: var(--bg-white);
-    color: var(--text-light);
+    color: var(--text-light); /* 模式切换按钮使用全局默认 */
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
@@ -1361,20 +1545,20 @@ body.show-minimalist .mode-minimalist {
 .word-minimalist {
     font-size: 2.5rem;
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--card-content-dark); /* 极简模式卡片内部使用新的卡片变量 */
     margin: 0 0 10px 0;
 }
 
 .phonetic-minimalist {
     font-size: 1.1rem;
-    color: var(--text-light);
+    color: var(--card-content-light); /* 极简模式卡片内部使用新的卡片变量 */
     display: block; /* 独占一行 */
     /* margin-bottom: 15px; */ /* 间距由 header padding 控制 */
 }
 
 .definition-minimalist {
     font-size: 1.1rem;
-    color: var(--text-dark);
+    color: var(--card-content-dark); /* 极简模式卡片内部使用新的卡片变量 */
     line-height: 1.6;
     text-align: center; /* 确保文本居中 */
 }
@@ -1431,4 +1615,249 @@ body.show-minimalist .mode-minimalist {
     .word-minimalist { font-size: 2rem; }
     .phonetic-minimalist { font-size: 1rem; }
     .definition-minimalist { font-size: 1rem; }
+}
+
+/* 新增：悬浮操作按钮基础样式 */
+.floating-action-btn {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 50px;
+    height: 50px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1050; /* 确保在其他元素之上，但可能低于模态框 */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    opacity: 0.85; /* 默认稍微透明 */
+}
+
+.floating-action-btn:hover {
+    background-color: #3a80d2; /* 加深主色 */
+    transform: scale(1.05);
+    opacity: 1;
+}
+
+.floating-action-btn svg {
+    width: 22px; /* 调整图标大小 */
+    height: 22px;
+}
+
+/* 移除之前为 .fullscreen-toggle-btn 添加的响应式规则 */
+@media (max-width: 768px) {
+    /* ... 保留其他优化 ... */
+    
+    /* 隐藏样式选择器、颜色选择器和磨砂按钮 */
+    .style-selector-wrapper, 
+    .color-picker-btn,
+    .frost-control-wrapper {
+        display: none !important;
+    }
+    
+}
+
+ /* --- 修改：将按钮固定样式移出 768px 媒体查询，避免冲突 --- */
+ /* --- 并添加新的 768px 媒体查询仅用于定位 --- */
+ .sidebar .sidebar-toggle-btn {
+    /* 这些样式应该默认应用，但在桌面模式下会被覆盖 */
+ }
+ /* 当侧边栏打开时，按钮可以恢复原位或保持固定，这里选择保持固定 */
+ .sidebar.open .sidebar-toggle-btn {
+    /* 可以选择性地改变样式，例如背景变透明 */
+    /* background-color: transparent; */
+ }
+ /* --- 修改结束 --- */
+
+ /* --- 新增：专门针对手机视图下按钮定位和样式的媒体查询 --- */
+ @media (max-width: 768px) {
+     .sidebar .sidebar-toggle-btn {
+        position: fixed !important; 
+        top: 15px; 
+        left: 15px; 
+        z-index: 1001; 
+        display: flex !important; 
+        opacity: 1 !important; 
+        pointer-events: auto !important; 
+        transform: none !important; 
+        /* 悬浮按钮样式 */
+        background-color: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(4px);
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        width: 36px; 
+        height: 36px;
+        border: 1px solid rgba(0,0,0,0.1);
+     }
+ }
+
+ /* --- 新增：专门针对桌面视图下按钮恢复默认样式的媒体查询 --- */
+ @media (min-width: 769px) {
+     .sidebar .sidebar-toggle-btn {
+        position: static !important; /* 恢复文档流定位 */
+        z-index: auto !important;
+        opacity: 1 !important; /* 确保可见 */
+        pointer-events: auto !important;
+        transform: revert !important; /* 恢复默认或继承的 transform */
+        /* 恢复默认外观 */
+        background-color: var(--bg-white) !important;
+        backdrop-filter: none !important;
+        border: 1px solid var(--border-color) !important;
+        box-shadow: none !important;
+        width: 32px !important; /* 恢复原始尺寸 */
+        height: 32px !important;
+        /* 可能需要恢复 margin */
+        margin: 0 !important; 
+     }
+     /* 如果需要，恢复 :hover 样式 */
+     .sidebar .sidebar-toggle-btn:hover {
+         background-color: #f0f0f0 !important;
+         color: var(--text-dark) !important;
+         transform: none !important; /* 确保没有悬浮放大 */
+     }
+     /* 恢复 collapsed 状态下的旋转 */
+     .sidebar.collapsed .sidebar-toggle-btn {
+         transform: rotate(180deg) !important;
+     }
+ }
+
+/* 默认隐藏新增的手机菜单按钮 */
+#mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1001; /* 高于侧边栏 */
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(4px);
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0,0,0,0.1);
+    width: 36px; 
+    height: 36px;
+    padding: 0; /* 移除默认 padding */
+    cursor: pointer;
+    /* 确保内部 SVG 居中 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#mobile-menu-toggle svg {
+    color: var(--text-dark); /* 手机菜单按钮图标使用全局默认 */
+}
+
+@media (max-width: 768px) {
+    /* ... 其他手机样式 ... */
+
+    /* 显示新增的手机菜单按钮 */
+    #mobile-menu-toggle {
+        display: flex !important; /* 强制显示 */
+    }
+
+    /* 隐藏侧边栏内部的原切换按钮 */
+    .sidebar .sidebar-toggle-btn {
+        display: none !important; 
+    }
+    
+    /* 移除之前为 sidebar .sidebar-toggle-btn 添加的 fixed 样式 */
+    /* .sidebar .sidebar-toggle-btn { ... fixed styles removed ... } */
+
+    /* ... 其他手机样式 ... */
+}
+
+@media (min-width: 769px) {
+    /* 确保桌面模式下，侧边栏内部按钮恢复正常 */
+    .sidebar .sidebar-toggle-btn {
+        position: static !important; 
+        z-index: auto !important;
+        opacity: 1 !important; 
+        pointer-events: auto !important;
+        transform: revert !important; 
+        /* 恢复默认外观 */
+        background-color: var(--bg-white) !important;
+        backdrop-filter: none !important;
+        border: 1px solid var(--border-color) !important;
+        box-shadow: none !important;
+        width: 32px !important; 
+        height: 32px !important;
+        margin: 0 !important; 
+        display: flex !important; /* 确保是 flex */
+     }
+     .sidebar .sidebar-toggle-btn:hover {
+         background-color: #f0f0f0 !important;
+         color: var(--text-dark) !important;
+         transform: none !important; 
+     }
+     .sidebar.collapsed .sidebar-toggle-btn {
+         transform: rotate(180deg) !important;
+     }
+
+     /* 确保新增的手机按钮在桌面隐藏 */
+     #mobile-menu-toggle {
+         display: none !important;
+     }
+}
+
+/* --- 移动端适配 --- */
+@media (max-width: 768px) {
+    /* ... 其他移动端样式 ... */
+
+    .sidebar {
+        /* --- 恢复原始隐藏和过渡样式 --- */
+        display: flex !important; /* 保持 flex 布局，确保内部元素正确排列 */
+        visibility: visible !important; /* 保持可见，隐藏由 transform 控制 */
+        position: fixed !important;     
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: 260px !important; /* 保持展开宽度 */       
+        z-index: 1000 !important; /* 保持较高层级 */       
+        background-color: var(--bg-white) !important; /* 恢复背景色 */ 
+        border: none !important; /* 移除调试边框 */ 
+        
+        transform: translateX(-100%) !important; /* 恢复初始隐藏状态 */
+        transition: transform 0.3s ease !important; /* 恢复滑动动画 */
+        
+        /* --- 保留其他必要样式 --- */
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+        padding-top: 60px; 
+        box-sizing: border-box;
+        flex-direction: column; /* 确保是列布局 */
+    }
+
+    /* 恢复 .sidebar.open 的规则 */
+    .sidebar.open {
+        transform: translateX(0) !important; /* 确保滑入 */
+    }
+
+    #mobile-menu-toggle {
+        display: flex !important; 
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 1001 !important; /* 比侧边栏高一点 */
+        /* ... 其他按钮样式保持不变 ... */
+        background-color: var(--primary-color, #007bff); 
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .card-main {
+        margin-left: 0 !important; 
+    }
+    
+    /* ... 其他移动端样式 ... */
 }

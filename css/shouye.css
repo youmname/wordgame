@@ -1568,3 +1568,126 @@ body {
 }
 
 /* --- 今日任务样式结束 --- */
+
+/* --- 手机竖屏适配 (补充) --- */
+@media (max-width: 768px) {
+    /* 调整中央内容区内边距 */
+    .content-area {
+        padding: 20px 15px; /* 减小左右内边距 */
+    }
+
+    /* 调整网格标题区域 */
+    .grid-header {
+        flex-direction: column; /* 标题和按钮垂直堆叠 */
+        align-items: flex-start; /* 左对齐 */
+        gap: 10px; /* 增加堆叠间距 */
+        padding-bottom: 10px; /* 减少底部内边距 */
+    }
+    .grid-header h2 {
+        font-size: 22px; /* 减小标题字号 */
+    }
+    .view-controls {
+        width: 100%; /* 按钮组占满宽度 */
+        justify-content: space-around; /* 按钮均匀分布 */
+    }
+    .view-btn {
+        padding: 6px 12px; /* 减小按钮内边距 */
+        font-size: 13px; /* 减小按钮字号 */
+    }
+
+    /* 功能卡片网格改为单列 */
+    .features-grid {
+        grid-template-columns: 1fr !important; /* 强制单列，覆盖 grid-view 等 */
+        gap: 15px; /* 减小卡片间距 */
+    }
+    .func-card {
+        height: auto; /* 高度自适应 */
+        min-height: 80px; /* 保持一定最小高度 */
+        padding: 15px; /* 减小内边距 */
+        font-size: 16px; /* 减小字号 */
+    }
+    .sticker {
+        font-size: 11px; /* 减小贴纸字号 */
+        padding: 2px 8px;
+        bottom: 10px;
+        right: 10px;
+    }
+    .deco-clip {
+        width: 20px;
+        top: -5px;
+        right: 5px;
+    }
+
+    /* 统计数据模块改为单列 */
+    .stats-container {
+        grid-template-columns: 1fr;
+        gap: 15px; /* 减小模块间距 */
+    }
+    .data-module {
+        padding: 15px; /* 减小内边距 */
+    }
+    .data-value {
+        font-size: 20px; /* 减小数值字号 */
+    }
+
+    /* 调整徽章墙列数 */
+    .badge-wall {
+         grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); /* 允许更多列，根据空间自适应 */
+         gap: 10px; /* 减小徽章间距 */
+         padding: 10px;
+    }
+    .badge-item {
+        width: 45px; /* 适当减小徽章尺寸 */
+        height: 45px;
+    }
+
+    /* 调整日历容器 */
+    .calendar-container {
+        padding: 10px; /* 减小内边距 */
+    }
+
+    /* 确保底部设置按钮可见 */
+    .settings-button {
+        bottom: 20px; /* 调整距离底部的距离 */
+        right: 20px;  /* 调整距离右侧的距离 */
+        /* 可能需要调整 z-index 确保在最上层 */
+    }
+
+     /* 调整模式选择模态框 */
+    #mode-selection-modal .modal-content {
+        width: 90vw;
+        padding: 20px;
+        min-height: 50vh;
+        overflow-y: auto; /* 允许垂直滚动 */
+        max-height: 85vh; /* 限制最大高度，触发滚动 */
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE/Edge */
+    }
+    /* --- 新增：隐藏 WebKit 滚动条 --- */
+    #mode-selection-modal .modal-content::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Edge */
+    }
+    /* --- 新增结束 --- */
+
+    #mode-selection-modal .mode-grid {
+        grid-template-columns: 1fr; /* 手机上单列显示模式卡片 */
+        gap: 15px;
+        margin: 20px 0;
+    }
+     #mode-selection-modal .mode-title {
+        font-size: 18px;
+    }
+     #mode-selection-modal .mode-desc {
+        font-size: 14px;
+    }
+
+    /* 调整徽章详情模态框 */
+    #badge-detail-modal .modal-content {
+        width: 90vw;
+        max-width: none; /* 移除最大宽度限制 */
+        padding: 20px;
+    }
+    .badge-detail-icon-large {
+        font-size: 4em;
+    }
+}
