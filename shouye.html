@@ -285,6 +285,11 @@
                     🌟 单词卡片
                     <div class="sparkle-effect"></div>
                 </div>
+
+                <div class="func-card" data-type="secondary">
+                    🎧 单词听写
+                    <div class="sparkle-effect"></div>
+                </div>
             </div>
 
             
@@ -570,6 +575,19 @@
                     }
                     // 修改跳转逻辑：跳转到 CARD.html
                     window.location.href = 'card.html'; 
+                };
+            }
+
+            // 在 recommendCard 代码后添加单词听写按钮的点击事件
+            const tingxieCard = document.querySelector('.func-card[data-type="secondary"]:nth-child(5)');
+            if (tingxieCard) {
+                tingxieCard.onclick = function() {
+                    // 设置内容模式为 tingxie(听写练习)
+                    if (window.setPlayMode) {
+                        window.setPlayMode('tingxie');
+                    }
+                    // 跳转到听写页面
+                    window.location.href = 'tingxie.html';
                 };
             }
         });

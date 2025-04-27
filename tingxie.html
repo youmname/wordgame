@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词听写</title>
+    <link rel="stylesheet" href="css/tingxie.css">
+    <link rel="stylesheet" href="css/card.css">
+    <!-- 引入 Font Awesome 图标库 (如果需要图标) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 添加内联样式，确保设置面板可见性 -->
+    <style>
+        .settings-panel-overlay.visible {
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: flex !important;
+        }
+        
+        /* 确保设置面板样式正确 */
+        .settings-panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .settings-panel {
+            background-color: white;
+            padding: 24px 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dictation-page-container">
+        <!-- 主内容区 (现在是顶层) -->
+        <div class="main-content">
+            <!-- 顶部应用栏 -->
+            <header class="app-bar">
+                <!-- 移除移动端菜单按钮 -->
+                <h1 class="app-title">单词听写</h1>
+                <!-- 统一使用 action-btn btn-home，无外层 button 包装 -->
+                <a id="backHomeBtn" href="shouye.html" class="action-btn btn-home" title="返回首页">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354l-6-6zM2.5 7.707V14H6v-4a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4h3.5V7.707L8 2.207l-5.5 5.5z"/>
+                        <path d="M4.5 14V9.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5V14H4.5z"/>
+                    </svg>
+                    <span>首页</span>
+                </a>
+                <button id="settingsBtn" class="settings-btn" title="设置">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </header>
+
+            <!-- 听写核心区域 -->
+            <div class="dictation-area">
+                <div class="dictation-card">
+                    <!-- 级别与章节选择 (联动) -->
+                    <div class="level-chapter-select">
+                        <select id="levelSelect" class="custom-select">
+                            <option value="">加载中...</option>
+                        </select>
+                        <select id="chapterSelect" class="custom-select" disabled>
+                            <option value="">请先选择级别</option>
+                        </select>
+                    </div>
+                    <!-- 中文提示区 -->
+                    <div class="hint-area">
+                        <span class="hint-text" id="hintText">选择词库开始听写</span> <!-- 初始提示, 添加 ID -->
+                        <button class="toggle-hint-btn" id="toggleHintBtn" title="切换释义显示"> <!-- 添加 ID -->
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="feedback-area" id="feedbackArea">
+                        <!-- 用于显示对错反馈和正确答案, 添加 ID -->
+                    </div>
+                    <div class="input-area">
+                        <input type="text" id="wordInput" class="word-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" disabled> <!-- 移除 placeholder -->
+                    </div>
+                     <!-- 页脚区域，包含按钮和进度条 -->
+                     <div class="card-footer">
+                         <!-- 控制按钮组 -->
+                         <div class="control-bar">
+                             <button class="control-btn prev-btn" id="prevWordBtn" title="上一个 (←)" disabled>
+                                 <i class="fas fa-arrow-left"></i>
+                             </button>
+                             <button class="control-btn speak-btn" id="playAudioBtn" title="朗读 (Space)" disabled>
+                                 <i class="fas fa-volume-up"></i>
+                             </button>
+                             <button class="control-btn next-btn" id="nextWordBtn" title="下一个 (→)" disabled>
+                                 <i class="fas fa-arrow-right"></i>
+                             </button>
+                         </div>
+                         <!-- 确认检查按钮 -->
+                         <button class="check-button" id="checkBtn" disabled>检查</button>
+                         <!-- 进度条 (移动到最后) -->
+                         <div class="progress-bar-container">
+                             <div class="progress-bar"></div>
+                             <span class="progress-text" id="progressText">0/0</span>
+                         </div>
+                     </div>
+                </div>
+                <div class="word-container" id="wordContainer">
+                    <p class="word-title" id="currentWord"></p>
+                    <p class="word-meaning" id="currentMeaning"></p>
+                    <div id="playingStatus" class="playing-status" style="display:none;">
+                        <div class="pulse-animation">正在播放：<span id="playingWord"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置面板 (初始隐藏) -->
+    <div class="settings-panel-overlay" id="settingsPanelOverlay">
+        <div class="settings-panel">
+            <h2>设置</h2>
+            <!-- 语音选择 -->
+            <div class="setting-item">
+                <label for="voiceSelect">朗读语音:</label>
+                <select id="voiceSelect" class="custom-select">
+                    <option value="">加载语音中...</option>
+                </select>
+            </div>
+            <!-- 语速设置 -->
+            <div class="setting-item">
+                <label for="speechRateInput">朗读语速:</label>
+                <input type="range" id="speechRateInput" min="0.5" max="2" step="0.1" value="1.0">
+                <span id="speechRateValue">1.0</span>
+            </div>
+            <!-- 新增：朗读次数设置 -->
+            <div class="setting-item">
+                <label for="repeatCountInput">朗读次数:</label>
+                <input type="number" id="repeatCountInput" min="1" value="2">
+            </div>
+            <!-- 新增：间隔时间设置 -->
+            <div class="setting-item">
+                <label for="intervalInput">间隔秒数:</label>
+                <input type="number" id="intervalInput" min="0" step="0.1" value="1.5">
+            </div>
+            <button class="close-settings-btn" id="closeSettingsBtn">关闭</button>
+        </div>
+    </div>
+
+    <!-- 引入数据加载器 (确保路径正确) -->
+    <script src="js/data-loader.js" defer></script>
+    <!-- 引入听写页面的 JS -->
+    <script src="js/tingxie.js" defer></script>
+    
+    <!-- 内联脚本确保设置面板正常显示 -->
+    <script>
+        // DOM加载后立即执行
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[Tingxie HTML] DOM已加载，初始化设置面板');
+            bindSettingsPanel();
+        });
+        
+        // 页面完全加载后再次检查
+        window.addEventListener('load', function() {
+            console.log('[Tingxie HTML] 页面完全加载，再次检查设置面板');
+            setTimeout(bindSettingsPanel, 300);
+        });
+        
+        // 绑定设置面板功能
+        function bindSettingsPanel() {
+            // 获取DOM元素
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsPanelOverlay = document.getElementById('settingsPanelOverlay');
+            const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+            
+            // 打印元素状态用于调试
+            console.log('[Tingxie HTML] 设置面板元素状态:', {
+                settingsBtn: Boolean(settingsBtn), 
+                settingsPanelOverlay: Boolean(settingsPanelOverlay),
+                closeSettingsBtn: Boolean(closeSettingsBtn)
+            });
+            
+            if(settingsBtn && settingsPanelOverlay && closeSettingsBtn) {
+                // 移除已有的事件监听器（防止重复绑定）
+                settingsBtn.removeEventListener('click', openSettingsPanelHandler);
+                closeSettingsBtn.removeEventListener('click', closeSettingsPanelHandler);
+                settingsPanelOverlay.removeEventListener('click', overlayClickHandler);
+                
+                // 添加新的事件监听器
+                settingsBtn.addEventListener('click', openSettingsPanelHandler);
+                closeSettingsBtn.addEventListener('click', closeSettingsPanelHandler);
+                settingsPanelOverlay.addEventListener('click', overlayClickHandler);
+                
+                console.log('[Tingxie HTML] 设置面板事件绑定成功');
+            } else {
+                console.error('[Tingxie HTML] 无法找到设置面板元素');
+            }
+        }
+        
+        // 打开设置面板处理函数
+        function openSettingsPanelHandler() {
+            console.log('[Tingxie HTML] 设置按钮被点击');
+            const panel = document.getElementById('settingsPanelOverlay');
+            if (panel) {
+                panel.classList.add('visible');
+            }
+        }
+        
+        // 关闭设置面板处理函数
+        function closeSettingsPanelHandler() {
+            console.log('[Tingxie HTML] 关闭按钮被点击');
+            const panel = document.getElementById('settingsPanelOverlay');
+            if (panel) {
+                panel.classList.remove('visible');
+            }
+        }
+        
+        // 覆盖层点击处理函数
+        function overlayClickHandler(event) {
+            if(event.target === this) {
+                console.log('[Tingxie HTML] 点击空白区域关闭设置面板');
+                this.classList.remove('visible');
+            }
+        }
+    </script>
+</body>
+</html>

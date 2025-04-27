@@ -1,0 +1,770 @@
+/* tingxie.css */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Quicksand:wght@400;500;700&display=swap');
+
+/* 基本样式和变量 (参考 card.css) */
+:root {
+    --primary-color: #4a90e2; /* 柔和蓝 */
+    --secondary-color: #f5a623; /* 橙黄 (可用于检查按钮) */
+    --gradient-blue-start: #89f7fe; /* 浅蓝 */
+    --gradient-blue-end: #66a6ff; /* 中蓝 */
+    --background-color: #f8f9fa; /* 对应 --bg-light */
+    --surface-color: #ffffff; /* 对应 --bg-white */
+    --on-primary-color: #ffffff;
+    --on-surface-color: #2c3e50; /* 对应 --text-dark */
+    --text-secondary-color: #7f8c8d; /* 对应 --text-light */
+    --text-hint-color: #adb5bd; /* 更浅的灰色 */
+    --border-color: #e0e0e0;
+    --success-color: #28a745; /* 更鲜明的绿色 */
+    --error-color: #dc3545; /* 更鲜明的红色 */
+    --app-bar-height: 60px; /* 与 card.css 一致 */
+    --card-shadow: 0 12px 35px rgba(0, 0, 0, 0.08); /* 与 card.css 一致 */
+    --progress-width: 0%; /* 用于 JS 更新进度条 */
+}
+
+body {
+    margin: 0;
+    font-family: 'Noto Sans SC', 'Quicksand', sans-serif; /* 与 card.css 一致 */
+    background-color: var(--background-color);
+    color: var(--on-surface-color);
+    line-height: 1.6;
+    /* 移除 overflow: hidden; 允许主内容区在需要时滚动 */
+}
+
+.dictation-page-container {
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center;     /* 垂直居中 */
+    min-height: 100vh;
+    overflow: hidden;        /* 禁用溢出滚动 */
+}
+
+/* --- 主内容区 --- */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* 确保至少撑满屏幕 */
+    margin-left: 0 !important; /* 确保没有边距 */
+    width: 100%; /* 始终占满宽度 */
+}
+
+/* --- 应用栏 --- */
+.app-bar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: var(--app-bar-height);
+    background-color: var(--surface-color); /* 改为表面颜色 */
+    color: var(--on-surface-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    z-index: 900;
+    position: sticky; /* 吸顶 */
+    top: 0;
+}
+
+.settings-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    padding: 8px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.settings-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+}
+
+.app-title {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0 16px;
+    color: var(--on-surface-color);
+    margin-left: 44px; /* 大约是按钮宽度+padding */
+}
+
+/* --- 听写区域 --- */
+.dictation-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 24px;
+    overflow: visible;     /* 禁用滚动 */
+}
+
+/* 听写卡片样式 */
+.dictation-card {
+    height: 70vh;
+    width: 80%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 40px 60px;
+    background-color: var(--surface-color);
+    border-radius: 24px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 或者移除，效果一样 */
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+
+/* --- 中文提示区 --- */
+.hint-area {
+    padding: 16px 0; /* 移除左右 padding，保留上下 */
+    background-color: transparent; /* 移除背景色 */
+    border-radius: 0; /* 移除圆角 */
+    text-align: center; /* 文本居中 */
+    margin-bottom: 0; /* 移除默认 margin */
+}
+
+.hint-text {
+    font-size: 1.5rem;
+    color: var(--text-secondary-color);
+    transition: all 0.3s ease;
+    display: inline-block; /* 允许按钮跟在后面 */
+    margin-right: 8px; /* 和按钮间加点距离 */
+}
+
+.hint-text.blurred {
+    filter: blur(5px);
+    user-select: none;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.toggle-hint-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background-color 0.2s, color 0.2s;
+    flex-shrink: 0; /* 防止按钮被压缩 */
+}
+.toggle-hint-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+}
+
+/* --- 输入区 --- */
+.input-area {
+    width: 70%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: 5vh;
+    margin-bottom: 0;
+    margin-left: auto;  /* 水平居中 */
+    margin-right: auto; /* 水平居中 */
+}
+
+.word-input {
+    flex-grow: 1;
+    font-size: 2rem;
+    border: none;
+    border-bottom: 2px solid var(--border-color);
+    padding-top: 25px;    /* 增加上内边距 */
+    padding-bottom: 25px; /* 增加下内边距 */
+    padding-left: 15px;
+    padding-right: 15px;
+    outline: none;
+    background-color: transparent;
+    text-align: center;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 0;
+}
+
+.word-input:focus {
+    border-bottom-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+    animation: gentle-pulse 2s infinite;
+}
+
+@keyframes gentle-pulse {
+    0% { box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2); }
+    50% { box-shadow: 0 2px 12px rgba(74, 144, 226, 0.4); }
+    100% { box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2); }
+}
+
+.word-input.correct {
+    border-bottom-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.05);
+    animation: correctAnswer 1s forwards;
+}
+
+@keyframes correctAnswer {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+}
+
+.word-input.incorrect {
+    border-bottom-color: var(--error-color);
+    background-color: rgba(220, 53, 69, 0.05);
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.word-input:disabled {
+    background-color: #f8f9fa; /* 给禁用状态一个背景色 */
+    border-bottom-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+.submit-input-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-hint-color);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.submit-input-btn:hover {
+    color: var(--primary-color);
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+.submit-input-btn:disabled {
+    color: #ced4da;
+    cursor: not-allowed;
+}
+.submit-input-btn:disabled:hover {
+     background-color: transparent;
+}
+
+
+/* 反馈区 */
+.feedback-area {
+    min-height: 24px; /* 保留最小高度以占据空间 */
+    visibility: hidden; /* 初始不可见 */
+    width: 100%;
+    text-align: center;
+    font-size: 1rem;
+    transition: visibility 0s linear 0.1s, opacity 0.3s ease; /* 添加淡入淡出效果 */
+    opacity: 0;
+    margin-bottom: 15px; /* 与输入框保持一定距离 */
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.feedback-area.feedback-visible {
+    visibility: visible;
+    transition-delay: 0s;
+    opacity: 1;
+}
+
+.feedback-area .correct-answer {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.feedback-area .incorrect-answer {
+    color: var(--error-color);
+    font-weight: 500;
+}
+
+.feedback-area .correct-icon {
+    color: var(--success-color);
+    margin-right: 5px;
+    animation: scale-up 0.3s ease;
+}
+
+.feedback-area .incorrect-icon {
+    color: var(--error-color);
+    margin-right: 5px;
+    animation: scale-up 0.3s ease;
+}
+
+/* --- 页脚样式 --- */
+.card-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 2vh; /* 添加一个小的固定上边距 */
+    padding-top: 0;
+}
+
+/* 控制按钮组 (在页脚内) */
+.control-bar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 80%;
+    max-width: 400px;
+    margin-bottom: 2vh; /* 与检查按钮间距 */
+}
+
+.control-btn {
+    background: linear-gradient(135deg, var(--gradient-blue-start), var(--gradient-blue-end));
+    color: var(--on-primary-color);
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(102, 166, 255, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease; /* 添加 background 和 opacity 过渡 */
+}
+
+.control-btn:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 15px rgba(102, 166, 255, 0.6);
+}
+
+.control-btn:active:not(:disabled) { /* 仅在非禁用时应用 active 效果 */
+    transform: scale(0.95);
+    box-shadow: 0 2px 5px rgba(102, 166, 255, 0.3);
+}
+
+.control-btn:disabled {
+    background: #bdbdbd; /* 保持线性渐变背景样式 */
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+.control-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+
+/* 检查按钮 (在页脚内) */
+.check-button {
+    font-size: 1.2rem;
+    padding: 15px 30px;
+    border-radius: 30px;
+    margin-top: 0;
+    margin-bottom: 2vh; /* 与下方进度条的间距 */
+    background-color: var(--secondary-color);
+    color: var(--on-surface-color);
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    text-transform: none;
+}
+
+.check-button:hover:not(:disabled) {
+    background-color: #f7b731;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.check-button:disabled {
+    background-color: #e0e0e0;
+    color: var(--text-hint-color);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* --- 进度条 --- */
+.progress-bar-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 3vh; /* 与上方按钮的间距 */
+    box-sizing: border-box;
+}
+
+.progress-bar {
+    flex-grow: 1;
+    height: 8px; /* 稍微加粗 */
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.progress-bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: var(--progress-width, 0%);
+    background: linear-gradient(to right, var(--primary-color), #66a6ff);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.progress-text {
+    font-size: 1rem;
+    color: var(--text-secondary-color);
+    white-space: nowrap;
+}
+
+/* --- 设置面板 --- */
+.settings-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: none; /* 更改为none */
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.settings-panel-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    display: flex !important; /* 使用!important确保覆盖display:none */
+}
+
+.settings-panel {
+    background-color: var(--surface-color);
+    padding: 24px 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 400px;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.settings-panel-overlay.visible .settings-panel {
+    transform: scale(1);
+}
+
+.settings-panel h2 {
+    margin-top: 0;
+    margin-bottom: 24px;
+    text-align: center;
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+.setting-item {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.setting-item label {
+    flex-basis: 120px; /* 保持固定宽度 */
+    flex-shrink: 0; /* 防止标签被压缩 */
+    text-align: right;
+    color: var(--text-secondary-color);
+    font-size: 0.9rem;
+}
+
+/* 设置面板内的 select 和 input 样式 */
+.setting-item select,
+.setting-item input[type="number"],
+.setting-item input[type="range"] { /* 应用到 range input */
+    flex-grow: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    margin-top: 4px; /* 给标签和控件之间增加一点间距 */
+}
+.setting-item select:focus,
+.setting-item input[type="number"]:focus,
+.setting-item input[type="range"]:focus { /* 应用到 range input */
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15);
+}
+
+.setting-item input[type="range"] {
+    padding: 0; /* Range input 不需要内边距 */
+    cursor: pointer;
+}
+
+/* 调整 custom-select 在 setting-item 内的样式 */
+.setting-item .custom-select {
+    width: 100%;          /* 占满可用空间 */
+    max-width: 250px;     /* 限制最大宽度 */
+    white-space: nowrap;   /* 不换行 */
+    overflow: hidden;      /* 隐藏溢出 */
+    text-overflow: ellipsis; /* 文本溢出显示省略号 */
+}
+
+
+.close-settings-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 24px;
+    background-color: var(--primary-color);
+    color: var(--on-primary-color);
+    border: none;
+    border-radius: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.close-settings-btn:hover {
+    background-color: #3a80d2;
+}
+.close-settings-btn:active {
+    transform: scale(0.98);
+}
+
+
+/* --- 动画 --- */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes glow-success {
+    /* 可选：添加成功时的发光或边框动画 */
+}
+
+@keyframes scale-up {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+
+/* --- 响应式设计 --- */
+/* 移动端 */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0 !important; /* 确保没有边距 */
+        width: 100%;
+    }
+    .app-bar {
+        padding: 0 8px;
+    }
+    .app-title {
+        font-size: 1.1rem;
+        margin: 0 8px;
+        margin-left: 36px; /* 移动端调整标题边距 */
+    }
+    .dictation-area {
+        padding: 20px 16px; /* 调整 padding */
+    }
+    .dictation-card {
+        padding: 24px; /* 调整移动端卡片 padding */
+        width: 95%; /* 移动端宽度可以更大些 */
+        max-width: 95%; /* 确保不超过屏幕 */
+        border-radius: 16px;
+        margin: 15px auto;
+    }
+    .hint-area {
+        margin-bottom: 24px;
+        padding: 10px 12px;
+    }
+    .hint-text {
+        font-size: 1rem;
+    }
+    .word-input {
+        font-size: 1.3rem;
+        padding: 8px 40px 8px 8px;
+    }
+    .control-bar {
+        margin-bottom: 24px;
+        max-width: 240px;
+    }
+    .control-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+    .check-button {
+        padding: 10px 20px; /* 调整 */
+        font-size: 0.95rem;
+         border-radius: 20px;
+    }
+    .settings-panel {
+        width: 90%;
+        padding: 20px;
+    }
+    .setting-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
+    }
+    .setting-item label {
+        text-align: left;
+        flex-basis: auto;
+        margin-bottom: 2px; /* 移动端标签和控件间加点距离 */
+    }
+    /* 移动端进度条容器样式 */
+    .progress-bar-container {
+        width: calc(100% + 48px); /* 移动端 padding (24px * 2) */
+        margin-left: -24px;
+        margin-right: -24px;
+        padding-left: 24px;
+        padding-right: 24px;
+        padding-top: 16px;
+    }
+    .setting-item input[type="range"] {
+       width: 100%; /* 移动端 range 占满宽度 */
+    }
+    /* 移动端设置面板内的 select 样式 */
+    .setting-item .custom-select {
+         width: 100%; /* 移动端占满宽度 */
+         /* padding: 10px 30px 10px 12px; 使用默认 select padding */
+         /* font-size: 1rem; 使用默认 select font-size */
+         background-position: right 12px center;
+    }
+}
+
+.level-chapter-select {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.level-chapter-select select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+/* back button 样式 */
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s, color 0.2s;
+}
+.back-btn .back-text {
+    margin-left: 6px;
+    font-size: 1rem;
+    color: var(--on-surface-color);
+}
+.back-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+}
+/* 调整 app title 居中，避免因按钮占位影响 */
+.app-bar .app-title {
+    margin-left: 0;
+    margin-right: 0;
+    flex-grow: 1;
+    text-align: center;
+}
+
+/* 播放按钮样式 */
+.control-btn.playing {
+    background: linear-gradient(135deg, #ff7e5f, #feb47b) !important;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 126, 95, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 126, 95, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 126, 95, 0);
+    }
+}
+
+/* 播放状态显示 */
+.playing-status {
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+    color: #1890ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 500;
+    animation: pulse-opacity 1.5s infinite;
+}
+
+@keyframes pulse-opacity {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+/* 播放状态显示 */
+#playingStatus {
+    display: none;
+    color: #1890ff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background-color: rgba(24, 144, 255, 0.1);
+    border: 1px solid rgba(24, 144, 255, 0.2);
+    margin: 10px 0;
+    font-weight: bold;
+    text-align: center;
+    animation: pulse-opacity 1.5s infinite;
+}
+
+@keyframes pulse-opacity {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+/* 增强播放按钮视觉效果 */
+#playAudioBtn {
+    transition: all 0.3s ease;
+}
+
+#playAudioBtn:hover {
+    transform: scale(1.05);
+}
+
+.active-pulse {
+    animation: button-pulse 1.5s infinite !important;
+    background-color: #1890ff !important;
+    color: white !important;
+}
+
+@keyframes button-pulse {
+    0% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 rgba(24, 144, 255, 0.4);
+    }
+    50% { 
+        transform: scale(1.05); 
+        box-shadow: 0 0 10px rgba(24, 144, 255, 0.7);
+    }
+    100% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 rgba(24, 144, 255, 0.4);
+    }
+}
