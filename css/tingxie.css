@@ -768,3 +768,153 @@ body {
         box-shadow: 0 0 0 rgba(24, 144, 255, 0.4);
     }
 }
+
+/* --- 增强响应式设计 --- */
+/* 手机和平板通用基础设置 */
+@media (max-width: 1024px) {
+  .dictation-card {
+    width: 95%;
+    height: auto;
+    min-height: 60vh;
+    padding: 30px;
+  }
+  
+  .input-area {
+    width: 85%;
+  }
+  
+  /* 增强触摸体验 */
+  .control-btn, .check-button, .settings-btn, .toggle-hint-btn {
+    transform: scale(1.05);
+  }
+  
+  /* 更好的滚动体验 */
+  .dictation-area {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+}
+
+/* 平板设备特定样式 (768px-1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dictation-card {
+    max-width: 90%;
+    padding: 32px;
+  }
+  
+  .hint-text {
+    font-size: 1.3rem;
+  }
+  
+  .word-input {
+    font-size: 1.7rem;
+    padding: 20px 50px 20px 20px;
+  }
+  
+  .control-bar {
+    width: 70%;
+    max-width: 350px;
+  }
+  
+  .control-btn {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* 手机设备改进 (更精细的调整) */
+@media (max-width: 480px) {
+  .dictation-card {
+    padding: 20px 15px;
+    margin: 10px auto;
+  }
+  
+  .app-title {
+    font-size: 1rem;
+  }
+  
+  .level-chapter-select {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .hint-text {
+    font-size: 0.9rem;
+  }
+  
+  .word-input {
+    font-size: 1.2rem;
+    padding: 8px 35px 8px 8px;
+  }
+  
+  .control-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+  
+  .check-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .progress-text {
+    font-size: 0.85rem;
+  }
+  
+  /* 设置面板适配 */
+  .settings-panel {
+    padding: 15px;
+    width: 95%;
+  }
+  
+  .setting-item {
+    margin-bottom: 10px;
+  }
+}
+
+/* 适应不同屏幕方向 */
+@media (orientation: landscape) and (max-width: 1024px) {
+  .dictation-card {
+    height: auto;
+    min-height: 80vh;
+  }
+  
+  .level-chapter-select {
+    flex-direction: row;
+  }
+  
+  .card-footer {
+    margin-top: 1vh;
+  }
+}
+
+/* 适配触摸设备 */
+@media (hover: none) {
+  .control-btn, .check-button, .settings-btn, .toggle-hint-btn {
+    cursor: default;
+  }
+  
+  /* 增大触摸目标 */
+  .submit-input-btn {
+    padding: 12px;
+  }
+  
+  /* 防止iOS缩放问题 */
+  .word-input {
+    font-size: 16px; /* iOS不会自动缩放16px以上的输入框 */
+  }
+}
+
+/* 安全区域适配 - 支持iPhone X及以上刘海屏 */
+@supports (padding: max(0px)) {
+  .app-bar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  
+  .dictation-page-container {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

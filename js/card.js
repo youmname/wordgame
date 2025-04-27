@@ -1,6 +1,30 @@
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Card Page] DOM Content Loaded. Initializing...');
     
+    // --- URL参数解析 ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlCategoryParam = urlParams.get('category'); // 从URL获取级别ID
+    const urlChapterParam = urlParams.get('chapter'); // 从URL获取章节ID
+    console.log(`[Card Page] URL参数解析: 级别=${urlCategoryParam}, 章节=${urlChapterParam}`);
+    
+    // --- 从跳转检查 --- 
+    const jumpedFromNextLevel = sessionStorage.getItem('jumpedFromNextLevel') === 'true';
+    const forceActiveChapter = sessionStorage.getItem('forceActiveChapter') === 'true';
+    const lastSelectedLevel = sessionStorage.getItem('lastSelectedLevel');
+    const lastSelectedChapter = sessionStorage.getItem('lastSelectedChapter');
+    
+    if (jumpedFromNextLevel) {
+        console.log(`[Card Page] 检测到从"下一关"按钮跳转, 上一关级别=${lastSelectedLevel}, 章节=${lastSelectedChapter}`);
+        // 清除标记，避免影响下次加载
+        sessionStorage.removeItem('jumpedFromNextLevel');
+    }
+    
+    if (forceActiveChapter) {
+        console.log('[Card Page] 检测到强制激活章节标记，将优先使用URL参数选择章节');
+        // 清除标记，避免影响下次加载
+        sessionStorage.removeItem('forceActiveChapter');
+    }
+    
     // --- 0. 检查 WordDataLoader 是否存在 ---
     if (!window.WordDataLoader || typeof window.WordDataLoader._getAuthHeaders !== 'function') {
         console.error('[Card Page] CRITICAL: window.WordDataLoader or necessary methods not found! Ensure data-loader.js is loaded BEFORE card.js.');
@@ -79,7 +103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const prevButtons = document.querySelectorAll('.nav-arrow.prev'); 
         const nextButtons = document.querySelectorAll('.nav-arrow.next');
         
-        // if (!prevButton || !nextButton) return; // 旧的检查移除
         if (prevButtons.length === 0 && nextButtons.length === 0) {
             console.warn("[Nav Buttons] No navigation buttons found to update state.");
             return;
@@ -90,7 +113,82 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 遍历并更新所有按钮
         prevButtons.forEach(button => button.classList.toggle('disabled', isPrevDisabled));
-        nextButtons.forEach(button => button.classList.toggle('disabled', isNextDisabled));
+
+        // 检查是否是最后一张卡片
+        if (isNextDisabled && currentWordList.length > 0) {
+            // 当是最后一张卡片时，将"下一个"按钮变为"下一章"按钮
+            nextButtons.forEach(button => {
+                // 移除disabled类
+                button.classList.remove('disabled');
+                
+                // 如果按钮没有nextChapter类，添加它，并更改内容及样式
+                if (!button.classList.contains('next-chapter')) {
+                    button.classList.add('next-chapter');
+                    
+                    // 保存原始文本/图标
+                    if (!button.dataset.originalContent) {
+                        button.dataset.originalContent = button.innerHTML;
+                    }
+                    
+                    // 更改显示文本/图标
+                    button.innerHTML = '下一章 &rarr;';
+                    button.style.backgroundColor = '#4caf50';  // 绿色背景
+                    button.style.color = 'white';
+                    button.style.fontWeight = 'bold';
+                    button.style.padding = '5px 10px';
+                    
+                    // 添加提示
+                    button.title = "进入下一章学习";
+                    
+                    // 移除原来的点击事件
+                    const oldClone = button.cloneNode(true);
+                    button.parentNode.replaceChild(oldClone, button);
+                    
+                    // 添加新的点击事件，调用nextLevel函数
+                    oldClone.addEventListener('click', async () => {
+                        // 先获取当前级别和章节信息
+                        await updateCurrentChapterProgress();
+                        nextLevel();
+                    });
+                }
+            });
+        } else {
+            // 如果不是最后一张卡片，恢复原状
+            nextButtons.forEach(button => {
+                button.classList.toggle('disabled', isNextDisabled);
+                
+                // 如果有nextChapter类，移除它，并恢复原始内容及样式
+                if (button.classList.contains('next-chapter')) {
+                    button.classList.remove('next-chapter');
+                    
+                    // 恢复原始文本/图标
+                    if (button.dataset.originalContent) {
+                        button.innerHTML = button.dataset.originalContent;
+                        delete button.dataset.originalContent;
+                    }
+                    
+                    // 清除添加的样式
+                    button.style.backgroundColor = '';
+                    button.style.color = '';
+                    button.style.fontWeight = '';
+                    button.style.padding = '';
+                    
+                    // 清除提示
+                    button.title = "下一个单词";
+                    
+                    // 移除事件并重新绑定原事件
+                    const oldClone = button.cloneNode(true);
+                    button.parentNode.replaceChild(oldClone, button);
+                    
+                    // 重新绑定原始的下一个单词事件
+                    oldClone.addEventListener('click', () => {
+                        if (currentWordList && currentWordIndex < currentWordList.length - 1) {
+                            displayWordAtIndex(currentWordIndex + 1);
+                        }
+                    });
+                }
+            });
+        }
 
         console.log(`[Nav Buttons] State Updated: Idx=${currentWordIndex}, Total=${currentWordList.length}, Prev=${isPrevDisabled?'Dis':'En'}, Next=${isNextDisabled?'Dis':'En'} (Applied to ${prevButtons.length} prev, ${nextButtons.length} next buttons)`);
     }
@@ -108,21 +206,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             const levels = await window.WordDataLoader.getLevels(); 
             optionsList.innerHTML = ''; 
             if (levels && levels.length > 0) {
-                firstLevelId = levels[0].id; 
+                firstLevelId = levels[0].id;
+                
+                // 设置要选择的级别ID（优先使用URL中的参数）
+                const targetLevelId = urlCategoryParam || firstLevelId;
+                console.log(`[Card Page] 目标级别ID: ${targetLevelId} (URL指定:${!!urlCategoryParam})`);
+                
+                let levelSelected = false;
                 levels.forEach((level, index) => {
                     const li = document.createElement('li');
                     li.textContent = level.name; 
                     li.dataset.value = level.id; 
                     optionsList.appendChild(li);
-                    if (index === 0) {
+                    
+                    // 如果找到URL中指定的级别，选择该级别
+                    if (level.id === targetLevelId) {
+                        selectedOptionSpan.textContent = level.name;
+                        customSelectWrapper.dataset.value = level.id;
+                        li.classList.add('selected');
+                        levelSelected = true;
+                        console.log(`[Card Page] 根据参数选择级别: ${level.name}`);
+                    } else if (index === 0 && !levelSelected) {
+                        // 如果找不到指定级别且是第一个级别，则选择该级别
                         selectedOptionSpan.textContent = level.name;
                         customSelectWrapper.dataset.value = level.id;
                         li.classList.add('selected');
                     }
                 });
+                
                 setupLevelSelection();
-                if (firstLevelId) {
-                    await populateChapters(firstLevelId);
+                
+                // 加载章节（优先使用URL中指定的级别）
+                const levelToLoad = levelSelected ? targetLevelId : firstLevelId;
+                if (levelToLoad) {
+                    await populateChapters(levelToLoad);
                 }
             } else { 
                 optionsList.innerHTML = '<li>无可用级别</li>';
@@ -148,6 +265,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             chapterList.innerHTML = ''; 
             if (chapters && chapters.length > 0) {
                 let firstActiveChapterId = null;
+                let targetChapterFound = false;
+                let targetChapterElement = null;
+                let shouldSelectChapter = urlChapterParam || forceActiveChapter || jumpedFromNextLevel;
+                
+                // 按章节序号排序（如果章节名称包含数字）
+                chapters.sort((a, b) => {
+                    const aMatch = a.name.match(/第(\d+)章/);
+                    const bMatch = b.name.match(/第(\d+)章/);
+                    if (aMatch && bMatch) {
+                        return parseInt(aMatch[1], 10) - parseInt(bMatch[1], 10);
+                    }
+                    return 0; // 如果无法提取数字，保持原顺序
+                });
+                
+                // 首先创建所有章节元素，但不设置active状态
                 chapters.forEach((chapter) => {
                     const div = document.createElement('div');
                     div.classList.add('chapter-item');
@@ -160,30 +292,62 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (isGuestLocked) {
                         div.classList.add('locked'); 
                     } else {
-                        // 非游客用户 或 游客但未锁定的章节
-                        if (firstActiveChapterId === null) {
-                            div.classList.add('active');
+                        // 如果URL指定了章节ID并且是当前章节，并且我们应该选择章节，则标记为找到目标
+                        if (shouldSelectChapter && urlChapterParam && chapter.id === urlChapterParam) {
+                            targetChapterFound = true;
+                            targetChapterElement = div;
                             firstActiveChapterId = chapter.id;
-                            console.log('[Card Page] Default active chapter:', firstActiveChapterId);
-                            // --- 修改点：加载第一个激活章节的单词 ---
-                            // await loadWordsForChapter(firstActiveChapterId); // <-- 添加调用
+                            div.classList.add('active');
+                            console.log(`[Card Page] 根据URL参数选择章节: ${chapter.id}`);
+                        } 
+                        // 记录第一个未锁定的章节，但不自动设为active
+                        else if (firstActiveChapterId === null) {
+                            firstActiveChapterId = chapter.id;
                         }
                     }
                     chapterList.appendChild(div);
                 });
                 
-                // --- 修改点：将加载单词移到循环外，确保 DOM 更新后再加载 ---
-                if (firstActiveChapterId) {
-                     console.log(`[Card Page] Loading initial words for chapter ${firstActiveChapterId}`);
-                     await loadWordsForChapter(firstActiveChapterId); // <--- 在这里调用
-                } else if (chapters.length > 0) { // 只有在有章节但全锁定时才警告
-                     console.warn('[Card Page] All chapters are locked for the current user.');
-                     chapterList.innerHTML = '<li class="empty-placeholder">当前无已解锁章节</li>';
-                      // 清空卡片内容或显示提示
-                      const wordDisplay = wordCard?.querySelector('.word');
-                      const meaningDisplay = wordCard?.querySelector('.definition');
-                      if(wordDisplay) wordDisplay.textContent = '';
-                      if(meaningDisplay) meaningDisplay.textContent = '请先解锁章节';
+                // 如果需要选择章节但没有找到目标章节，则选择第一个未锁定的章节
+                if (shouldSelectChapter && !targetChapterFound && firstActiveChapterId) {
+                    const firstChapter = chapterList.querySelector(`.chapter-item[data-chapter-id="${firstActiveChapterId}"]`);
+                    if (firstChapter) {
+                        firstChapter.classList.add('active');
+                        targetChapterElement = firstChapter;
+                        console.log(`[Card Page] 未找到URL指定章节，选择第一个可用章节: ${firstActiveChapterId}`);
+                    }
+                }
+                
+                // --- 滚动到选定的章节（如果有） ---
+                if (targetChapterElement && chapterListContainer) {
+                    // 延迟执行，确保DOM渲染完成
+                    setTimeout(() => {
+                        // 获取章节列表容器的滚动位置
+                        const containerRect = chapterListContainer.getBoundingClientRect();
+                        const targetRect = targetChapterElement.getBoundingClientRect();
+                        
+                        // 计算目标元素相对于容器的位置
+                        const relativeTop = targetRect.top - containerRect.top;
+                        
+                        // 滚动到目标位置，使目标居中
+                        chapterListContainer.scrollTop = chapterListContainer.scrollTop + relativeTop - 
+                            (containerRect.height / 2 - targetRect.height / 2);
+                        
+                        console.log(`[Card Page] 滚动到目标章节 ${firstActiveChapterId}`);
+                    }, 100);
+                }
+                
+                // --- 只有在应该选择章节且找到有效章节时才加载单词 ---
+                if (shouldSelectChapter && firstActiveChapterId) {
+                    console.log(`[Card Page] 加载章节 ${firstActiveChapterId} 的单词`);
+                    await loadWordsForChapter(firstActiveChapterId);
+                } else {
+                    console.log('[Card Page] 未自动选择任何章节，等待用户选择');
+                    // 显示提示，引导用户选择章节
+                    const wordDisplay = wordCard?.querySelector('.word');
+                    const meaningDisplay = wordCard?.querySelector('.definition');
+                    if(wordDisplay) wordDisplay.textContent = '';
+                    if(meaningDisplay) meaningDisplay.textContent = '请选择章节开始学习';
                 }
                 // ---------------------------------------------
 
@@ -385,6 +549,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
              // --- 修改点：调用加载单词的函数 ---
              await loadWordsForChapter(chapterId); // <--- 添加调用
+             
+             // --- 新增：更新URL，但不刷新页面 ---
+             try {
+                 // 获取当前级别
+                 const levelId = customSelectWrapper?.dataset.value;
+                 if (levelId && chapterId) {
+                     // 构建新的URL
+                     const currentUrl = new URL(window.location.href);
+                     const searchParams = new URLSearchParams(currentUrl.search);
+                     
+                     // 更新参数
+                     searchParams.set('category', levelId);
+                     searchParams.set('chapter', chapterId);
+                     
+                     // 替换当前URL，不刷新页面
+                     const newUrl = currentUrl.pathname + '?' + searchParams.toString();
+                     window.history.replaceState({}, '', newUrl);
+                     console.log(`[Card Page] URL已更新: ${newUrl}`);
+                 }
+             } catch (err) {
+                 console.error('[Card Page] 更新URL时出错:', err);
+                 // 错误不影响主要功能，所以继续执行
+             }
 
              if (isMobile && sidebar && sidebar.classList.contains('open')) {
                  closeSidebarAndOverlay();
@@ -1305,9 +1492,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[Mobile Menu] Attempting to setup mobile toggle...');
         const mobileToggleBtn = document.getElementById('mobile-menu-toggle');
         const sidebarEl = document.querySelector('.sidebar'); 
-        const mobileToggleIcon = mobileToggleBtn ? mobileToggleBtn.querySelector('i') : null; 
+        // 修改这一行，不报错找不到<i>元素
+        let mobileToggleIcon = null;
         
-        // 移除调试反馈 1
+        if (mobileToggleBtn) {
+            mobileToggleIcon = mobileToggleBtn.querySelector('i') || mobileToggleBtn.querySelector('.fa') || mobileToggleBtn.querySelector('svg');
+        }
+        
         if (!mobileToggleBtn) {
             console.error('[Mobile Menu] ERROR: Mobile toggle button #mobile-menu-toggle not found!');
             return;
@@ -1316,11 +1507,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('[Mobile Menu] ERROR: Sidebar element .sidebar not found!');
             return;
         }
+        
+        // 修改：不再显示错误，只记录日志
         if (!mobileToggleIcon) {
-            console.error('[Mobile Menu] ERROR: Icon element <i> inside #mobile-menu-toggle not found!');
+            console.log('[Mobile Menu] Notice: Icon element not found inside #mobile-menu-toggle. Icon switching will be disabled.');
         }
+        
         console.log('[Mobile Menu] Elements found, attaching listener...');
-        // 移除调试反馈 1 结束
 
         mobileToggleBtn.addEventListener('click', (e) => {
             // 移除调试反馈 2
@@ -1391,5 +1584,365 @@ document.addEventListener('DOMContentLoaded', async () => {
            }
         } 
     })(); 
+
+    /**
+     * 下一关功能
+     * 处理关卡完成后的进度更新与跳转
+     */
+    async function nextLevel() {
+        console.log('[卡片游戏] "下一关"按钮点击');
+        
+        // 如果有结果模态框，先关闭它
+        const resultModal = document.getElementById('result-modal');
+        if (resultModal) {
+            resultModal.classList.remove('active');
+        }
+
+        // --- 获取当前级别和章节信息 ---
+        let levelId, chapterOrderNum, chapterId;
+        
+        // 首先尝试从URL参数获取 - 这通常更可靠
+        const urlParams = new URLSearchParams(window.location.search);
+        const categoryParam = urlParams.get('category');
+        const chapterParam = urlParams.get('chapter');
+        
+        if (categoryParam) {
+            levelId = categoryParam;
+            console.log(`[卡片游戏] 从URL获取到级别ID: ${levelId}`);
+        }
+        
+        if (chapterParam) {
+            chapterId = chapterParam;
+            const chapterMatch = chapterParam.match(/第(\d+)章/);
+            if (chapterMatch) {
+                chapterOrderNum = parseInt(chapterMatch[1], 10);
+                console.log(`[卡片游戏] 从URL获取到章节序号: ${chapterOrderNum}`);
+            }
+        }
+        
+        // 如果URL中没有，尝试从自定义选择器中获取
+        if (!levelId) {
+            const customSelectWrapper = document.querySelector('.custom-select-wrapper');
+            if (customSelectWrapper && customSelectWrapper.dataset.value) {
+                levelId = customSelectWrapper.dataset.value;
+                console.log(`[卡片游戏] 从选择器获取到级别ID: ${levelId}`);
+            }
+        }
+        
+        // 尝试获取当前激活的章节
+        if (!chapterOrderNum || !chapterId) {
+            const activeChapter = document.querySelector('.chapter-item.active');
+            if (activeChapter) {
+                if (activeChapter.dataset.chapterId) {
+                    chapterId = activeChapter.dataset.chapterId;
+                    console.log(`[卡片游戏] 从激活章节获取到章节ID: ${chapterId}`);
+                }
+                
+                if (activeChapter.textContent) {
+                    const chapterText = activeChapter.textContent;
+                    const chapterMatch = chapterText.match(/第(\d+)章/);
+                    if (chapterMatch) {
+                        chapterOrderNum = parseInt(chapterMatch[1], 10);
+                        console.log(`[卡片游戏] 从激活章节获取到章节序号: ${chapterOrderNum}`);
+                    }
+                }
+            }
+        }
+
+        // --- 游客限制检查 ---
+        let userType = localStorage.getItem('userType');
+        // 如果未找到userType，尝试从userInfo中获取
+        if (!userType) {
+            try {
+                const userInfoStr = localStorage.getItem('userInfo');
+                if (userInfoStr) {
+                    const userInfo = JSON.parse(userInfoStr);
+                    userType = userInfo.userType;
+                }
+            } catch (e) {
+                console.error("[卡片游戏] 解析用户信息时出错:", e);
+            }
+        }
+        
+        const guestLimit = 5; // 游客最多玩到第5关
+
+        if (userType === 'guest' && chapterOrderNum !== undefined && chapterOrderNum !== null) {
+            if (!isNaN(chapterOrderNum) && chapterOrderNum >= guestLimit) {
+                console.log(`[卡片游戏] 游客达到限制 (关卡 ${chapterOrderNum})，阻止进入下一关。`);
+                // 使用 SweetAlert (如果项目已集成)
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: '试玩结束',
+                        text: '免费试玩已结束，请登录或注册以解锁更多关卡！',
+                        icon: 'info',
+                        confirmButtonText: '去登录',
+                        showCancelButton: true,
+                        cancelButtonText: '取消'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = 'login.html'; // 跳转到登录页
+                        }
+                    });
+                } else {
+                    // 备用 alert 提示
+                    alert('免费试玩已结束，请登录或注册以解锁更多关卡！');
+                }
+                return; // 阻止后续代码执行
+            }
+        }
+
+        // 验证必要信息是否存在
+        if (!levelId || chapterOrderNum === undefined || chapterOrderNum === null) {
+            console.error('[卡片游戏] 缺少 levelId 或 chapterOrderNum，无法进入下一关');
+            console.log('调试信息:', { levelId, chapterOrderNum, chapterId, urlParams: Object.fromEntries(urlParams.entries()) });
+            alert('无法确定当前关卡信息，请刷新页面或重新选择关卡。');
+            return;
+        }
+
+        const currentNum = parseInt(chapterOrderNum, 10);
+        if (isNaN(currentNum)) {
+            console.error('[卡片游戏] chapterOrderNum 无效:', chapterOrderNum);
+            alert('关卡序号无效，无法进入下一关。');
+            return;
+        }
+
+        const nextOrderNum = currentNum + 1;
+        // 构造预期的下一章节标识符 (基于 "级别名称第X章" 的模式)
+        const predictedChapterId = `${levelId}第${nextOrderNum}章`;
+        console.log(`[卡片游戏] 尝试构造并检查下一章节: ${predictedChapterId}`);
+
+        // 获取当前URL的基本路径
+        const currentUrl = new URL(window.location.href);
+        const baseUrl = currentUrl.origin + currentUrl.pathname; // 获取不带查询参数的基本URL
+
+        let authToken = localStorage.getItem('authToken');
+        // 如果未找到authToken，尝试从headers中获取
+        if (!authToken && window.WordDataLoader && typeof window.WordDataLoader._getAuthHeaders === 'function') {
+            const headers = window.WordDataLoader._getAuthHeaders();
+            const authHeader = headers.Authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                authToken = authHeader.substring(7); // 移除 'Bearer ' 前缀
+            }
+        }
+        
+        if (!authToken) {
+            console.error('[卡片游戏] 未找到认证令牌');
+            alert('请先登录！');
+            window.location.href = 'login.html'; // 或者其他登录页面
+            return;
+        }
+
+        try {
+            // 显示加载提示
+            if (window.WordUtils && window.WordUtils.LoadingManager) {
+                window.WordUtils.LoadingManager.show('检查下一关是否存在...');
+            }
+
+            // 先更新当前关卡的完成状态
+            await updateChapterProgress(levelId, currentNum);
+
+            // 尝试获取下一关的单词，以此判断章节是否存在
+            const checkUrl = `/api/chapters/${encodeURIComponent(predictedChapterId)}/allwords`;
+            console.log(`[卡片游戏] 正在检查下一章节存在性: ${checkUrl}`);
+            
+            const response = await fetch(checkUrl, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            // 隐藏加载提示
+            if (window.WordUtils && window.WordUtils.LoadingManager) {
+                window.WordUtils.LoadingManager.hide();
+            }
+
+            if (response.ok) {
+                // 章节存在，构建跳转 URL (保留当前URL的基本部分)
+                console.log(`[卡片游戏] 找到下一章节 ${predictedChapterId}，准备跳转...`);
+                
+                // 构建相对URL，保持当前路径不变
+                const searchParams = new URLSearchParams();
+                searchParams.set('category', levelId);
+                searchParams.set('chapter', predictedChapterId);
+                searchParams.set('mode', 'normal');
+                
+                // 保存当前滚动位置以及当前选择的级别到会话存储，以便在新页面中恢复
+                sessionStorage.setItem('lastSelectedLevel', levelId);
+                sessionStorage.setItem('lastSelectedChapter', predictedChapterId);
+                sessionStorage.setItem('jumpedFromNextLevel', 'true');
+                sessionStorage.setItem('forceActiveChapter', 'true'); // 添加标记，表示要强制激活URL中的章节
+                
+                const nextLevelUrl = baseUrl + '?' + searchParams.toString();
+                console.log(`[卡片游戏] 跳转到URL: ${nextLevelUrl}`);
+                
+                // 使用location.replace而不是location.href，避免浏览器历史堆积
+                window.location.replace(nextLevelUrl);
+            } else if (response.status === 404) {
+                // 章节不存在，说明已经是最后一关
+                console.log(`[卡片游戏] 未找到章节 ${predictedChapterId}，判定为最后一关。`);
+                
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: '恭喜通关！',
+                        text: `您已完成 "${levelId}" 级别的所有卡片关卡！`,
+                        icon: 'success',
+                        confirmButtonText: '返回首页',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // 使用相对路径跳转
+                            const homePath = window.location.pathname.includes('/') ? 
+                                window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'shouye.html' : 
+                                'shouye.html';
+                            window.location.href = homePath;
+                        }
+                    });
+                } else {
+                    alert(`恭喜！您已完成 "${levelId}" 级别的所有卡片关卡！`);
+                    // 使用相对路径跳转
+                    const homePath = window.location.pathname.includes('/') ? 
+                        window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'shouye.html' : 
+                        'shouye.html';
+                    window.location.href = homePath;
+                }
+            } else {
+                // 其他错误
+                console.error(`[卡片游戏] 检查下一关时发生错误，状态码: ${response.status}`);
+                const errorData = await response.json().catch(() => ({ message: '无法解析错误信息' }));
+                alert(`加载下一关失败: ${errorData.message || response.statusText}`);
+            }
+        } catch (error) {
+            // 隐藏加载提示
+            if (window.WordUtils && window.WordUtils.LoadingManager) {
+                window.WordUtils.LoadingManager.hide();
+            }
+            console.error('[卡片游戏] 请求下一关信息时网络或处理错误:', error);
+            alert(`加载下一关时出错: ${error.message}`);
+        }
+    }
+
+    /**
+     * 更新关卡进度
+     * @param {string} levelId 关卡ID
+     * @param {number} chapterOrderNum 章节序号
+     * @param {number} score 得分，默认为10
+     */
+    async function updateChapterProgress(levelId, chapterOrderNum, score = 10) {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            console.warn('[卡片游戏] 无法更新进度：未找到 authToken');
+            return false;
+        }
+
+        try {
+            console.log(`[卡片游戏] 准备更新进度: levelId=${levelId}, completedOrderNum=${chapterOrderNum}, totalScore=${score}`);
+            
+            // 调用API更新关卡完成状态
+            const response = await fetch('/api/progress/complete-chapter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({
+                    levelId: levelId,
+                    completedOrderNum: chapterOrderNum,
+                    totalScore: score
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`服务器错误: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                console.log(`[卡片游戏] 用户进度更新成功！获得积分: ${data.pointsEarned || score}`);
+                return true;
+            } else {
+                console.error('[卡片游戏] 更新用户进度失败:', data.message);
+                return false;
+            }
+        } catch (error) {
+            console.error('[卡片游戏] 调用进度更新接口时出错:', error);
+            return false;
+        }
+    }
+
+    // 绑定"下一关"按钮事件
+    function bindNextLevelButton() {
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', nextLevel);
+            console.log('[卡片游戏] 已绑定"下一关"按钮事件');
+        }
+    }
+
+    // 在页面加载完成后绑定按钮事件
+    document.addEventListener('DOMContentLoaded', function() {
+        bindNextLevelButton();
+    });
+
+    // 添加更新当前章节进度的函数
+    async function updateCurrentChapterProgress() {
+        // 获取当前级别和章节信息
+        let levelId, chapterOrderNum;
+        
+        try {
+            // 尝试从自定义选择器中获取
+            const levelSelector = document.querySelector('.custom-select-display .selected-option');
+            if (levelSelector && levelSelector.textContent) {
+                // 从选择器文本获取级别名称
+                levelId = document.querySelector('.custom-select-wrapper')?.dataset.value;
+            }
+            
+            // 尝试获取当前激活的章节
+            const activeChapter = document.querySelector('.chapter-item.active');
+            if (activeChapter && activeChapter.textContent) {
+                // 从章节名称中提取序号 (e.g. "第3章" -> 3)
+                const chapterText = activeChapter.textContent;
+                const chapterMatch = chapterText.match(/第(\d+)章/);
+                if (chapterMatch) {
+                    chapterOrderNum = parseInt(chapterMatch[1], 10);
+                }
+            }
+            
+            // 如果无法从UI获取，尝试从URL参数获取
+            if (!levelId || isNaN(chapterOrderNum)) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const categoryParam = urlParams.get('category');
+                const chapterParam = urlParams.get('chapter');
+                
+                if (categoryParam) {
+                    levelId = categoryParam;
+                }
+                
+                if (chapterParam) {
+                    const chapterMatch = chapterParam.match(/第(\d+)章/);
+                    if (chapterMatch) {
+                        chapterOrderNum = parseInt(chapterMatch[1], 10);
+                    }
+                }
+            }
+            
+            // 日志记录获取的信息
+            console.log(`[Card Page] 获取到的级别ID: ${levelId}, 章节序号: ${chapterOrderNum}`);
+            
+            // 如果获取成功，更新进度
+            if (levelId && !isNaN(chapterOrderNum)) {
+                // 调用updateChapterProgress函数
+                await updateChapterProgress(levelId, chapterOrderNum);
+                return true;
+            } else {
+                console.warn('[Card Page] 无法获取当前级别或章节信息，无法更新进度');
+                return false;
+            }
+        } catch (error) {
+            console.error('[Card Page] 获取当前级别和章节信息时出错:', error);
+            return false;
+        }
+    }
 
 }); // DOMContentLoaded 的结束括号

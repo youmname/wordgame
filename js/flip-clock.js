@@ -2184,6 +2184,108 @@ $(document).ready(function() {
             clock = null;
         }
 
+        // 初始化闹钟音频
+        let alarmAudio = new Audio('assets/sounds/alarm-clock.mp3');
+        alarmAudio.loop = true;
+        
+        // 创建模态框（如果不存在）
+        if (!$('#countdownFinishedModal').length) {
+            $('body').append(`
+                <div id="countdownFinishedModal" class="clock-modal">
+                    <div class="modal-content">
+                        <h2>倒计时结束！</h2>
+                        <button id="stopAlarmBtn">确定</button>
+                    </div>
+                </div>
+            `);
+            
+            // 添加模态框样式
+            if (!$('#clockModalStyle').length) {
+                $('head').append(`
+                    <style id="clockModalStyle">
+                        .clock-modal {
+                            display: none;
+                            position: fixed;
+                            z-index: 1000;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                            height: 100%;
+                            background-color: rgba(0, 0, 0, 0.75);
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .modal-content {
+                            background-color: #222;
+                            color: #fff;
+                            padding: 30px 40px;
+                            border-radius: 15px;
+                            text-align: center;
+                            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+                            animation: modalFadeIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+                            border: 1px solid #444;
+                            min-width: 300px;
+                        }
+                        .modal-content h2 {
+                            margin: 0 0 25px 0;
+                            font-size: 28px;
+                            letter-spacing: 1px;
+                            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+                        }
+                        @keyframes modalFadeIn {
+                            from { opacity: 0; transform: translateY(-40px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        #stopAlarmBtn {
+                            background-color: #333;
+                            color: #fff;
+                            border: none;
+                            padding: 12px 30px;
+                            margin-top: 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 18px;
+                            font-weight: bold;
+                            transition: all 0.3s;
+                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                            border: 1px solid #555;
+                        }
+                        #stopAlarmBtn:hover {
+                            background-color: #444;
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+                        }
+                        #stopAlarmBtn:active {
+                            transform: translateY(1px);
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+                        }
+                    </style>
+                `);
+            }
+        }
+            
+        // 添加按钮点击事件 - 移到外面以避免重复绑定
+        $(document).off('click', '#stopAlarmBtn').on('click', '#stopAlarmBtn', function() {
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
+            $('#countdownFinishedModal').css('display', 'none');
+            // 重置回实时模式
+            initializeClock('realtime');
+            displaySelector.val('realtime');
+        });
+        
+        // 添加键盘事件 - 移到外面以避免重复绑定
+        $(document).off('keydown.countdownAlarm').on('keydown.countdownAlarm', function(e) {
+            if ($('#countdownFinishedModal').css('display') === 'flex') {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+                $('#countdownFinishedModal').css('display', 'none');
+                // 重置回实时模式
+                initializeClock('realtime');
+                displaySelector.val('realtime');
+            }
+        });
+
         let clockOptions = { language: 'zh-cn', autoStart: true };
         let faceType = 'TwentyFourHourClock';
         let startTime = initialTime;
@@ -2216,6 +2318,28 @@ $(document).ready(function() {
             clock.setCountdown(true);
             clock.setTime(startTime); 
             clock.start();
+            
+            // 监控倒计时结束
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            countdownInterval = setInterval(function() {
+                const currentTime = clock.getTime().time;
+                if (currentTime <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    
+                    // 播放闹钟声音
+                    alarmAudio.currentTime = 0;
+                    alarmAudio.play().catch(error => {
+                        console.error("无法播放闹钟声音：", error);
+                    });
+                    
+                    // 显示模态框
+                    $('#countdownFinishedModal').css('display', 'flex');
+                }
+            }, 1000);
         }
     }
 
