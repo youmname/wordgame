@@ -1815,10 +1815,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const TASKS_STORAGE_KEY = 'wordgame_tasks_v2'; // 使用新 key 避免旧数据冲突
+    const LAST_CHECK_DATE_KEY = 'wordgame_tasks_last_check_date'; // 存储上次检查日期
+
+    // --- 日期管理功能 --- 
+    const checkAndUpdateByDate = () => {
+        const today = new Date().toLocaleDateString();
+        const lastCheckDate = localStorage.getItem(LAST_CHECK_DATE_KEY);
+        
+        // 如果是新的一天，清理已完成任务
+        if (lastCheckDate !== today) {
+            console.log('新的一天，清理已完成任务');
+            // 保留未完成任务，移除已完成任务
+            tasks = tasks.filter(task => !task.checked);
+            
+            // 为所有旧任务标记日期（如果没有日期）
+            tasks.forEach(task => {
+                if (!task.date) {
+                    task.date = lastCheckDate || '历史任务';
+                }
+            });
+            
+            // 更新最后检查日期
+            localStorage.setItem(LAST_CHECK_DATE_KEY, today);
+            saveTasks();
+        }
+    };
 
     // --- 排序、保存、加载 --- 
     const sortTasksArray = () => {
-        tasks.sort((a, b) => a.checked - b.checked);
+        // 先按完成状态排序，未完成在前
+        // 然后按日期排序，今天创建的任务在前
+        const today = new Date().toLocaleDateString();
+        tasks.sort((a, b) => {
+            // 首先按照完成状态排序
+            if (a.checked !== b.checked) {
+                return a.checked - b.checked;
+            }
+            // 其次按照日期排序，今天的在前面
+            const aIsToday = !a.date || a.date === today;
+            const bIsToday = !b.date || b.date === today;
+            if (aIsToday !== bIsToday) {
+                return bIsToday - aIsToday; // 今天的排在前面
+            }
+            // 如果日期状态相同，按ID排序（新创建的在前）
+            return b.id - a.id;
+        });
     };
 
     const saveTasks = () => {
@@ -1835,6 +1876,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
             tasks = savedTasks ? JSON.parse(savedTasks) : [];
+            // 加载后检查日期并更新任务
+            checkAndUpdateByDate();
             sortTasksArray(); // 加载后立即排序
             renderTaskList();
         } catch (error) {
@@ -1862,13 +1905,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (taskData.checked) {
             taskItem.classList.add('checked');
         }
-        // 注意：不再需要设置背景色变量，颜色由 border-left-color 控制
-        taskItem.innerHTML = `
+        
+        // 添加日期标识样式
+        const today = new Date().toLocaleDateString();
+        if (taskData.date && taskData.date !== today) {
+            taskItem.classList.add('historical-task');
+            // 可以根据具体日期添加不同样式，比如昨天、前天等
+        }
+        
+        let taskHTML = `
           <input type="checkbox" class="task-check" ${taskData.checked ? 'checked' : ''} title="${taskData.checked ? '标记为未完成' : '标记为已完成'}">
           <span class="task-text editable" contenteditable>${escapeHtml(taskData.text)}</span>
-          <button class="delete-btn" title="删除任务">×</button>
-          `;
-           // 移除颜色选择器和指示器的相关代码
+        `;
+        
+        // 如果有日期，显示日期提示
+        if (taskData.date && taskData.date !== today) {
+            taskHTML += `<span class="task-date" title="创建于 ${taskData.date}">${taskData.date}</span>`;
+        }
+        
+        taskHTML += `<button class="delete-btn" title="删除任务">×</button>`;
+        taskItem.innerHTML = taskHTML;
+        
         return taskItem;
     };
 
@@ -1877,11 +1934,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const trimmedText = text.trim();
         if (!trimmedText) return;
 
+        const today = new Date().toLocaleDateString();
         const newTaskData = {
             id: Date.now().toString(),
             text: trimmedText,
-            // color: getRandomSoftColor(), // 不再需要颜色
-            checked: false
+            checked: false,
+            date: today // 新增任务时记录创建日期
         };
         tasks.unshift(newTaskData);
         sortTasksArray(); // 添加后也要排序，确保新任务在未完成列表顶部
@@ -1943,10 +2001,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // getRandomSoftColor 不再需要
-    
     const escapeHtml = (unsafe) => {
-        // ... (保持不变) ...
          return unsafe
              .replace(/&/g, "&amp;")
              .replace(/</g, "&lt;")
@@ -1980,139 +2035,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderTaskList(); 
             }
         }
-         // 移除颜色选择器相关的 change 监听
     });
 
+    // 添加删除按钮点击事件监听
     taskList.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('delete-btn')) {
             const taskItem = target.closest('.task-item');
             const taskId = taskItem?.dataset.taskId;
             if (taskId) {
+                // 调用删除任务方法
                 deleteTask(taskId);
             }
         }
-        // 移除颜色指示器相关的 click 监听
     });
-
+    
+    // 添加任务文本编辑完成事件监听
     taskList.addEventListener('blur', (e) => {
         const target = e.target;
         if (target.classList.contains('task-text') && target.hasAttribute('contenteditable')) {
             const taskItem = target.closest('.task-item');
             const taskId = taskItem?.dataset.taskId;
-            const newText = target.textContent.trim(); // 使用 textContent 更安全
+            const newText = target.textContent.trim();
             
             if (taskId) {
-                 if (!newText) {
-                     deleteTask(taskId);
-                 } else {
-                    // updateTask 内部会检查是否真的改变了并保存
+                if (!newText) {
+                    // 如果文本为空，删除该任务
+                    deleteTask(taskId);
+                } else {
+                    // 更新任务文本
                     updateTask(taskId, { text: newText });
-                    // 不需要手动更新 DOM 的 textContent，因为 blur 后内容已更新
-                 }
+                }
             }
         }
     }, true);
 
-    // --- 拖放事件处理 --- 
-    taskList.addEventListener('dragstart', (e) => {
-        if (e.target.classList.contains('task-item')) {
-            draggedItem = e.target;
-            const dragImage = draggedItem.cloneNode(true);
-            // ... (setDragImage 代码保持不变) ...
-            dragImage.style.position = 'absolute';
-            dragImage.style.top = '-9999px'; 
-            dragImage.style.width = draggedItem.offsetWidth + 'px';
-            dragImage.style.opacity = '0.8'; 
-            dragImage.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-            document.body.appendChild(dragImage);
-            e.dataTransfer.setDragImage(dragImage, 10, 10);
-            requestAnimationFrame(() => { 
-                if(document.body.contains(dragImage)) {
-                    document.body.removeChild(dragImage);
-                }
-            });
-            
-            setTimeout(() => draggedItem?.classList.add('dragging'), 0);
-        }
-    });
-
-    taskList.addEventListener('dragend', (e) => {
-        if (draggedItem) {
-             draggedItem.classList.remove('dragging');
-            if (dragOverPlaceholder) {
-                dragOverPlaceholder.remove();
-                dragOverPlaceholder = null;
-            }
-            // 获取当前 DOM 顺序
-            const newOrderedIds = Array.from(taskList.querySelectorAll('.task-item')).map(item => item.dataset.taskId);
-            // 根据 DOM 顺序重排内存中的 tasks 数组
-            tasks = newOrderedIds.map(id => tasks.find(t => t.id === id)).filter(Boolean);
-            // 强制按完成状态排序
-            sortTasksArray();
-            // 保存最终结果
-            saveTasks();
-            // 重新渲染以确保视觉和数据一致
-            renderTaskList(); 
-            draggedItem = null;
-        }
-    });
-
-    taskList.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(taskList, e.clientY);
-        const currentDragging = document.querySelector('.dragging');
-        if (!currentDragging) return;
-
-        if (!dragOverPlaceholder) {
-            dragOverPlaceholder = document.createElement('div');
-            dragOverPlaceholder.classList.add('drag-over-placeholder');
-        }
-
-        if (afterElement == null) {
-            if (taskList.lastElementChild !== dragOverPlaceholder && taskList.lastElementChild !== currentDragging) {
-                 taskList.appendChild(dragOverPlaceholder);
-            }
-        } else {
-             if (afterElement.previousSibling !== dragOverPlaceholder && afterElement !== currentDragging) {
-                taskList.insertBefore(dragOverPlaceholder, afterElement);
-             }
-        }
-    });
-    
-    taskList.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (dragOverPlaceholder && draggedItem) { 
-            taskList.insertBefore(draggedItem, dragOverPlaceholder);
-        }
-    });
-
-    taskList.addEventListener('dragleave', (e) => {
-        // 移除占位符，如果鼠标移出了列表区域
-        if (dragOverPlaceholder && !taskList.contains(e.relatedTarget)) {
-             if (dragOverPlaceholder.parentNode === taskList) { // 确保还在 taskList 中
-                 dragOverPlaceholder.remove();
-             }
-             dragOverPlaceholder = null;
-        }
-    });
-
-    // 辅助函数：获取拖动位置下方的元素
-    function getDragAfterElement(container, y) {
-        // ... (保持不变) ...
-        const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    // --- 初始化 --- 
-    loadTasks(); 
+    // 初始化加载任务
+    loadTasks();
 });
 // --- 今日任务 功能结束 ---

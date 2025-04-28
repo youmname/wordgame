@@ -1691,3 +1691,51 @@ body {
         font-size: 4em;
     }
 }
+
+/* 添加历史任务样式 */
+.task-item.historical-task {
+  border-left: 3px solid #8e9aaf !important; /* 使用灰蓝色边框标识历史任务 */
+  background-color: rgba(142, 154, 175, 0.08); /* 轻微的灰蓝色背景 */
+}
+
+.task-item .task-date {
+  font-size: 0.7rem;
+  color: #8e9aaf;
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background-color: rgba(142, 154, 175, 0.1);
+}
+
+/* 确保任务项样式正确 */
+.task-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid var(--accent-color, #d8a6b3);
+  transition: all 0.2s ease;
+}
+
+.task-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.task-item.checked {
+  opacity: 0.7;
+  text-decoration: line-through;
+  border-left-color: #a3c4bc !important;
+}
+
+.task-item.historical-task.checked {
+  opacity: 0.6;
+  border-left-color: #a0a0a0 !important;
+}
+
+/* 修改删除按钮样式，确保在日期标签后面显示 */
+.task-item .delete-btn {
+  margin-left: 5px;
+}

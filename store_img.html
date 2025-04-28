@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>词汇情境学习工具</title>
+    <link rel="stylesheet" href="css/store_img.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">词汇情境学习工具</h1>
+
+        <div class="columns">
+            <!-- 左侧：叙述文本生成器 -->
+            <div class="column narrative-column">
+                <h2 class="section-title">情境文本生成器</h2>
+                <div class="input-instructions">
+                    <p class="instruction-text">
+                        使用 **中文(英文)** 格式标记需要高亮的词汇<br>
+                        右侧列表中的单词会以不同颜色显示在文本中
+                    </p>
+                </div>
+                <div class="input-box" contenteditable="true" id="narrativeInput" aria-label="情境文本输入">
+                    在这里输入内容，例如：**人工智能(AI)**正在**改变(transform)**我们的**生活(life)**方式。
+                </div>
+                <div class="button-group">
+                    <button id="generateButton" class="btn primary-btn" aria-label="生成文本效果">生成文本效果</button>
+                </div>
+                <div class="output-box" id="narrativeOutput" aria-live="polite"></div>
+            </div>
+
+            <!-- 右侧：分类单词列表格式化器 -->
+            <div class="column word-list-column">
+                <h2 class="section-title">单词分类工具</h2>
+                <div class="input-instructions">
+                    <p class="instruction-text">
+                        使用emoji符号分类单词：🔥高频 ⭐中频 💡低频 ⚠️高级<br>
+                        每行直接输入单词(中文释义)/音标，无需使用短横线
+                    </p>
+                </div>
+                <textarea id="wordListInput" placeholder="🔥 重点高频词汇
+life（生活）/laɪf/
+transform（改变）/trænsˈfɔːrm/
+
+⭐ 中频词汇
+AI（人工智能）/ˌeɪ ˈaɪ/" aria-label="单词列表输入"></textarea>
+                <div class="button-group">
+                    <button id="formatButton" class="btn primary-btn" aria-label="格式化文本">格式化文本</button>
+                </div>
+                <div id="wordListOutput" class="output" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <!-- 底部下载按钮 -->
+        <div class="button-group download-buttons">
+            <button id="downloadStandardButton" class="btn" aria-label="下载标准图片">下载标准图片</button>
+            <button id="downloadTransparentButton" class="btn" aria-label="下载透明高清图片">下载透明高清</button>
+            <button id="downloadZipButton" class="btn primary-btn" aria-label="打包下载所有内容">打包下载</button>
+            <button id="exportPdfButton" class="btn secondary-btn" aria-label="导出为PDF">导出PDF</button>
+            <span id="loading" class="loading" style="display: none;">处理中...</span>
+        </div>
+        
+        <!-- 主题切换按钮 -->
+        <div class="theme-toggle">
+            <button id="light-theme" class="theme-btn active" aria-label="浅色主题">☀️</button>
+            <button id="dark-theme" class="theme-btn" aria-label="深色主题">🌙</button>
+        </div>
+        
+        <!-- 版本信息 -->
+        <div class="footer">
+            <p>词汇情境学习工具 v2.0 | <a href="#" id="resetButton">重置</a></p>
+        </div>
+    </div>
+    
+    <script src="js/store_img.js"></script>
+</body>
+</html>
