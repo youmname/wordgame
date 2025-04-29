@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #f5f7fa, #c3cfe2); color: #2c3e50; min-height: 100vh; }
         .container { max-width: 1200px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); }
@@ -77,11 +78,90 @@
         .format-help h3 { margin-top: 0; color: #2980b9; font-size: 1.2em; }
         .format-help pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 13px; }
         .format-toggle { cursor: pointer; color: #3498db; font-size: 0.9em; }
+        .admin-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .admin-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .filter-section, .excel-upload {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .filter-section h3, .excel-upload h3 {
+            margin-top: 0;
+            color: #2980b9;
+            font-size: 1.2em;
+        }
+        .filter-toggle, .excel-toggle {
+            cursor: pointer;
+            color: #3498db;
+            font-size: 0.9em;
+        }
+        .filter-controls, .excel-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-controls select, .excel-controls input {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #dfe6e9;
+            background: white;
+            flex-grow: 1;
+        }
+        .filter-controls button, .excel-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .filter-controls button:hover, .excel-controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        #excel-file-input {
+            display: none;
+        }
+        /* 适配移动端 */
+        @media (max-width: 768px) {
+            .admin-link {
+                position: relative;
+                top: auto;
+                right: auto;
+                display: inline-block;
+                margin-bottom: 15px;
+            }
+            .filter-controls, .excel-controls {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>艺术感单词卡片生成器 2.0</h2>
+        <a href="admin.html" class="admin-link">返回管理页面</a>
         
         <div class="format-help">
             <h3>支持的输入格式 <span class="format-toggle" onclick="toggleFormatHelp()">［收起］</span></h3>
@@ -93,6 +173,33 @@
                 <pre>1 embrace BrE: /ɪmˈbreɪs/ 1. 接受 2. 拥抱</pre>
                 <p><strong>3. 简化格式:</strong></p>
                 <pre>1 abandon /əˈbændən/ v.放弃，抛弃 n.放任</pre>
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <h3>从数据库获取 <span class="filter-toggle" onclick="toggleFilterSection()">［展开］</span></h3>
+            <div id="filter-details" style="display: none;">
+                <div class="filter-controls">
+                    <select id="level-select">
+                        <option value="">加载级别中...</option>
+                    </select>
+                    <select id="chapter-select" disabled>
+                        <option value="">请先选择级别</option>
+                    </select>
+                    <button id="fetch-words-btn">获取单词</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="excel-upload">
+            <h3>Excel导入 <span class="excel-toggle" onclick="toggleExcelSection()">［展开］</span></h3>
+            <div id="excel-details" style="display: none;">
+                <p>上传Excel文件导入单词数据（支持.xlsx, .xls, .csv格式）</p>
+                <div class="excel-controls">
+                    <button id="upload-excel-btn">上传Excel</button>
+                    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+                    <button id="download-template-btn">下载模板</button>
+                </div>
             </div>
         </div>
         
@@ -133,7 +240,7 @@
                     <option value="custom">自定义背景</option>
                 </select>
                 <input type="file" id="custom-bg" accept="image/*" style="display:none;" onchange="loadCustomBackground(event)">
-                <button onclick="document.getElementById('custom-bg').click()">选择背景</button>
+                <button id="select-bg-btn">选择背景</button>
                 <div class="color-pickers" id="color-pickers">
                     <label>单词颜色: <input type="color" id="word-color" value="#34495e" onchange="updateCards()"></label>
                     <label>音标颜色: <input type="color" id="pronunciation-color" value="#7f8c8d" onchange="updateCards()"></label>
@@ -164,6 +271,9 @@
         <div id="b5-container"></div>
     </div>
     <script>
+        // ✅ 根据app.js路由修正接口路径
+        const API_BASE = `${location.protocol}//${location.hostname}:5000/api`;
+
         let cardsData = [];
         let customBackground = null;
 
@@ -327,6 +437,15 @@
             return cards.map(card => {
                 const backgroundStyle = style === 'custom' && customBackground ? 
                     `style="background: url('${customBackground}') no-repeat center/cover;"` : '';
+                
+                // --- DEBUG LOGGING START ---
+                if (style === 'custom') {
+                    console.log('[renderCards - Custom Style Debug]');
+                    console.log('  - customBackground variable:', customBackground ? customBackground.substring(0, 100) + '...' : null); // Log first 100 chars of Data URL
+                    console.log('  - Generated backgroundStyle:', backgroundStyle);
+                }
+                // --- DEBUG LOGGING END ---
+                
                 const colorStyle = style === 'custom' ? `style="color: ${wordColor};"` : '';
                 const pronStyle = style === 'custom' ? `style="color: ${pronColor};"` : '';
                 const defStyle = style === 'custom' ? `style="color: ${defColor};"` : '';
@@ -450,68 +569,78 @@
             const baseName = 'wordcard';
 
             if (size === 'single') {
+                // --- Single Page Mode Logic ---
                 for (let i = 0; i < cards.length; i++) {
-                    const clone = cards[i].cloneNode(true);
-                    clone.style.maxHeight = 'none'; // 移除高度限制
-                    
-                    tempContainer.innerHTML = '';
+                    const originalCard = cards[i]; 
+                    const cardWidth = originalCard.offsetWidth; 
+
+                    const clone = originalCard.cloneNode(true);
+                    // Ensure styles allow full content height calculation
+                    clone.style.width = `${cardWidth}px`; // Explicitly set width to match original
+                    clone.style.height = 'auto';   
+                    clone.style.maxHeight = 'none'; 
+                    clone.style.overflow = 'visible'; 
+
+                    // Append to DOM temporarily to calculate scrollHeight
+                    tempContainer.innerHTML = ''; 
                     tempContainer.appendChild(clone);
                     
-                    const canvas = await html2canvas(tempContainer, {
+                    const fullCardHeight = clone.scrollHeight; // Get full content height
+
+                    // Capture the clone directly with calculated dimensions
+                    const canvas = await html2canvas(clone, { 
                         scale: 2,
-                        backgroundColor: backgroundColor
+                        backgroundColor: backgroundColor,
+                        width: cardWidth,          
+                        height: fullCardHeight,     
+                        windowWidth: cardWidth,    
+                        windowHeight: fullCardHeight 
                     });
                     blobs.push({ name: `${baseName}_${i + 1}.png`, data: canvas.toDataURL('image/png') });
                 }
             } else {
-                // 设置页面尺寸
+                // --- A4/B5 Mode Logic ---
                 const pageConfig = size === 'a4' ? 
                     { width: 794, height: 1123, container: a4Container, gridClass: 'a4-grid' } : 
                     { width: 516, height: 729, container: b5Container, gridClass: 'b5-grid' };
                 
-                // 计算每页最多容纳的卡片数量
-                const maxCardsPerPage = 4; // 默认每页最多4张卡片
-                
-                // 分组卡片处理
+                const maxCardsPerPage = 4; // Adjust if needed
                 const cardGroups = [];
                 for (let i = 0; i < cards.length; i += maxCardsPerPage) {
                     cardGroups.push(cards.slice(i, i + maxCardsPerPage));
                 }
                 
-                // 处理每一组卡片
-// 处理每一组卡片
-for (let i = 0; i < cardGroups.length; i++) {
+                for (let i = 0; i < cardGroups.length; i++) {
                     const pageCards = cardGroups[i];
-                    const cardWidth = (pageConfig.width - 40) / 2; // 两列布局，减去左右边距
+                    // Calculate width for 2-column layout within page padding
+                    const cardWidth = Math.floor((pageConfig.width - 40 - 15) / 2); // Subtract padding & gap, use floor
                     
-                    // 创建页面容器
                     pageConfig.container.innerHTML = '';
                     const gridDiv = document.createElement('div');
                     gridDiv.className = pageConfig.gridClass;
-                    
-                    // 根据卡片数量确定布局
-                    if (pageCards.length <= 2) {
-                        gridDiv.style.gridTemplateRows = '1fr';
-                    } else {
-                        gridDiv.style.gridTemplateRows = 'repeat(2, auto)';
-                    }
-                    
-                    // 添加卡片到页面
+                    // Grid styling ensures 2 columns
+                    // gridDiv.style.gridTemplateRows = pageCards.length <= 2 ? '1fr' : 'repeat(2, auto)'; // Let height be auto
+
                     pageCards.forEach(card => {
                         const clone = card.cloneNode(true);
+                        // Apply calculated width and allow height to adjust
                         clone.style.width = `${cardWidth}px`;
-                        clone.style.maxHeight = 'none'; // 允许卡片根据内容自适应高度
+                        clone.style.height = 'auto';      // Explicitly allow height to grow
+                        clone.style.maxHeight = 'none';   // Remove any max height restriction
+                        clone.style.overflow = 'visible'; // Try to prevent internal clipping
                         gridDiv.appendChild(clone);
                     });
                     
                     pageConfig.container.appendChild(gridDiv);
                     
-                    // 渲染页面为图片
+                    // Capture the entire page container at standard A4/B5 dimensions
                     const canvas = await html2canvas(pageConfig.container, {
-                        width: pageConfig.width,
-                        height: pageConfig.height,
+                        width: pageConfig.width,     // Use standard page width
+                        height: pageConfig.height,    // Use standard page height
                         scale: 2,
-                        backgroundColor: backgroundColor
+                        backgroundColor: backgroundColor,
+                        windowWidth: pageConfig.width, // Help layout engine
+                        windowHeight: pageConfig.height 
                     });
                     
                     blobs.push({ 
@@ -556,6 +685,317 @@ for (let i = 0; i < cardGroups.length; i++) {
                 updateCards();
             }
         });
+
+        // 切换数据库过滤区域显示/隐藏
+        function toggleFilterSection() {
+            const filterDetails = document.getElementById('filter-details');
+            const toggle = document.querySelector('.filter-toggle');
+            filterDetails.style.display = filterDetails.style.display === 'none' ? 'block' : 'none';
+            toggle.textContent = filterDetails.style.display === 'none' ? '［展开］' : '［收起］';
+        }
+
+        // 切换Excel上传区域显示/隐藏
+        function toggleExcelSection() {
+            const excelDetails = document.getElementById('excel-details');
+            const toggle = document.querySelector('.excel-toggle');
+            excelDetails.style.display = excelDetails.style.display === 'none' ? 'block' : 'none';
+            toggle.textContent = excelDetails.style.display === 'none' ? '［展开］' : '［收起］';
+        }
+
+        // 从 /api/vocabulary-levels 获取所有级别
+        async function populateLevels() {
+            const levelSelect = document.getElementById('level-select');
+            levelSelect.innerHTML = '<option value="">加载级别中...</option>'; // Show loading state
+            levelSelect.disabled = true;
+            try {
+                // Use API_BASE
+                const res = await fetch(`${API_BASE}/vocabulary-levels`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json(); // Get the whole response object
+                // Check success and data structure
+                if (!data.success || !Array.isArray(data.levels)) throw new Error('级别数据格式错误');
+                
+                const levels = data.levels; // Extract levels array
+                
+                levelSelect.innerHTML = '<option value="">请选择级别</option>';
+                levels.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value       = l.id; // Use the actual ID from API
+                    opt.textContent = l.name;
+                    levelSelect.appendChild(opt);
+                });
+                levelSelect.disabled = false;
+            } catch (err) {
+                console.error('populateLevels 获取级别失败:', err);
+                levelSelect.innerHTML = '<option>加载失败</option>';
+                 // Use alert for user feedback
+                 alert(`加载级别失败: ${err.message}`);
+            }
+        }
+
+        // ✅ 完全移植card.js的populateChapters实现
+        async function populateChapters(levelId) {
+            const chapSelect = document.getElementById('chapter-select');
+            chapSelect.innerHTML = '<option value="">加载章节中...</option>'; // Show loading state
+            chapSelect.disabled = true;
+            try {
+                // ✅ 添加认证状态检查
+                const authToken = localStorage.getItem('authToken'); // Use 'authToken'
+                if (!authToken) {
+                    alert('请先登录系统'); // Use alert instead of showToast
+                    // Optional: redirect to login page
+                    // window.location.href = '/页面.html'; // Make sure this path is correct
+                    chapSelect.innerHTML = '<option value="">请先登录</option>';
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/vocabulary-levels/${encodeURIComponent(levelId)}/chapters`, {
+                    // Remove credentials: 'include' when using Bearer token
+                    // credentials: 'include',
+                    headers: {
+                        // Remove 'X-Requested-With' unless specifically required by backend CORS setup
+                        // 'X-Requested-With': 'XMLHttpRequest',
+                        'Authorization': `Bearer ${authToken}` // ✅ 使用有效的authToken
+                    }
+                });
+
+                // ✅ 增强401/403错误处理
+                if (res.status === 401 || res.status === 403) {
+                    localStorage.removeItem('authToken'); // Clear invalid token
+                    alert('登录已过期或无权限，请重新登录');
+                    chapSelect.innerHTML = '<option value="">请重新登录</option>';
+                    // Optional: reload or redirect
+                    // window.location.reload(); 
+                    return;
+                }
+
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({ message: `请求失败 (${res.status})` }));
+                    throw new Error(errorData.message || `请求失败 (${res.status})`);
+                }
+
+                // ✅ 严格匹配app.js返回的数据结构 { success: true, chapters: [...], last_accessed_order: ... }
+                const data = await res.json();
+                if (!data.success || !Array.isArray(data.chapters)) throw new Error('无效的章节数据结构');
+
+                const chapters = data.chapters;
+                chapSelect.innerHTML = chapters.length ? '<option value="">请选择章节</option>' : '<option value="">该级别无章节</option>';
+                
+                chapters
+                    // .sort((a, b) => a.order_num - b.order_num) // Data should be pre-sorted by API
+                    .forEach(chapter => {
+                        const opt = document.createElement('option');
+                        opt.value = chapter.id;
+                        // Display name, word count, and lock status
+                        let displayText = `${chapter.name || `章节 ${chapter.order_num}`} (${chapter.word_count || 0}词)`;
+                        if (chapter.locked) {
+                            displayText += " 🔒"; // Add lock icon
+                            opt.disabled = true; // Disable locked options
+                        }
+                        opt.textContent = displayText;
+                        chapSelect.appendChild(opt);
+                    });
+                 chapSelect.disabled = chapters.length === 0; // Disable if no chapters
+
+            } catch (err) {
+                console.error('[CHAPTER] 获取失败:', err);
+                const errorMessage = err.message.replace('Error: ', '');
+                chapSelect.innerHTML = `<option>加载失败</option>`;
+                chapSelect.disabled = true;
+                alert(`章节加载失败：${errorMessage}`); // Use alert
+            }
+        }
+
+        // 【修改】获取单词列表
+        async function fetchWords() {
+            const levelId = document.getElementById('level-select').value;
+            const chapterId = document.getElementById('chapter-select').value;
+            
+            // Ensure a chapter is selected
+            if (!chapterId) {
+                 alert('请选择章节');
+                 return;
+            }
+            // Level ID is not strictly needed for the /api/chapters/:id/allwords endpoint,
+            // but keep the check if desired.
+            if (!levelId) {
+                 alert('请选择级别');
+                 return;
+            }
+
+            const inputArea = document.getElementById('input-area');
+            inputArea.value = "正在加载单词..."; // Indicate loading
+
+             const authToken = localStorage.getItem('authToken');
+             if (!authToken) {
+                 alert('请先登录以获取单词');
+                 inputArea.value = "请先登录";
+                 return;
+             }
+
+            try {
+                // Use the correct API endpoint and API_BASE
+                let url = `${API_BASE}/chapters/${encodeURIComponent(chapterId)}/allwords`;
+                
+                const resp = await fetch(url, {
+                    // Remove credentials: 'include'
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                 });
+
+                 if (resp.status === 401 || resp.status === 403) {
+                     localStorage.removeItem('authToken');
+                     alert('登录已过期或无权限，请重新登录');
+                     inputArea.value = "请重新登录";
+                     return;
+                 }
+
+                if (!resp.ok) throw new Error(`状态码 ${resp.status}`);
+                
+                // Parse the response { success: true, words: [...] }
+                const data = await resp.json();
+                if (!data.success || !Array.isArray(data.words)) {
+                     throw new Error('获取单词数据失败或格式错误');
+                }
+
+                const words = data.words;
+                if (!words?.length) {
+                    alert('该章节没有单词');
+                    inputArea.value = ''; // Clear loading message
+                    return;
+                }
+                
+                // 转换数据格式（保持原有逻辑）
+                const formattedData = words.map((word, index) => 
+                    // Ensure all fields exist or provide defaults
+                    `${index+1}\t${word.word || ''}\t${word.phonetic || ''}\t${word.meaning || ''}\t${word.phrase || ''}\t${word.example || ''}\t${word.morphology || ''}\t${word.note || ''}`
+                ).join('\n'); // Use \n for literal newline in textarea value
+                
+                inputArea.value = formattedData;
+                alert(`成功获取 ${words.length} 个单词`);
+            } catch (err) {
+                console.error('获取单词出错:', err);
+                alert(`获取单词失败: ${err.message}`);
+                inputArea.value = `获取单词失败: ${err.message}`; // Show error in textarea
+            }
+        }
+
+        // Add event listener for the fetch words button
+        document.getElementById('fetch-words-btn').addEventListener('click', fetchWords);
+
+        // 处理Excel上传
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {type: 'binary'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // 转换为JSON
+                    const excelData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    if (excelData.length < 2) {
+                        alert('Excel文件没有足够的数据');
+                        return;
+                    }
+                    
+                    // 假设第一行是标题
+                    const headers = excelData[0];
+                    const wordIndex = headers.findIndex(h => /word|单词/i.test(h));
+                    const pronIndex = headers.findIndex(h => /pronun|音标/i.test(h));
+                    const meaningIndex = headers.findIndex(h => /meaning|定义|释义/i.test(h));
+                    const phrasesIndex = headers.findIndex(h => /phrases|短语/i.test(h));
+                    const examplesIndex = headers.findIndex(h => /examples|例句/i.test(h));
+                    const formsIndex = headers.findIndex(h => /forms|词形/i.test(h));
+                    const notesIndex = headers.findIndex(h => /notes|注释/i.test(h));
+                    
+                    if (wordIndex === -1) {
+                        alert('Excel文件缺少单词列');
+                        return;
+                    }
+                    
+                    // 转换数据
+                    const formattedData = excelData.slice(1).map((row, index) => {
+                        return `${index+1}\t${row[wordIndex] || ''}\t${pronIndex > -1 ? row[pronIndex] || '' : ''}\t${meaningIndex > -1 ? row[meaningIndex] || '' : ''}\t${phrasesIndex > -1 ? row[phrasesIndex] || '' : ''}\t${examplesIndex > -1 ? row[examplesIndex] || '' : ''}\t${formsIndex > -1 ? row[formsIndex] || '' : ''}\t${notesIndex > -1 ? row[notesIndex] || '' : ''}`;
+                    }).join('\n');
+                    
+                    // 放入输入框
+                    document.getElementById('input-area').value = formattedData;
+                    alert(`成功导入 ${excelData.length - 1} 个单词`);
+                    
+                } catch (error) {
+                    console.error('解析Excel文件出错:', error);
+                    alert('Excel文件解析失败，请检查格式');
+                }
+            };
+            
+            reader.onerror = function() {
+                alert('读取文件失败');
+            };
+            
+            reader.readAsBinaryString(file);
+        }
+
+        // 生成Excel模板
+        function generateExampleExcel() {
+            // 示例数据
+            const worksheet = XLSX.utils.aoa_to_sheet([
+                ['序号', '单词', '音标', '定义', '短语', '例句', '词形变化', '注释'],
+                [1, 'abandon', '/əˈbændən/', 'v.放弃，抛弃', 'abandon oneself to', 'She abandoned herself to grief.', 'abandoned, abandoning', '常用于贬义场合'],
+                [2, 'ability', '/əˈbɪləti/', 'n.能力，才能', 'to the best of one\'s ability', 'She has the ability to speak six languages.', 'abilities', '']
+            ]);
+            
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '单词模板');
+            
+            // 生成并下载Excel文件
+            XLSX.writeFile(workbook, '单词导入模板.xlsx');
+        }
+
+        // DOMContentLoaded 中调用
+        document.addEventListener('DOMContentLoaded', () => {
+            populateLevels();
+            document.getElementById('level-select').addEventListener('change', e => {
+                const levelId = e.target.value;
+                if (levelId) {
+                    populateChapters(levelId);
+                } else {
+                    // 重置章节下拉
+                    const chapSelect = document.getElementById('chapter-select');
+                    chapSelect.innerHTML = '<option value="">请先选择级别</option>';
+                    chapSelect.disabled = true;
+                }
+            });
+        });
+
+        // Add event listener for the custom background button
+        document.getElementById('select-bg-btn').addEventListener('click', function() {
+            document.getElementById('custom-bg').click();
+        });
+
+        // 添加Excel上传事件
+        document.getElementById('upload-excel-btn').addEventListener('click', function() {
+            document.getElementById('excel-file-input').click();
+        });
+        document.getElementById('excel-file-input').addEventListener('change', handleExcelUpload);
+
+        // 添加下载模板事件
+        document.getElementById('download-template-btn').addEventListener('click', generateExampleExcel);
+
+        // ✅ 修正6：添加虚拟favicon避免404
+        (function addFavicon() {
+            const link = document.createElement('link');
+            link.type = 'image/x-icon';
+            link.rel = 'shortcut icon';
+            link.href = 'data:image/x-icon;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEREQAAAAAAEAAAEAAAAAEAAAEAAAAAAQAAAQAAAAABAAABAAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA//8AAP//AAD8HwAA4AMAAIABAACAAQAAgAEAAIABAACAAQAAgAEAAMADAAD8HwAA//8AAP//AAD//wAA';
+            document.head.appendChild(link);
+        })();
     </script>
 </body>
 </html>

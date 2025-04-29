@@ -3150,3 +3150,9 @@ app.post('/api/vocabulary-levels', verifyAdminToken, (req, res) => {
         });
     });
 });
+
+// 放到最顶部
+app.use((req, res, next) => {
+  console.log(`[Incoming] ${req.method} ${req.originalUrl}`);
+  next();
+});

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP 会员</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-image: url('assets/images/login_bg5.png'); /* Reuse background */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+        }
+
+        .page-content {
+            flex: 1 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .vip-container {
+            background: rgba(255, 255, 255, 0.85); /* Slightly less transparent */
+            backdrop-filter: blur(8px);
+            border-radius: 25px;
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+            padding: 30px 40px;
+            width: 100%;
+            max-width: 800px; /* Wider for more content */
+            text-align: center;
+        }
+
+        .vip-container h2 {
+            font-size: 2.5em;
+            font-weight: 500;
+            margin-bottom: 25px;
+            color: #2c3e50; /* Darker title color */
+        }
+
+        .benefits-section {
+            margin-bottom: 35px;
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .benefits-section h3 {
+            font-size: 1.8em;
+            font-weight: 400;
+            color: #3498db; /* Accent color */
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+            display: inline-block;
+        }
+
+        .benefits-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .benefits-list li {
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .benefits-list li i {
+            color: #2ecc71; /* Green checkmark */
+            margin-right: 10px;
+            font-size: 1.3em;
+        }
+
+        .plans-section {
+            display: flex;
+            justify-content: space-around;
+            gap: 25px;
+            margin-bottom: 30px;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+
+        .plan-card {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            padding: 25px;
+            flex: 1;
+            min-width: 220px; /* Minimum width for cards */
+            max-width: 300px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .plan-card h4 {
+            font-size: 1.6em;
+            font-weight: 500;
+            color: #e67e22; /* VIP color */
+            margin-bottom: 15px;
+        }
+
+        .plan-price {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .plan-price span {
+            font-size: 0.5em;
+            font-weight: normal;
+            color: #666;
+        }
+
+        .plan-duration {
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            width: 100%;
+            background: #e67e22; /* VIP color */
+            color: #fff;
+            border-radius: 25px;
+            padding: 12px;
+            text-align: center;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+            border: none;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #d35400; /* Darker VIP color */
+        }
+        
+        .back-link {
+            margin-top: 20px;
+            display: inline-block;
+            color: #777;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        
+        .back-link:hover {
+            color: #333;
+            text-decoration: underline;
+        }
+         /* Responsive adjustments */
+        @media (max-width: 768px) {
+             .vip-container {
+                 padding: 20px;
+                 max-width: 95%;
+             }
+             .vip-container h2 { font-size: 2em; }
+             .benefits-section h3 { font-size: 1.5em; }
+             .benefits-list li { font-size: 1em; }
+             .plans-section { flex-direction: column; align-items: center; }
+             .plan-card { min-width: 80%; margin-bottom: 20px; }
+             .plan-price { font-size: 1.8em; }
+             .btn { font-size: 1em; padding: 10px; }
+         }
+    </style>
+</head>
+<body>
+    <div class="page-content">
+        <div class="vip-container">
+            <h2>升级成为 VIP 会员</h2>
+
+            <div class="benefits-section">
+                <h3>尊享特权</h3>
+                <ul class="benefits-list">
+                    <li><i class="material-icons">check_circle</i> 解锁所有词库与关卡</li>
+                    <li><i class="material-icons">check_circle</i> 无限制的游戏次数</li>
+                    <li><i class="material-icons">check_circle</i> 优先体验新功能</li>
+                    <li><i class="material-icons">check_circle</i> 专属 VIP 标识</li>
+                    <li><i class="material-icons">check_circle</i> 未来更多特权...</li>
+                </ul>
+            </div>
+
+            <div class="plans-section">
+                <div class="plan-card">
+                    <h4>月度会员</h4>
+                    <div class="plan-price">¥15</div>
+                    <div class="plan-duration">/月</div>
+                    <button class="btn purchase-btn" data-plan="monthly">立即开通</button>
+                </div>
+                <div class="plan-card">
+                    <h4>年度会员</h4>
+                    <div class="plan-price">¥98 <span>(立省 ¥82)</span></div>
+                    <div class="plan-duration">/年</div>
+                    <button class="btn purchase-btn" data-plan="yearly">立即开通</button>
+                </div>
+                 <div class="plan-card">
+                    <h4>永久会员</h4>
+                    <div class="plan-price">¥198</div>
+                     <div class="plan-duration">一次购买，永久有效</div>
+                    <button class="btn purchase-btn" data-plan="lifetime">立即开通</button>
+                </div>
+            </div>
+            
+            <a href="javascript:history.back()" class="back-link">返回上一页</a>
+            
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const purchaseButtons = document.querySelectorAll('.purchase-btn');
+            
+            purchaseButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const plan = event.target.dataset.plan;
+                    
+                    // Placeholder: Show alert with selected plan
+                    // In a real application, this would initiate the payment process
+                    alert(`您选择了 ${plan} 计划。即将跳转到支付页面 (占位符)。`);
+                    
+                    // Example: Redirect to a payment URL (replace with actual logic)
+                    // const userId = localStorage.getItem('userId'); // Assuming user ID is stored
+                    // if (userId) {
+                    //    window.location.href = `/create-payment-session?plan=${plan}&userId=${userId}`;
+                    // } else {
+                    //    alert('请先登录再进行购买！');
+                         // Optionally redirect to login
+                         // window.location.href = '页面.html'; 
+                    // }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -2049,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     // 添加任务文本编辑完成事件监听
     taskList.addEventListener('blur', (e) => {
         const target = e.target;
@@ -2059,18 +2059,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const newText = target.textContent.trim();
             
             if (taskId) {
-                if (!newText) {
+                 if (!newText) {
                     // 如果文本为空，删除该任务
-                    deleteTask(taskId);
-                } else {
+                     deleteTask(taskId);
+                 } else {
                     // 更新任务文本
                     updateTask(taskId, { text: newText });
-                }
+                 }
             }
         }
     }, true);
 
     // 初始化加载任务
-    loadTasks();
+    loadTasks(); 
 });
 // --- 今日任务 功能结束 ---

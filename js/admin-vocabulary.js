@@ -26,6 +26,7 @@
 	let vocabularyLevels = [];
 	let currentLevelId = null;
 	let excelData = null;
+	let filteredWords = []; // 存储筛选后的单词数据
 
 	/**
 	 * 初始化导入功能
@@ -744,6 +745,9 @@
 				}
 			});
 		}
+
+		// 导出Excel按钮点击事件
+		document.getElementById('btn-export-excel').addEventListener('click', exportWordsToExcel);
 	}
 
 	/**
@@ -1165,6 +1169,9 @@
 						data.size || paginationState.pageSize,
 						data.total || (data.words ? data.words.length : 0)
 					);
+					
+					// 保存筛选后的单词数据到全局变量
+					filteredWords = data.words || [];
 					
 					// 显示单词数据
 					displayWords(data.words || []);
@@ -5406,6 +5413,9 @@
 				}
 			});
 		}
+
+		// 导出Excel按钮点击事件
+		document.getElementById('btn-export-excel').addEventListener('click', exportWordsToExcel);
 	}
 
 	/**
@@ -5526,3 +5536,71 @@
 			});
 		}
 	});
+
+	/**
+	 * 将筛选后的单词数据导出为Excel文件
+	 */
+	function exportWordsToExcel() {
+		if (!filteredWords || filteredWords.length === 0) {
+			showToast('没有数据可以导出', 'warning');
+			return;
+		}
+		
+		showLoading('正在生成Excel文件...');
+		
+		try {
+			// 准备Excel数据
+			const worksheetData = [
+				['ID', '单词', '音标', '含义', '级别', '章节'] // 表头
+			];
+			
+			// 添加数据行
+			filteredWords.forEach(word => {
+				worksheetData.push([
+					word.id,
+					word.word,
+					word.phonetic || '',
+					word.meaning || '',
+					getLevelNameById(word.level_id) || '',
+					getChapterNameById(word.chapter_id) || ''
+				]);
+			});
+			
+			// 创建工作表
+			const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+			
+			// 设置列宽
+			const colWidths = [
+				{ wch: 10 }, // ID
+				{ wch: 15 }, // 单词
+				{ wch: 20 }, // 音标
+				{ wch: 40 }, // 含义
+				{ wch: 15 }, // 级别
+				{ wch: 20 }  // 章节
+			];
+			ws['!cols'] = colWidths;
+			
+			// 创建工作簿
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, '单词列表');
+			
+			// 获取当前筛选条件
+			const levelFilter = document.getElementById('level-filter');
+			const chapterFilter = document.getElementById('chapter-filter');
+			const levelName = levelFilter.options[levelFilter.selectedIndex].text || '全部';
+			const chapterName = chapterFilter.options[chapterFilter.selectedIndex].text || '全部';
+			
+			// 生成文件名
+			const fileName = `单词列表_${levelName}_${chapterName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+			
+			// 导出文件
+			XLSX.writeFile(wb, fileName);
+			
+			hideLoading();
+			showToast('导出成功', 'success');
+		} catch (error) {
+			console.error('导出Excel失败:', error);
+			hideLoading();
+			showToast('导出失败: ' + error.message, 'error');
+		}
+	}

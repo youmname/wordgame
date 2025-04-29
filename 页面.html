@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="通过有趣的连连看游戏学习英语单词，支持考研、雅思等多种词库。">
     <title>登录 - 单词游戏</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
@@ -296,9 +297,15 @@
                     </div>
                     <button class="btn" type="submit">登入</button>
                 </form>
-                <div style="margin-top: 15px; text-align: center;">
-                    <p style="color: #745858; font-size: 14px; margin-bottom: 10px;">没有账号？立即体验</p>
-                    <button id="try-now-btn" class="btn" style="background-color: #508bbe;">体验一下</button>
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="text-align: center;">
+                        <p style="color: #666; font-size: 14px; margin-bottom: 8px;">游客体验</p>
+                        <button id="try-now-btn" class="btn" style="background-color: #508bbe; width: 100%; max-width: 400px;">体验一下</button>
+                    </div>
+                    <!-- <div style="text-align: center; flex: 1;">
+                         <p style="color: #666; font-size: 14px; margin-bottom: 8px;">成为会员</p>
+                        <button id="register-vip-btn" class="btn" style="background-color: #e67e22; width: 100%; max-width: 150px;">注册 VIP</button>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -455,6 +462,19 @@
                 passwordInput.addEventListener('input', function() {
                     document.getElementById('password-error').textContent = '';
                 });
+            }
+
+            // Add event listener for the VIP button
+            const vipBtn = document.getElementById('register-vip-btn');
+            if (vipBtn) {
+                vipBtn.addEventListener('click', () => {
+                    // Placeholder action: Redirect to a placeholder URL or show an alert
+                    // Replace with your actual payment link integration later
+                    alert('即将跳转到 VIP 购买页面 (占位符)');
+                    // Example redirect:
+                    // window.location.href = '/vip-purchase-placeholder'; 
+                });
+                console.log('注册 VIP 按钮事件监听已绑定');
             }
 
             console.log('页面.html DOMContentLoaded - 设置完成'); // 调试信息

@@ -6,11 +6,18 @@
     <title>词汇情境学习工具</title>
     <link rel="stylesheet" href="css/store_img.css">
     <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
 </head>
 <body>
     <div class="container">
-        <h1 class="title">词汇情境学习工具</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h1 class="title">词汇情境学习工具</h1>
+            <a href="admin.html" class="back-btn">
+                <i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 4px;">arrow_back</i>
+                返回管理首页
+            </a>
+        </div>
 
         <div class="columns">
             <!-- 左侧：叙述文本生成器 -->
@@ -58,6 +65,7 @@ AI（人工智能）/ˌeɪ ˈaɪ/" aria-label="单词列表输入"></textarea>
             <button id="downloadStandardButton" class="btn" aria-label="下载标准图片">下载标准图片</button>
             <button id="downloadTransparentButton" class="btn" aria-label="下载透明高清图片">下载透明高清</button>
             <button id="downloadZipButton" class="btn primary-btn" aria-label="打包下载所有内容">打包下载</button>
+            <!-- <button id="composeButton" class="btn primary-btn" aria-label="合成图片">合成编辑</button> -->
             <button id="exportPdfButton" class="btn secondary-btn" aria-label="导出为PDF">导出PDF</button>
             <span id="loading" class="loading" style="display: none;">处理中...</span>
         </div>
@@ -75,5 +83,6 @@ AI（人工智能）/ˌeɪ ˈaɪ/" aria-label="单词列表输入"></textarea>
     </div>
     
     <script src="js/store_img.js"></script>
+    <script src="js/store_img_init.js"></script>
 </body>
 </html>
